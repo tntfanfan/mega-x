@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phyntom X8 — Mega X Holding Ltd.</title>
-  <meta name="description" content="Phyntom X8 — The world's first platform for AI-native productivity business units. Deploy a department, not a person.">
-  <meta property="og:title" content="Phyntom X8 — Mega X Holding Ltd.">
-  <meta property="og:description" content="Instantly deploy AI-native business units at a fraction of the cost. The next enterprise infrastructure revolution.">
+  <title>Phyntom X8 — Certified AI Department | Mega X Holding Ltd.</title>
+  <meta name="description" content="Phyntom X8 — Certified AI Department by Mega X. We build agent workflows with non-technical businesses that are actually accountable.">
+  <meta property="og:title" content="Phyntom X8 — Certified AI Department">
+  <meta property="og:description" content="Your AI runs. Certified. Managed AI operations for businesses that demand results, not complexity.">
   <meta property="og:type" content="website">
 
   <link rel="icon" href="assets/final-favicon.ico" type="image/x-icon">
@@ -14,947 +14,532 @@
   <link rel="apple-touch-icon" href="assets/final-apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap"></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap"></noscript>
   <link rel="stylesheet" href="styles/bundle.min.css">
   <style>
-    /* ===== Phyntom X8 — Page Palette ===== */
-    .phyntom-page {
-      --phyntom: #5BA0E8;
-      --phyntom-dim: rgba(91, 160, 232, 0.55);
-      --phyntom-glow: rgba(91, 160, 232, 0.2);
-      --phyntom-mint: #4ED8C0;
-      --phyntom-mint-glow: rgba(78, 216, 192, 0.18);
-      --phyntom-surface: rgba(18, 24, 38, 0.6);
+    /* ===== Phyntom X8 — Self-contained page styles ===== */
+    /* ===== Force black text on all px-page headings (override dark theme) ===== */
+    .px-page h1, .px-page h2, .px-page h3, .px-page h4, .px-page h5, .px-page h6 {
+      color: #0A0A0A !important;
+      font-family: 'Space Grotesk', -apple-system, sans-serif !important;
     }
-    body.phyntom-page h1, body.phyntom-page h2, body.phyntom-page h3 {
-      font-family: var(--font-display);
-      font-weight: 400;
-      letter-spacing: -0.01em;
+    /* White text for sections with dark/video backgrounds */
+    .px-hero h1, .px-hero h2,
+    .px-hero-headline,
+    .px-cert-section h2, .px-cert-section h3,
+    .px-cta-section h2 {
+      color: #FFFFFF !important;
+    }
+    .px-page p, .px-page span, .px-page div { font-family: 'Space Grotesk', -apple-system, sans-serif; }
+    .px-hero-right h2, .px-hero-right-heading { color: #fff !important; }
+    .px-cert-section h2, .px-cert-section h3, .px-cert-title { color: #fff !important; }
+    .px-cta-title { color: #fff !important; }
+    .px-cta-yellow { color: #FFE000 !important; }
+
+
+
+    /* ===== Phyntom design tokens ===== */
+    :root {
+      --px-black: #0A0A0A;
+      --px-white: #FFFFFF;
+      --px-yellow: #FFE000;
+      --px-gray: #F5F5F3;
+      --px-mid-gray: #999;
+      --px-border: 2px solid #0A0A0A;
+      --px-font: 'Space Grotesk', -apple-system, sans-serif;
     }
 
-    /* ===== Abstract gradient utilities ===== */
-    @keyframes gradientDrift {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(3%, -4%) scale(1.05); }
-      66% { transform: translate(-2%, 3%) scale(0.97); }
+    /* ===== Page body reset (scoped) ===== */
+    .px-page {
+      font-family: var(--px-font);
+      color: var(--px-black);
+      -webkit-font-smoothing: antialiased;
     }
-    @keyframes gradientDrift2 {
-      0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-      50% { transform: translate(-5%, 2%) rotate(6deg) scale(1.08); }
-    }
-    @keyframes gradientPulse {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 1; }
-    }
-    .phyntom-ambient-layer {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-    .phyntom-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      pointer-events: none;
-      will-change: transform;
-    }
-    .phyntom-mesh {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      opacity: 0.45;
-    }
+    .px-page a { color: inherit; text-decoration: none; }
+    .px-page img { display: block; max-width: 100%; }
 
-    /* ===== HERO ===== */
-    .phyntom-hero {
+    /* ─── BUTTONS ─── */
+    .px-btn {
+      display: inline-block;
+      font-family: var(--px-font);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 13px 28px;
+      border: var(--px-border);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      white-space: nowrap;
+    }
+    .px-btn-dark { background: var(--px-black); color: var(--px-white); }
+    .px-btn-dark:hover { background: var(--px-yellow); color: var(--px-black); }
+    .px-btn-yellow { background: var(--px-yellow); color: var(--px-black); }
+    .px-btn-yellow:hover { background: var(--px-black); color: var(--px-yellow); }
+    .px-btn-outline-white { background: transparent; color: var(--px-white); border: 2px solid var(--px-white); }
+    .px-btn-outline-white:hover { background: var(--px-white); color: var(--px-black); }
+
+    /* ─── HERO ─── */
+    .px-hero {
       position: relative;
-      width: 100%;
       min-height: 100vh;
+      margin-top: 72px;
+      border-bottom: var(--px-border);
+      background: var(--px-black);
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: stretch;
       overflow: hidden;
     }
-    .phyntom-hero-ambient {
+    .px-hero-video-bg {
       position: absolute;
       inset: 0;
       z-index: 0;
-      background:
-        radial-gradient(ellipse 60% 50% at 50% 40%, rgba(91,160,232,0.14) 0%, transparent 60%),
-        radial-gradient(ellipse 45% 45% at 75% 70%, rgba(78,216,192,0.08) 0%, transparent 50%),
-        radial-gradient(ellipse 35% 30% at 20% 80%, rgba(120,100,220,0.06) 0%, transparent 55%),
-        conic-gradient(from 200deg at 60% 35%, rgba(91,160,232,0.06) 0deg, transparent 60deg, rgba(78,216,192,0.04) 120deg, transparent 180deg, rgba(91,160,232,0.03) 300deg, transparent 360deg),
-        var(--color-bg);
+      overflow: hidden;
     }
-    .phyntom-hero-orb1 {
-      width: 600px; height: 600px;
-      top: -15%; left: 15%;
-      background: radial-gradient(circle, rgba(91,160,232,0.18) 0%, rgba(91,160,232,0.03) 50%, transparent 70%);
-      animation: gradientDrift 18s ease-in-out infinite;
+    .px-hero-video-bg video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
-    .phyntom-hero-orb2 {
-      width: 450px; height: 450px;
-      bottom: -10%; right: 10%;
-      background: radial-gradient(circle, rgba(78,216,192,0.14) 0%, rgba(78,216,192,0.02) 50%, transparent 70%);
-      animation: gradientDrift2 22s ease-in-out infinite;
-    }
-    .phyntom-hero-orb3 {
-      width: 350px; height: 350px;
-      top: 25%; right: 25%;
-      background: radial-gradient(circle, rgba(120,100,220,0.1) 0%, transparent 60%);
-      animation: gradientDrift 26s ease-in-out infinite reverse;
-    }
-    .phyntom-hero-grid {
+    .px-hero-video-bg::after {
+      content: '';
       position: absolute;
       inset: 0;
-      z-index: 0;
-      background-image:
-        linear-gradient(rgba(91,160,232,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(91,160,232,0.05) 1px, transparent 1px);
-      background-size: 80px 80px;
-      mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%);
-      -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%);
+      background: linear-gradient(
+        180deg,
+        rgba(10,10,10,0.45) 0%,
+        rgba(10,10,10,0.3) 40%,
+        rgba(10,10,10,0.55) 100%
+      );
+      z-index: 1;
     }
-    .phyntom-hero-inner {
+    .px-hero-left {
       position: relative;
       z-index: 2;
-      text-align: center;
-      max-width: 820px;
-      padding: 0 var(--space-lg);
-    }
-    .phyntom-hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 14px;
-      font-family: var(--font-body);
-      font-size: 0.7rem;
-      font-weight: 500;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      color: var(--phyntom);
-      margin-bottom: var(--space-xl);
-      opacity: 0;
-      transform: translateY(10px);
-      animation: phyntomReveal 1.1s var(--ease-out) 0.3s forwards;
-    }
-    .phyntom-hero-eyebrow::before,
-    .phyntom-hero-eyebrow::after {
-      content: '';
-      width: 36px;
-      height: 1px;
-      background: var(--phyntom-dim);
-    }
-    .phyntom-hero-title {
-      font-family: var(--font-display);
-      font-size: clamp(2.8rem, 7vw + 0.5rem, 7rem);
-      font-weight: 400;
-      font-style: italic;
-      color: #fff;
-      line-height: 0.95;
-      letter-spacing: -0.03em;
-      margin-bottom: var(--space-lg);
-      opacity: 0;
-      transform: translateY(24px);
-      animation: phyntomReveal 1.4s var(--ease-out) 0.6s forwards;
-    }
-    .phyntom-hero-title em {
-      font-style: italic;
-      color: var(--phyntom);
-    }
-    .phyntom-hero-sub {
-      font-family: var(--font-body);
-      font-weight: 300;
-      font-size: clamp(1rem, 1.2vw + 0.3rem, 1.35rem);
-      color: var(--color-text-body);
-      letter-spacing: 0.04em;
-      line-height: 1.75;
-      max-width: 48ch;
-      margin: 0 auto var(--space-xl);
-      opacity: 0;
-      transform: translateY(14px);
-      animation: phyntomReveal 1.2s var(--ease-out) 1s forwards;
-    }
-    .phyntom-hero-tag {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 22px;
-      border-radius: 9999px;
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: var(--phyntom-mint);
-      background: rgba(78, 216, 192, 0.06);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.08),
-        0 2px 12px rgba(0,0,0,0.18);
-      position: relative;
-      overflow: hidden;
-      opacity: 0;
-      animation: phyntomReveal 1s var(--ease-out) 1.4s forwards;
-    }
-    .phyntom-hero-tag::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      padding: 1px;
-      background: linear-gradient(180deg, rgba(78,216,192,0.35), rgba(78,216,192,0.05));
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-    .phyntom-hero-tag .dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--phyntom-mint);
-      box-shadow: 0 0 10px var(--phyntom-mint);
-      animation: dotPulse 2s ease-in-out infinite;
-    }
-    @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    @keyframes phyntomReveal { to { opacity:1; transform:translateY(0); } }
-
-    /* Scroll hint */
-    .phyntom-scroll-hint {
-      margin-top: var(--space-xl);
+      padding: 72px 64px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      opacity: 0;
-      animation: phyntomReveal 1s var(--ease-out) 1.8s forwards;
+      justify-content: space-between;
+      width: 58%;
     }
-    .phyntom-scroll-hint span {
-      font-family: var(--font-body);
-      font-size: 0.6rem;
-      letter-spacing: 0.3em;
+    .px-hero-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--color-text-dim);
+      color: rgba(255,255,255,0.6);
     }
-    .phyntom-scroll-hint .scroll-line {
-      width: 1px;
-      height: 40px;
-      background: linear-gradient(180deg, rgba(91,160,232,0.4), transparent);
-      animation: scrollPulse 2.4s ease-in-out infinite;
-    }
-    @keyframes scrollPulse { 0%,100%{opacity:0.3} 50%{opacity:0.9} }
-
-    /* ===== Section base ===== */
-    .phyntom-section {
-      padding: clamp(6rem, 12vh, 11rem) 0;
-      position: relative;
-    }
-
-    .phyntom-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 14px;
-      font-family: var(--font-body);
-      font-size: 0.66rem;
-      font-weight: 500;
-      letter-spacing: 0.24em;
+    .px-hero-headline {
+      font-size: clamp(72px, 9.5vw, 140px);
+      font-weight: 700;
+      line-height: 0.93;
       text-transform: uppercase;
-      color: var(--phyntom);
-      margin-bottom: var(--space-lg);
+      letter-spacing: -0.025em;
+      margin-top: 40px;
+      color: #FFFFFF !important;
+      font-family: var(--px-font) !important;
+      text-shadow: 0 4px 60px rgba(0,0,0,0.5);
+      -webkit-text-stroke: 0;
     }
-    .phyntom-eyebrow::before {
-      content: '';
-      width: 28px;
-      height: 1px;
-      background: var(--phyntom);
-    }
-
-    /* ===== VISION ===== */
-    .phyntom-vision {
-      text-align: center;
-      overflow: hidden;
-      position: relative;
-    }
-    .phyntom-vision::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 50% 60% at 30% 40%, rgba(91,160,232,0.07) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 50% at 80% 70%, rgba(78,216,192,0.05) 0%, transparent 55%),
-        conic-gradient(from 130deg at 50% 50%, rgba(91,160,232,0.03) 0deg, transparent 90deg, rgba(120,100,220,0.03) 180deg, transparent 270deg, rgba(78,216,192,0.02) 360deg);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .phyntom-vision .container { position: relative; z-index: 1; }
-    .phyntom-vision-orb {
-      position: absolute;
-      width: 500px; height: 500px;
-      border-radius: 50%;
-      filter: blur(60px);
-      pointer-events: none;
-      z-index: 0;
-      will-change: transform;
-    }
-    .phyntom-vision-orb.orb-l { top: -80px; left: -180px; background: radial-gradient(circle, rgba(91,160,232,0.1), transparent 65%); animation: gradientDrift 20s ease-in-out infinite; }
-    .phyntom-vision-orb.orb-r { bottom: -120px; right: -180px; background: radial-gradient(circle, rgba(78,216,192,0.07), transparent 65%); animation: gradientDrift2 24s ease-in-out infinite; }
-    .phyntom-vision h2 {
-      font-size: clamp(2.2rem, 4.2vw + 0.5rem, 4.6rem);
-      line-height: 1.05;
-      color: var(--color-heading);
-      max-width: 18ch;
-      margin: 0 auto var(--space-lg);
-    }
-    .phyntom-vision h2 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-vision-lede {
-      font-weight: 300;
-      font-size: var(--text-lg);
-      color: var(--color-text-body);
-      line-height: 1.8;
-      max-width: 58ch;
-      margin: 0 auto;
-    }
-    .phyntom-vision-divider {
-      width: 60px;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--phyntom-dim), transparent);
-      margin: var(--space-xl) auto;
-    }
-
-    /* ===== MARKET SIGNAL ===== */
-    .phyntom-market {
-      background: var(--color-surface);
-      overflow: hidden;
-      position: relative;
-    }
-    .phyntom-market::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 55% 50% at 20% 30%, rgba(91,160,232,0.06) 0%, transparent 65%),
-        radial-gradient(ellipse 40% 45% at 80% 80%, rgba(78,216,192,0.04) 0%, transparent 55%),
-        radial-gradient(ellipse 30% 35% at 60% 10%, rgba(120,100,220,0.04) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .phyntom-market .container { position: relative; z-index: 1; }
-    .phyntom-market-inner {
+    .px-hero-headline .hl { background: var(--px-yellow); color: #FFFFFF !important; padding: 0 6px; display: inline; }
+    .px-hero-bottom {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: var(--space-2xl);
-      align-items: center;
+      border-top: 2px solid rgba(255,255,255,0.2);
+      margin-top: 40px;
     }
-    .phyntom-market-number {
-      font-family: var(--font-display);
-      font-style: italic;
-      font-size: clamp(5rem, 12vw, 12rem);
-      color: var(--phyntom);
-      line-height: 0.85;
-      letter-spacing: -0.04em;
-      opacity: 0.9;
-    }
-    .phyntom-market-number span {
-      font-size: 0.35em;
-      color: var(--color-text-muted);
-      letter-spacing: 0;
-      font-style: normal;
-      font-family: var(--font-body);
-      font-weight: 300;
-      vertical-align: super;
-    }
-    .phyntom-market-caption {
-      font-family: var(--font-mono);
-      font-size: 0.66rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--phyntom-dim);
-      margin-top: var(--space-md);
-    }
-    .phyntom-market-text h2 {
-      font-size: clamp(2rem, 3.6vw, 3.2rem);
-      line-height: 1.1;
-      color: var(--color-heading);
-      margin-bottom: var(--space-md);
-    }
-    .phyntom-market-text h2 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-market-text p {
-      font-weight: 300;
-      font-size: var(--text-base);
-      color: var(--color-text-body);
-      line-height: 1.75;
-      max-width: 48ch;
-    }
-    @media (max-width: 900px) {
-      .phyntom-market-inner { grid-template-columns: 1fr; gap: var(--space-xl); text-align: center; }
-      .phyntom-market-text { text-align: left; }
-    }
+    .px-hero-stat { padding: 24px 0; }
+    .px-hero-stat:first-child { border-right: 2px solid rgba(255,255,255,0.2); padding-right: 32px; }
+    .px-hero-stat:last-child { padding-left: 32px; }
+    .px-stat-n { font-size: 52px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: #fff; }
+    .px-stat-l { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-top: 6px; }
 
-    /* ===== THE GAP ===== */
-    .phyntom-gap {
+    .px-hero-right {
       position: relative;
-      overflow: hidden;
-    }
-    .phyntom-gap::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 45% 40% at 75% 25%, rgba(91,160,232,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 50% 50% at 15% 75%, rgba(78,216,192,0.05) 0%, transparent 55%),
-        conic-gradient(from 310deg at 40% 60%, rgba(91,160,232,0.03) 0deg, transparent 120deg, rgba(120,100,220,0.02) 240deg, transparent 360deg);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .phyntom-gap .container { position: relative; z-index: 1; }
-    .phyntom-gap-header {
-      text-align: center;
-      max-width: 780px;
-      margin: 0 auto var(--space-2xl);
-    }
-    .phyntom-gap-header h2 {
-      font-size: clamp(2rem, 3.8vw, 3.4rem);
-      line-height: 1.1;
-      color: var(--color-heading);
-      margin-bottom: var(--space-md);
-    }
-    .phyntom-gap-header h2 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-gap-header p {
-      font-weight: 300;
-      font-size: var(--text-lg);
-      color: var(--color-text-body);
-      line-height: 1.7;
-      max-width: 52ch;
-      margin: 0 auto;
-    }
-    .phyntom-gaps-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1px;
-      background: rgba(91, 160, 232, 0.08);
-    }
-    .phyntom-gap-card {
-      background: var(--phyntom-surface);
-      backdrop-filter: blur(18px) saturate(1.2);
-      -webkit-backdrop-filter: blur(18px) saturate(1.2);
-      padding: clamp(2rem, 3vw, 3rem) clamp(1.6rem, 2.4vw, 2.2rem);
-      min-height: 300px;
+      z-index: 2;
+      background: rgba(10,10,10,0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: var(--px-white);
+      padding: 72px 56px;
       display: flex;
       flex-direction: column;
-      position: relative;
-      transition: all 0.5s var(--ease-out);
-    }
-    .phyntom-gap-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0;
-      width: 32px;
-      height: 1px;
-      background: linear-gradient(90deg, var(--phyntom), transparent);
-    }
-    .phyntom-gap-card:hover {
-      background: rgba(26, 34, 52, 0.7);
-    }
-    .phyntom-gap-num {
-      font-family: var(--font-mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--phyntom-dim);
-      margin-bottom: var(--space-lg);
-    }
-    .phyntom-gap-card h4 {
-      font-family: var(--font-display);
-      font-weight: 400;
-      font-size: clamp(1.3rem, 1.8vw, 1.6rem);
-      color: var(--color-heading);
-      line-height: 1.15;
-      margin-bottom: var(--space-md);
-    }
-    .phyntom-gap-card h4 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-gap-card p {
-      font-weight: 300;
-      font-size: 0.88rem;
-      color: var(--color-text-body);
-      line-height: 1.65;
-      margin-top: auto;
-      max-width: 28ch;
-    }
-    @media (max-width: 900px) {
-      .phyntom-gaps-grid { grid-template-columns: 1fr 1fr; }
-    }
-    @media (max-width: 560px) {
-      .phyntom-gaps-grid { grid-template-columns: 1fr; }
-      .phyntom-gap-card { min-height: auto; }
+      justify-content: space-between;
+      width: 42%;
+      border-left: 2px solid rgba(255,255,255,0.1);
     }
 
-    /* ===== SOLUTION ===== */
-    .phyntom-solution {
-      background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
-      overflow: hidden;
-      position: relative;
-    }
-    .phyntom-solution::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 50% 40% at 50% 20%, rgba(91,160,232,0.06), transparent 65%),
-        radial-gradient(ellipse 40% 35% at 25% 70%, rgba(78,216,192,0.05), transparent 55%),
-        radial-gradient(ellipse 35% 30% at 80% 60%, rgba(120,100,220,0.04), transparent 50%),
-        conic-gradient(from 60deg at 50% 45%, rgba(91,160,232,0.025) 0deg, transparent 80deg, rgba(78,216,192,0.02) 160deg, transparent 240deg, rgba(91,160,232,0.015) 360deg);
-      pointer-events: none;
-    }
-    .phyntom-solution .container { position: relative; z-index: 1; }
-    .phyntom-solution-header {
-      text-align: center;
-      max-width: 820px;
-      margin: 0 auto var(--space-2xl);
-    }
-    .phyntom-solution-header h2 {
-      font-size: clamp(2.2rem, 4.2vw, 4rem);
-      line-height: 1.05;
-      color: var(--color-heading);
-      margin-bottom: var(--space-md);
-    }
-    .phyntom-solution-header h2 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-solution-header p {
-      font-weight: 300;
-      font-size: var(--text-lg);
-      color: var(--color-text-body);
-      line-height: 1.7;
-      max-width: 56ch;
-      margin: 0 auto;
-    }
-    .phyntom-pillars {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-lg);
-      max-width: 1080px;
-      margin: 0 auto;
-    }
-    .phyntom-pillar {
-      background: var(--phyntom-surface);
-      backdrop-filter: blur(22px) saturate(1.3);
-      -webkit-backdrop-filter: blur(22px) saturate(1.3);
-      border-radius: 20px;
-      padding: clamp(2.4rem, 3.5vw, 3.2rem) clamp(1.8rem, 2.5vw, 2.4rem);
-      position: relative;
-      overflow: hidden;
-      transition: all 0.6s var(--ease-out);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.08),
-        0 10px 36px rgba(0,0,0,0.3);
-    }
-    .phyntom-pillar::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      padding: 1px;
-      background: linear-gradient(180deg,
-        rgba(255,255,255,0.14) 0%,
-        rgba(255,255,255,0.02) 35%,
-        rgba(91,160,232,0.1) 100%
-      );
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-    .phyntom-pillar::after {
-      content: '';
-      position: absolute;
-      top: 0; left: 12%;
-      width: 50%;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-      pointer-events: none;
-    }
-    .phyntom-pillar:hover {
-      transform: translateY(-4px);
-      background: rgba(26, 34, 52, 0.6);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.14),
-        0 18px 52px rgba(0,0,0,0.4),
-        0 0 50px var(--phyntom-glow);
-    }
-    .phyntom-pillar-icon {
-      width: 48px; height: 48px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, rgba(91,160,232,0.15), rgba(78,216,192,0.1));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: var(--space-lg);
-      font-size: 1.4rem;
-      color: var(--phyntom);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
-    }
-    .phyntom-pillar-num {
-      font-family: var(--font-mono);
-      font-size: 0.58rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--phyntom-dim);
-      margin-bottom: var(--space-md);
-    }
-    .phyntom-pillar h4 {
-      font-family: var(--font-display);
-      font-weight: 400;
-      font-size: clamp(1.4rem, 2vw, 1.85rem);
-      color: var(--color-heading);
-      line-height: 1.15;
-      margin-bottom: var(--space-md);
-    }
-    .phyntom-pillar h4 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-pillar p {
-      font-weight: 300;
-      font-size: 0.92rem;
-      color: var(--color-text-body);
-      line-height: 1.7;
-    }
-    @media (max-width: 900px) {
-      .phyntom-pillars { grid-template-columns: 1fr; max-width: 480px; }
-    }
-
-    /* ===== VALUE ===== */
-    .phyntom-value {
-      text-align: center;
-      border-top: 1px solid rgba(91,160,232,0.08);
-      border-bottom: 1px solid rgba(91,160,232,0.08);
-      position: relative;
-      overflow: hidden;
-    }
-    .phyntom-value::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 45% 50% at 50% 50%, rgba(91,160,232,0.04) 0%, transparent 65%),
-        radial-gradient(ellipse 35% 30% at 10% 80%, rgba(78,216,192,0.03) 0%, transparent 50%),
-        radial-gradient(ellipse 30% 30% at 90% 20%, rgba(120,100,220,0.03) 0%, transparent 50%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .phyntom-value > .container { position: relative; z-index: 1; }
-    .phyntom-value-inner {
-      max-width: 820px;
-      margin: 0 auto;
-    }
-    .phyntom-value h2 {
-      font-size: clamp(2rem, 3.6vw, 3.2rem);
-      line-height: 1.1;
-      color: var(--color-heading);
-      margin-bottom: var(--space-2xl);
-    }
-    .phyntom-value h2 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-value-items {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--space-xl);
-      text-align: left;
-    }
-    .phyntom-value-item {
-      padding-top: var(--space-lg);
-      border-top: 1px solid rgba(91,160,232,0.12);
-    }
-    .phyntom-value-item h5 {
-      font-family: var(--font-display);
-      font-weight: 400;
-      font-style: italic;
-      font-size: clamp(1.2rem, 1.6vw, 1.5rem);
-      color: var(--phyntom);
-      margin-bottom: var(--space-sm);
-    }
-    .phyntom-value-item p {
-      font-weight: 300;
-      font-size: 0.92rem;
-      color: var(--color-text-body);
-      line-height: 1.7;
-    }
-    @media (max-width: 700px) {
-      .phyntom-value-items { grid-template-columns: 1fr; gap: var(--space-lg); }
-    }
-
-    /* ===== CLOSING ===== */
-    .phyntom-closing {
-      text-align: center;
-      padding: clamp(7rem, 16vh, 14rem) var(--space-lg);
-      position: relative;
-      overflow: hidden;
-    }
-    .phyntom-closing-ambient {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background:
-        radial-gradient(ellipse 55% 60% at 50% 100%, rgba(91,160,232,0.1) 0%, transparent 65%),
-        radial-gradient(ellipse 40% 40% at 20% 15%, rgba(78,216,192,0.06) 0%, transparent 55%),
-        radial-gradient(ellipse 35% 35% at 80% 30%, rgba(120,100,220,0.05) 0%, transparent 55%),
-        conic-gradient(from 240deg at 50% 80%, rgba(91,160,232,0.04) 0deg, transparent 90deg, rgba(78,216,192,0.03) 180deg, transparent 270deg, rgba(91,160,232,0.02) 360deg);
-    }
-    .phyntom-closing > .container { position: relative; z-index: 1; }
-    .phyntom-closing h2 {
-      font-family: var(--font-display);
-      font-size: clamp(2rem, 4vw, 3.6rem);
-      font-weight: 400;
-      color: var(--color-heading);
-      line-height: 1.15;
-      max-width: 680px;
-      margin: 0 auto var(--space-xl);
-    }
-    .phyntom-closing h2 em { font-style: italic; color: var(--phyntom); }
-    .phyntom-cta {
+    .px-hero-right-inner { position: relative; z-index: 1; }
+    .px-hero-badge {
       display: inline-flex;
       align-items: center;
-      gap: var(--space-sm);
-      padding: 1rem 2.8rem;
-      font-family: var(--font-body);
-      font-size: 0.72rem;
-      font-weight: 500;
-      letter-spacing: 0.18em;
+      gap: 8px;
+      border: 2px solid var(--px-yellow);
+      color: var(--px-yellow);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 9999px;
-      background: rgba(91, 160, 232, 0.15);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      box-shadow:
-        inset 0 1px 1px rgba(255,255,255,0.12),
-        0 4px 20px rgba(91, 160, 232, 0.15);
-      position: relative;
-      overflow: hidden;
-      transition: all 0.4s var(--ease-out);
+      padding: 7px 14px;
+      width: fit-content;
+      margin-bottom: 48px;
     }
-    .phyntom-cta::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      padding: 1px;
-      background: linear-gradient(180deg, rgba(91,160,232,0.5), rgba(91,160,232,0.1) 50%, rgba(78,216,192,0.2));
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-    .phyntom-cta:hover {
-      background: rgba(91, 160, 232, 0.28);
-      transform: translateY(-2px);
-      box-shadow:
-        inset 0 1px 1px rgba(255,255,255,0.18),
-        0 8px 40px rgba(91, 160, 232, 0.25);
-      color: #fff;
-    }
+    .px-hero-right-heading { font-size: clamp(24px, 2.4vw, 34px); font-weight: 700; line-height: 1.22; letter-spacing: -0.01em; }
+    .px-hero-right-body { font-size: 16px; font-weight: 400; line-height: 1.65; color: rgba(255,255,255,0.82); margin-top: 28px; }
+    .px-hero-right-actions { margin-top: 48px; display: flex; flex-direction: column; gap: 12px; }
+    .px-hero-right-actions .px-btn { width: 100%; text-align: center; }
 
-    /* ===== Mobile ===== */
-    @media (max-width: 768px) {
-      .phyntom-hero { min-height: 88vh; }
-      .phyntom-hero-inner { padding: 0 1.25rem; }
-      .phyntom-scroll-hint { margin-top: var(--space-md); }
-      .container { padding: 0 1.25rem; }
+    /* ─── TICKER ─── */
+    .px-ticker { background: var(--px-yellow); border-bottom: var(--px-border); padding: 15px 0; overflow: hidden; }
+    .px-ticker-track { display: flex; animation: pxScroll 24s linear infinite; white-space: nowrap; }
+    .px-ticker-item { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 0 36px; flex-shrink: 0; color: var(--px-black); }
+    .px-ticker-item::after { content: '\25C6'; margin-left: 36px; font-size: 8px; vertical-align: middle; }
+    @keyframes pxScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    /* ─── SECTIONS ─── */
+    .px-section { padding: 96px 64px; border-bottom: var(--px-border); background: var(--px-white); }
+    .px-section-label { display: flex; align-items: center; gap: 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--px-mid-gray); margin-bottom: 20px; }
+    .px-section-label::before { content: ''; width: 28px; height: 3px; background: var(--px-yellow); flex-shrink: 0; }
+    .px-section-title { font-size: clamp(40px, 4.5vw, 68px); font-weight: 700; text-transform: uppercase; line-height: 0.95; letter-spacing: -0.02em; margin-bottom: 64px; color: var(--px-black); }
+
+    /* ─── SERVICES ─── */
+    .px-services-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: var(--px-border); }
+    .px-service-item { padding: 44px 40px; border-right: var(--px-border); }
+    .px-service-item:last-child { border-right: none; }
+    .px-service-num { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--px-mid-gray); margin-bottom: 28px; }
+    .px-service-name { font-size: 22px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.01em; line-height: 1.05; margin-bottom: 16px; color: var(--px-black); }
+    .px-service-desc { font-size: 15px; line-height: 1.65; color: #444; }
+
+    /* ─── INDUSTRIES ─── */
+    .px-industries-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: var(--px-border); }
+    .px-industry-card { border-right: var(--px-border); overflow: hidden; }
+    .px-industry-card:last-child { border-right: none; }
+    .px-industry-photo { width: 100%; height: 300px; object-fit: cover; border-bottom: var(--px-border); filter: grayscale(15%) contrast(1.05); transition: filter 0.3s; }
+    .px-industry-card:hover .px-industry-photo { filter: grayscale(0%) contrast(1.1); }
+    .px-industry-caption { padding: 28px 32px; }
+    .px-industry-tag { display: inline-block; background: var(--px-yellow); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 10px; margin-bottom: 14px; }
+    .px-industry-name { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 8px; color: var(--px-black); }
+    .px-industry-desc { font-size: 14px; color: #555; line-height: 1.55; }
+
+    /* ─── CERTIFICATION ─── */
+    .px-cert-section { background: var(--px-black); color: var(--px-white); }
+    .px-cert-section .px-section-label { color: rgba(255,255,255,0.35); }
+    .px-cert-section .px-section-label::before { background: var(--px-yellow); }
+    .px-cert-section .px-section-title { color: var(--px-white); }
+    .px-cert-grid { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid rgba(255,255,255,0.12); }
+    .px-cert-item { padding: 44px 40px; border-right: 2px solid rgba(255,255,255,0.12); border-bottom: 2px solid rgba(255,255,255,0.12); }
+    .px-cert-item:nth-child(3n) { border-right: none; }
+    .px-cert-item:nth-last-child(-n+3) { border-bottom: none; }
+    .px-cert-num { display: inline-flex; align-items: center; justify-content: center; background: var(--px-yellow); color: var(--px-black); font-size: 12px; font-weight: 700; width: 30px; height: 30px; margin-bottom: 24px; }
+    .px-cert-title { font-size: 20px; font-weight: 700; text-transform: uppercase; line-height: 1.1; letter-spacing: -0.01em; margin-bottom: 14px; color: var(--px-white); }
+    .px-cert-desc { font-size: 15px; line-height: 1.65; color: rgba(255,255,255,0.62); font-weight: 400; }
+
+    /* ─── PROCESS ─── */
+    .px-process-grid { display: grid; grid-template-columns: repeat(4, 1fr); border: var(--px-border); }
+    .px-process-step { padding: 44px 36px; border-right: var(--px-border); position: relative; }
+    .px-process-step:last-child { border-right: none; }
+    .px-process-arrow { position: absolute; right: -18px; top: 44px; width: 36px; height: 36px; background: var(--px-yellow); border: var(--px-border); display: flex; align-items: center; justify-content: center; font-weight: 900; z-index: 1; }
+    .px-process-step:last-child .px-process-arrow { display: none; }
+    .px-process-n { font-size: 72px; font-weight: 700; color: #EBEBEB; line-height: 1; margin-bottom: 20px; letter-spacing: -0.04em; }
+    .px-process-title { font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: -0.01em; margin-bottom: 12px; color: var(--px-black); }
+    .px-process-desc { font-size: 14px; color: #555; line-height: 1.6; }
+
+    /* ─── CTA ─── */
+    .px-cta-section { background: var(--px-black); color: var(--px-white); padding: 128px 64px; text-align: center; position: relative; overflow: hidden; border-bottom: none; }
+    .px-cta-bg { position: absolute; inset: 0; background-image: url('assets/Phyntom x8 /stage design.jpeg'); background-size: cover; background-position: center 30%; opacity: 0.13; }
+    .px-cta-content { position: relative; z-index: 1; }
+    .px-cta-title { font-size: clamp(52px, 7vw, 108px); font-weight: 700; text-transform: uppercase; line-height: 0.93; letter-spacing: -0.025em; color: var(--px-white); margin-bottom: 40px; font-family: var(--px-font); }
+    .px-cta-yellow { color: var(--px-yellow); }
+    .px-cta-sub { font-size: 20px; font-weight: 400; color: rgba(255,255,255,0.68); margin-bottom: 52px; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.55; }
+    .px-cta-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* ─── OVERRIDE FOOTER FOR WHITE CONTEXT ─── */
+    /* footer already inherits from bundle.min.css — no overrides needed */
+
+    /* ─── SCATTERED BACKGROUND SQUARES ─── */
+    .px-section { position: relative; overflow: hidden; }
+    .px-sq {
+      position: absolute;
+      object-fit: cover;
+      border-radius: 4px;
+      opacity: 0.18;
+      z-index: 0;
+      pointer-events: none;
+      cursor: default;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+      will-change: transform, opacity;
+    }
+    /* Keep section content above squares */
+    .px-section-label, .px-section-title,
+    .px-services-grid, .px-industries-grid,
+    .px-cert-grid, .px-process-grid { position: relative; z-index: 2; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1100px) {
+      .px-hero { flex-direction: column; }
+      .px-hero-left { width: 100%; }
+      .px-hero-right { width: 100%; min-height: 520px; border-left: none; border-top: 2px solid rgba(255,255,255,0.1); }
+    }
+    @media (max-width: 860px) {
+      .px-services-grid, .px-industries-grid, .px-cert-grid, .px-process-grid { grid-template-columns: 1fr; }
+      .px-service-item, .px-industry-card, .px-process-step { border-right: none; border-bottom: var(--px-border); }
+      .px-service-item:last-child, .px-process-step:last-child { border-bottom: none; }
+      .px-cert-item { border-right: none; }
+      .px-process-arrow { display: none; }
+      .px-section { padding: 64px 28px; }
+      .px-cta-section { padding: 80px 28px; }
+    }
+    @media (max-width: 560px) {
+      .px-hero-left { padding: 48px 28px; }
+      .px-hero-right { padding: 48px 28px; }
     }
   </style>
 </head>
-<body class="phyntom-page">
-  <a href="#main" class="skip-link">Skip to content</a>
+<body>
 
+  <a href="#main" class="skip-link">Skip to content</a>
+  <div class="loader-overlay" aria-hidden="true"><div class="loader-logo"><img src="assets/MegaX_logo2.png" alt=""></div></div>
+
+  <!-- ===== MEGA X NAV ===== -->
   <nav class="nav" aria-label="Main navigation">
     <div class="container nav-inner">
       <a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2_circle.png" alt="Mega X" height="48"></a>
       <ul class="nav-links">
         <li><a href="index.html">Home</a></li>
-        <li><a href="phyntom-x8.html" style="color:var(--phyntom);">Phyntom X8</a></li>
+        <li><a href="phyntom-x8.html" style="color:var(--color-primary);">Phyntom X8</a></li>
         <li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li>
-        <li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li>
+        <li><a href="wifi-iot-chips.html">ChipNexus Hub</a></li>
         <li><a href="about.html">Company</a></li>
         <li><a href="contact.html" class="btn btn-primary" style="padding:0.5rem 1.2rem;">Contact</a></li>
       </ul>
       <button class="nav-toggle" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
-    </div>
     <div class="nav-glow-line"></div>
+    </div>
   </nav>
-
   <div class="mobile-menu" role="dialog" aria-label="Mobile navigation">
     <a href="index.html">Home</a>
     <a href="phyntom-x8.html">Phyntom X8</a>
     <a href="fann-gaming-ai.html">FannX Gaming AI</a>
-    <a href="wifi-iot-chips.html">IoT Chip & Robotics</a>
+    <a href="wifi-iot-chips.html">ChipNexus Hub</a>
     <a href="about.html">Company</a>
     <a href="contact.html">Contact</a>
   </div>
 
-  <main id="main">
+  <!-- ===== PAGE CONTENT ===== -->
+  <main id="main" class="px-page">
 
-    <!-- ===== HERO ===== -->
-    <section class="phyntom-hero">
-      <div class="phyntom-hero-ambient" aria-hidden="true">
-        <div class="phyntom-orb phyntom-hero-orb1"></div>
-        <div class="phyntom-orb phyntom-hero-orb2"></div>
-        <div class="phyntom-orb phyntom-hero-orb3"></div>
-      </div>
-      <div class="phyntom-hero-grid" aria-hidden="true"></div>
-      <div class="phyntom-hero-inner">
-        <div class="phyntom-hero-eyebrow">Phyntom X8</div>
-        <h1 class="phyntom-hero-title">Deploy a <em>department</em>. <br>Not a person.</h1>
-        <p class="phyntom-hero-sub">The world's first platform for instantly deploying AI-native productivity business units — complete, outcome-accountable, running 24/7.</p>
-        <span class="phyntom-hero-tag"><span class="dot"></span>AI-Workflow Factory</span>
-        <div class="phyntom-scroll-hint">
-          <span>Scroll</span>
-          <div class="scroll-line"></div>
+    <!-- HERO -->
+    <section class="px-hero">
+      <div class="px-hero-video-bg"><video autoplay muted loop playsinline><source src="assets/Phyntom x8 /hero x8.mp4" type="video/mp4"></video></div>
+      <div class="px-hero-left">
+        <p class="px-hero-eyebrow">Phyntom X8 · Certified AI Department</p>
+        <h1 class="px-hero-headline">
+          YOUR<br>
+          <span class="hl">AI DEPT</span><br>
+          IS HERE.
+        </h1>
+        <div class="px-hero-bottom">
+          <div class="px-hero-stat">
+            <div class="px-stat-n">3×</div>
+            <div class="px-stat-l">Avg. Productivity Gain</div>
+          </div>
+          <div class="px-hero-stat">
+            <div class="px-stat-n">30 days</div>
+            <div class="px-stat-l">To Full Deployment</div>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- ===== VISION ===== -->
-    <section class="phyntom-section phyntom-vision">
-      <div class="phyntom-vision-orb orb-l" aria-hidden="true"></div>
-      <div class="phyntom-vision-orb orb-r" aria-hidden="true"></div>
-      <div class="container">
-        <div class="phyntom-eyebrow reveal" style="justify-content:center;display:inline-flex;">I · Vision</div>
-        <h2 class="reveal" style="transition-delay:100ms;">Every organization instantly owns a department that <em>didn't exist before</em>.</h2>
-        <div class="phyntom-vision-divider reveal" style="transition-delay:180ms;"></div>
-        <p class="phyntom-vision-lede reveal" style="transition-delay:260ms;">We upgrade traditional human-intensive departments into digital productivity modules — instantly deployed, scaled on demand, paid by results. The global economy shifts from human labor to AI agent factories, and Phyntom X8 is the operating system that makes it happen.</p>
-      </div>
-    </section>
-
-    <!-- ===== MARKET SIGNAL ===== -->
-    <section class="phyntom-section phyntom-market">
-      <div class="container">
-        <div class="phyntom-market-inner reveal">
-          <div style="text-align:center;">
-            <div class="phyntom-market-number">$20<span>T+</span></div>
-            <div class="phyntom-market-caption">Annual enterprise spend on standardizable BUs</div>
-          </div>
-          <div class="phyntom-market-text">
-            <div class="phyntom-eyebrow">II · Market</div>
-            <h2>A ten-trillion-dollar <em>restructuring</em> opportunity.</h2>
-            <p>Customer service, financial reconciliation, compliance review, content moderation, recruitment screening — process-driven departments that account for trillions in annual cost. Fixed processes. Digitizable knowledge. Quantifiable output. Naturally suited for AI-native replacement.</p>
+      <div class="px-hero-right">
+    
+        <div class="px-hero-right-inner">
+          <div class="px-hero-badge">◆ Phyntom X8</div>
+          <h2 class="px-hero-right-heading">
+            We run AI so your business runs better — without you becoming a tech person.
+          </h2>
+          <p class="px-hero-right-body">
+            Certified AI Department is a fully managed AI operations service. We audit your
+            workflows, work with you to deploy the agent flow, and maintain everything. You get the results.
+            We handle the complexity.
+          </p>
+          <div class="px-hero-right-actions">
+            <a href="contact.html" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.4);">Start With a Free Assessment →</a>
+            <a href="#how-it-works" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.25);">See How It Works</a>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== THE GAP ===== -->
-    <section class="phyntom-section phyntom-gap">
-      <div class="phyntom-ambient-layer" aria-hidden="true">
-        <div class="phyntom-orb" style="width:400px;height:400px;top:-5%;right:-8%;background:radial-gradient(circle,rgba(91,160,232,0.1),transparent 65%);animation:gradientDrift 22s ease-in-out infinite;"></div>
-        <div class="phyntom-orb" style="width:300px;height:300px;bottom:5%;left:-5%;background:radial-gradient(circle,rgba(78,216,192,0.08),transparent 60%);animation:gradientDrift2 18s ease-in-out infinite;"></div>
+    <!-- TICKER -->
+    <div class="px-ticker">
+      <div class="px-ticker-track">
+        <span class="px-ticker-item">Workflow Automation</span>
+        <span class="px-ticker-item">Custom AI Agents</span>
+        <span class="px-ticker-item">Team Training</span>
+        <span class="px-ticker-item">Ongoing Operations</span>
+        <span class="px-ticker-item">ROI Measurement</span>
+        <span class="px-ticker-item">Integration Management</span>
+        <span class="px-ticker-item">Quality Certification</span>
+        <span class="px-ticker-item">Expert Oversight</span>
+        <span class="px-ticker-item">Workflow Automation</span>
+        <span class="px-ticker-item">Custom AI Agents</span>
+        <span class="px-ticker-item">Team Training</span>
+        <span class="px-ticker-item">Ongoing Operations</span>
+        <span class="px-ticker-item">ROI Measurement</span>
+        <span class="px-ticker-item">Integration Management</span>
+        <span class="px-ticker-item">Quality Certification</span>
+        <span class="px-ticker-item">Expert Oversight</span>
       </div>
-      <div class="container">
-        <div class="phyntom-gap-header reveal">
-          <div class="phyntom-eyebrow" style="justify-content:center;display:inline-flex;">III · The Gap</div>
-          <h2>Four fundamental gaps the market <em>cannot fill</em>.</h2>
-          <p>Thousands of AI tools exist. None deliver a complete, independently operating, outcome-accountable business unit.</p>
+    </div>
+
+    <!-- SERVICES -->
+    <section class="px-section" id="how-it-works">
+      <p class="px-section-label">01 / What We Run</p>
+      <h2 class="px-section-title">We Handle<br>The Work.</h2>
+      <div class="px-services-grid">
+        <div class="px-service-item">
+          <p class="px-service-num">01</p>
+          <h3 class="px-service-name">Financial Operations</h3>
+          <p class="px-service-desc">Monthly investor updates, cash flow projections, financial summaries, and pitch materials — generated automatically, reviewed by a domain expert before you see them.</p>
         </div>
-        <div class="phyntom-gaps-grid reveal" style="transition-delay:140ms;">
-          <div class="phyntom-gap-card">
-            <div class="phyntom-gap-num">Gap 01</div>
-            <h4>No <em>end-to-end</em> delivery</h4>
-            <p>AI tools are atomic capabilities, not departmental solutions. Enterprises still hire teams for work each subtask could handle.</p>
+        <div class="px-service-item">
+          <p class="px-service-num">02</p>
+          <h3 class="px-service-name">Creative Production</h3>
+          <p class="px-service-desc">Story briefs, character arcs, content calendars, campaign copy, brand narratives — your creative output scaled without scaling your team. Your voice, produced at volume.</p>
+        </div>
+        <div class="px-service-item">
+          <p class="px-service-num">03</p>
+          <h3 class="px-service-name">Operations Intelligence</h3>
+          <p class="px-service-desc">Weekly performance reports, pipeline summaries, project updates, team briefings — the operational knowledge your business generates, organized and delivered on schedule.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- INDUSTRIES -->
+    <section class="px-section" id="industries">
+      <p class="px-section-label">02 / Industries</p>
+      <h2 class="px-section-title">Built For<br>Your World.</h2>
+      <div class="px-industries-grid">
+        <div class="px-industry-card">
+          <img src="assets/Phyntom x8 /game studio.png" alt="Game production studio" class="px-industry-photo">
+          <div class="px-industry-caption">
+            <span class="px-industry-tag">Creative</span>
+            <h3 class="px-industry-name">Game & Entertainment Studios</h3>
+            <p class="px-industry-desc">Story generation, character development, world-building briefs, and narrative production — automated from your creative direction.</p>
           </div>
-          <div class="phyntom-gap-card">
-            <div class="phyntom-gap-num">Gap 02</div>
-            <h4>Domain know-how <em>locked</em> in silos</h4>
-            <p>Core knowledge lives in SOPs, emails, and historical decisions — never structured, never made AI-executable.</p>
+        </div>
+        <div class="px-industry-card">
+          <img src="assets/Phyntom x8 /design studio.png" alt="Design studio" class="px-industry-photo">
+          <div class="px-industry-caption">
+            <span class="px-industry-tag">Agencies</span>
+            <h3 class="px-industry-name">Marketing & Design Agencies</h3>
+            <p class="px-industry-desc">Pitch decks, campaign briefs, client reports, and content pipelines — your team's expertise running at a pace no hire could match.</p>
           </div>
-          <div class="phyntom-gap-card">
-            <div class="phyntom-gap-num">Gap 03</div>
-            <h4>No structured <em>human-AI</em> collaboration</h4>
-            <p>Full replacement fails. Frequent intervention loses efficiency. No platform defines the right boundary.</p>
-          </div>
-          <div class="phyntom-gap-card">
-            <div class="phyntom-gap-num">Gap 04</div>
-            <h4>No <em>outcome-based</em> pricing</h4>
-            <p>Leaders need results, not API calls. No one charges per report delivered, per review completed, per row cleaned.</p>
+        </div>
+        <div class="px-industry-card">
+          <img src="assets/Phyntom x8 /stage design.jpeg" alt="Live events" class="px-industry-photo">
+          <div class="px-industry-caption">
+            <span class="px-industry-tag">Events</span>
+            <h3 class="px-industry-name">Events & Experience Companies</h3>
+            <p class="px-industry-desc">Sponsorship decks, vendor communications, post-event reports, and season planning — produced while you're focused on the event itself.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== SOLUTION ===== -->
-    <section class="phyntom-section phyntom-solution">
-      <div class="phyntom-ambient-layer" aria-hidden="true">
-        <div class="phyntom-orb" style="width:500px;height:500px;top:10%;left:-12%;background:radial-gradient(circle,rgba(91,160,232,0.09),transparent 60%);animation:gradientDrift2 25s ease-in-out infinite;"></div>
-        <div class="phyntom-orb" style="width:380px;height:380px;bottom:-5%;right:-6%;background:radial-gradient(circle,rgba(120,100,220,0.07),transparent 60%);animation:gradientDrift 20s ease-in-out infinite reverse;"></div>
-        <div class="phyntom-orb" style="width:250px;height:250px;top:35%;right:20%;background:radial-gradient(circle,rgba(78,216,192,0.06),transparent 55%);animation:gradientPulse 8s ease-in-out infinite;"></div>
-      </div>
-      <div class="container">
-        <div class="phyntom-solution-header reveal">
-          <div class="phyntom-eyebrow" style="justify-content:center;display:inline-flex;">IV · Solution</div>
-          <h2>Three components. One <em>instant</em> department.</h2>
-          <p>Each Phyntom X8 business unit is a pre-trained agent swarm — deployed instantly, running autonomously, accountable by KPI.</p>
+    <!-- CERTIFICATION -->
+    <section class="px-section px-cert-section" id="certification">
+      <p class="px-section-label">03 / The Standard</p>
+      <h2 class="px-section-title">What "Certified"<br>Actually Means.</h2>
+      <div class="px-cert-grid">
+        <div class="px-cert-item">
+          <div class="px-cert-num">1</div>
+          <h3 class="px-cert-title">It Runs Without You</h3>
+          <p class="px-cert-desc">Your AI Department handles work automatically, on schedule. You don't log in, press buttons, or check if it worked. If anything stops working, we tell you first.</p>
         </div>
-        <div class="phyntom-pillars reveal" style="transition-delay:160ms;">
-          <div class="phyntom-pillar">
-            <div class="phyntom-pillar-icon">⧈</div>
-            <div class="phyntom-pillar-num">Component 01</div>
-            <h4>Department <em>Brain</em></h4>
-            <p>Full SOP knowledge base, business materials, industry rules, and digital deposit of past cases — continuously learning from enterprise private data.</p>
-          </div>
-          <div class="phyntom-pillar">
-            <div class="phyntom-pillar-icon">⟁</div>
-            <div class="phyntom-pillar-num">Component 02</div>
-            <h4>Human-AI <em>Division</em></h4>
-            <p>Clearly defined boundaries between AI autonomous driving and human decision-makers. Critical nodes stay human. All biological redundancy eliminated.</p>
-          </div>
-          <div class="phyntom-pillar">
-            <div class="phyntom-pillar-icon">⬡</div>
-            <div class="phyntom-pillar-num">Component 03</div>
-            <h4>Agent <em>Procedures</em></h4>
-            <p>Business logic defined in natural language — converted by Phyntom X8 into AI-driven structured workflows that execute, learn, and improve continuously.</p>
-          </div>
+        <div class="px-cert-item">
+          <div class="px-cert-num">2</div>
+          <h3 class="px-cert-title">You Only See Work That's Ready</h3>
+          <p class="px-cert-desc">Before anything reaches you, we check it. If the output isn't good enough, it doesn't leave our hands. You see finished work, not drafts that need cleaning up.</p>
         </div>
-      </div>
-    </section>
-
-    <!-- ===== VALUE ===== -->
-    <section class="phyntom-section phyntom-value">
-      <div class="container">
-        <div class="phyntom-value-inner reveal">
-          <div class="phyntom-eyebrow" style="justify-content:center;display:inline-flex;">V · Value</div>
-          <h2>What this <em>changes</em>.</h2>
-          <div class="phyntom-value-items">
-            <div class="phyntom-value-item">
-              <h5>For Enterprises</h5>
-              <p>Instantly obtain a department that didn't exist before — at a fraction of labor cost. No recruiting, no training, no turnover. Scale up or down in one click.</p>
-            </div>
-            <div class="phyntom-value-item">
-              <h5>For Industries</h5>
-              <p>Domain know-how escapes private silos. Best practices circulate as AI-executable templates, accelerating the leap toward AI-native productivity.</p>
-            </div>
-            <div class="phyntom-value-item">
-              <h5>For the Economy</h5>
-              <p>Millions of SMEs gain access to capabilities they could never afford. Non-existent departments come to life. New business models emerge at the margin.</p>
-            </div>
-          </div>
+        <div class="px-cert-item">
+          <div class="px-cert-num">3</div>
+          <h3 class="px-cert-title">If You're Not Happy, We Fix It Fast</h3>
+          <p class="px-cert-desc">Tell us something's wrong. We respond the same day and have it resolved within 48 hours. No runaround, no blame, no explanation needed.</p>
+        </div>
+        <div class="px-cert-item">
+          <div class="px-cert-num">4</div>
+          <h3 class="px-cert-title">You Always Know What You're Paying For</h3>
+          <p class="px-cert-desc">We keep a plain-English record of exactly what your AI Department does. You can ask to see it anytime. If we change how something works, we tell you before we do it.</p>
+        </div>
+        <div class="px-cert-item">
+          <div class="px-cert-num">5</div>
+          <h3 class="px-cert-title">A Real Person Is Responsible</h3>
+          <p class="px-cert-desc">There's an actual expert — not just software — who is accountable for the quality of your AI Department's output. You know who they are. You can reach them.</p>
+        </div>
+        <div class="px-cert-item">
+          <div class="px-cert-num">6</div>
+          <h3 class="px-cert-title">Your Work Is Always Yours</h3>
+          <p class="px-cert-desc">If you ever want to leave, we hand you everything — a complete record of how your AI Department works — within one week. No lock-in. No hostage data.</p>
         </div>
       </div>
     </section>
 
-    <!-- ===== CLOSING ===== -->
-    <section class="phyntom-closing">
-      <div class="phyntom-closing-ambient" aria-hidden="true"></div>
-      <div class="container reveal">
-        <h2>The operating system for the next generation of <em>global productivity</em>.</h2>
-        <a href="contact.html" class="phyntom-cta">Get in Touch →</a>
+    <!-- PROCESS -->
+    <section class="px-section" id="process">
+      <p class="px-section-label">04 / How It Works</p>
+      <h2 class="px-section-title">Up and Running<br>In 30 Days.</h2>
+      <div class="px-process-grid">
+        <div class="px-process-step">
+          <div class="px-process-arrow">→</div>
+          <div class="px-process-n">01</div>
+          <h3 class="px-process-title">Free Assessment</h3>
+          <p class="px-process-desc">One 60-minute call. We map the specialist work your business currently pays people to do — and identify the highest-value things to automate first.</p>
+        </div>
+        <div class="px-process-step">
+          <div class="px-process-arrow">→</div>
+          <div class="px-process-n">02</div>
+          <h3 class="px-process-title">We Build It Together</h3>
+          <p class="px-process-desc">Two to three sessions. We work directly with you to encode your expertise into the workflows. You review every output before anything goes live.</p>
+        </div>
+        <div class="px-process-step">
+          <div class="px-process-arrow">→</div>
+          <div class="px-process-n">03</div>
+          <h3 class="px-process-title">Certified & Live</h3>
+          <p class="px-process-desc">Your AI Department launches. Runs on schedule, produces certified-quality output, sends you a weekly summary of everything it did.</p>
+        </div>
+        <div class="px-process-step">
+          <div class="px-process-n">04</div>
+          <h3 class="px-process-title">We Keep It Running</h3>
+          <p class="px-process-desc">Your retainer covers ongoing management, quality monitoring, improvements, and a named expert always responsible for what comes out.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="px-cta-section" id="contact-cta">
+      <div class="px-cta-bg"></div>
+      <div class="px-cta-content">
+        <h2 class="px-cta-title">Your AI<br><span class="px-cta-yellow">Department</span><br>Starts Here.</h2>
+        <p class="px-cta-sub">A free 60-minute assessment. No pitch, no pressure. We'll tell you exactly what's worth automating in your business and what isn't.</p>
+        <div class="px-cta-buttons">
+          <a href="contact.html" class="px-btn px-btn-yellow">Book a Free Assessment →</a>
+          <a href="mailto:info@megaxholdings.com" class="px-btn px-btn-outline-white">Write To Us</a>
+        </div>
       </div>
     </section>
 
   </main>
 
+  <!-- ===== MEGA X FOOTER ===== -->
   <footer>
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand"><a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2.png" alt="Mega X" height="88"></a><p>The core hub for AI-native enterprise, gaming intelligence, and integrated computing infrastructure.</p></div>
         <div class="footer-col"><h5>Company</h5><ul><li><a href="about.html">About</a></li><li><a href="about.html#leadership">Leadership</a></li><li><a href="about.html#careers">Careers</a></li></ul></div>
-        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="phyntom-x8.html">Phyntom X8</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
+        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="phyntom-x8.html">Phyntom X8</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">ChipNexus Hub</a></li></ul></div>
         <div class="footer-col"><h5>Connect</h5><ul><li><a href="contact.html">Contact</a></li><li><a href="contact.html">Investor Relations</a></li><li><a href="contact.html">Press</a></li></ul></div>
       </div>
       <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Phyntom X8 · Gaming AI · IoT Chip & Robotics</span></div>
@@ -962,6 +547,126 @@
   </footer>
 
   <button class="scroll-top" aria-label="Scroll to top"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15V3"/><path d="M3 8l6-6 6 6"/></svg></button>
+  <script>
+    // Scatter colorful cropped squares into white sections with mouse interaction
+    (function() {
+      var imgs = [
+        'a_01.png','a_02.png','a_03.png','a_04.png','a_05.png','a_06.png',
+        'a_07.png','a_08.png','a_09.png','a_10.png','a_11.png','a_12.png',
+        'a_13.png','a_14.png','a_15.png','a_16.png','a_17.png','a_18.png',
+        'a_19.png','a_20.png','a_21.png',
+        'b_22.png','b_23.png','b_24.png','b_25.png','b_26.png','b_27.png',
+        'b_28.png','b_29.png','b_30.png','b_31.png','b_32.png','b_33.png',
+        'b_34.png','b_35.png','b_36.png','b_37.png'
+      ];
+      var sections = document.querySelectorAll('.px-section:not(.px-cert-section)');
+      var used = [];
+      sections.forEach(function(sec) {
+        var count = 8 + Math.floor(Math.random() * 5); // 8-12 per section
+        for (var i = 0; i < count; i++) {
+          var pick;
+          do { pick = imgs[Math.floor(Math.random() * imgs.length)]; } while (used.indexOf(pick) > -1 && used.length < imgs.length);
+          used.push(pick);
+          if (used.length >= imgs.length) used = [];
+
+          var img = document.createElement('img');
+          img.className = 'px-sq';
+          img.src = 'assets/Phyntom x8 /cropped/' + pick;
+          img.alt = '';
+          img.draggable = false;
+          var size = 35 + Math.floor(Math.random() * 80);
+          img.style.width = size + 'px';
+          img.style.height = size + 'px';
+          img.style.top = Math.floor(Math.random() * 88) + '%';
+          img.style.left = Math.floor(Math.random() * 90) + '%';
+          sec.appendChild(img);
+        }
+      });
+
+      // Soft proximity-based floating with co-movement
+      (function() {
+        var squares = document.querySelectorAll('.px-sq');
+        var positions = []; // current x,y offsets
+        var targets = [];   // target x,y offsets
+        var opacities = [];
+        var opTargets = [];
+
+        squares.forEach(function() {
+          positions.push({ x: 0, y: 0 });
+          targets.push({ x: 0, y: 0 });
+          opacities.push(0.18);
+          opTargets.push(0.18);
+        });
+
+        // On mousemove, calculate push for all nearby squares
+        document.addEventListener('mousemove', function(e) {
+          var mx = e.clientX;
+          var my = e.clientY;
+          var radius = 220; // influence radius in px
+
+          squares.forEach(function(sq, i) {
+            var rect = sq.getBoundingClientRect();
+            var cx = rect.left + rect.width / 2;
+            var cy = rect.top + rect.height / 2;
+            var dx = cx - mx;
+            var dy = cy - my;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < radius) {
+              // Strength falls off smoothly (cubic ease)
+              var t = 1 - (dist / radius);
+              var strength = t * t * t; // cubic falloff — gentle
+              var push = 18 + (i % 7) * 3; // slight variation per square
+              targets[i].x = (dx / (dist || 1)) * push * strength;
+              targets[i].y = (dy / (dist || 1)) * push * strength;
+              opTargets[i] = 0.18 + strength * 0.2;
+            } else {
+              targets[i].x = 0;
+              targets[i].y = 0;
+              opTargets[i] = 0.18;
+            }
+          });
+        });
+
+        // Per-square idle drift seeds
+        var drifts = [];
+        squares.forEach(function(sq, i) {
+          drifts.push({
+            phaseX: Math.random() * Math.PI * 2,
+            phaseY: Math.random() * Math.PI * 2,
+            speedX: 0.0003 + Math.random() * 0.0004,
+            speedY: 0.0002 + Math.random() * 0.0005,
+            ampX: 5 + Math.random() * 10,
+            ampY: 4 + Math.random() * 8
+          });
+        });
+
+        // Smooth lerp animation loop with idle drift
+        var lerp = 0.08;
+        function animate(time) {
+          squares.forEach(function(sq, i) {
+            // Idle floating
+            var d = drifts[i];
+            var idleX = Math.sin(time * d.speedX + d.phaseX) * d.ampX;
+            var idleY = Math.cos(time * d.speedY + d.phaseY) * d.ampY;
+
+            // Combine idle + mouse push
+            var goalX = targets[i].x + idleX;
+            var goalY = targets[i].y + idleY;
+
+            positions[i].x += (goalX - positions[i].x) * lerp;
+            positions[i].y += (goalY - positions[i].y) * lerp;
+            opacities[i] += (opTargets[i] - opacities[i]) * lerp;
+
+            sq.style.transform = 'translate(' + positions[i].x.toFixed(1) + 'px, ' + positions[i].y.toFixed(1) + 'px)';
+            sq.style.opacity = opacities[i].toFixed(3);
+          });
+          requestAnimationFrame(animate);
+        }
+        requestAnimationFrame(animate);
+      })();
+    })();
+  </script>
   <script src="js/main.js"></script>
 </body>
 </html>

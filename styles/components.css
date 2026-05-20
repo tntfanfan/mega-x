@@ -87,13 +87,26 @@
   width: 100%;
   z-index: 100;
   padding: var(--space-md) 0;
-  transition: all 0.6s var(--ease-out);
+  background: rgba(7, 9, 15, 0.15);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  transition: background 0.8s var(--ease-out),
+              backdrop-filter 0.8s var(--ease-out),
+              -webkit-backdrop-filter 0.8s var(--ease-out),
+              padding 0.6s var(--ease-out);
 }
 
 /* ---- Scrolled state: floating capsule pill ---- */
 .nav.scrolled {
   padding: 12px 0;
-  background: none;
+  background: rgba(7, 9, 15, 0);
+  backdrop-filter: blur(0px) saturate(1);
+  -webkit-backdrop-filter: blur(0px) saturate(1);
+}
+/* Pill fade-out when returning to top */
+.nav.pill-fade-out .nav-inner {
+  opacity: 0;
+  transition: opacity 0.6s var(--ease-out);
 }
 .nav.scrolled .nav-inner {
   max-width: 900px;
@@ -166,8 +179,8 @@
     transparent
   );
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s var(--ease-out);
+  opacity: 0.7;
+  transition: opacity 0.8s var(--ease-out);
   animation: navGlowPulse 4s ease-in-out infinite;
 }
 .nav.scrolled .nav-glow-line {

@@ -9,10 +9,22 @@ window.addEventListener('load', () => {
 
 // ========== NAV SCROLL ==========
 const nav = document.querySelector('.nav');
-let lastScroll = 0;
+let navIsScrolled = false;
 window.addEventListener('scroll', () => {
-  if (nav) {
-    nav.classList.toggle('scrolled', window.scrollY > 60);
+  if (!nav) return;
+  const shouldScroll = window.scrollY > 60;
+  if (shouldScroll && !navIsScrolled) {
+    // Scrolling down → add pill
+    nav.classList.remove('pill-fade-out');
+    nav.classList.add('scrolled');
+    navIsScrolled = true;
+  } else if (!shouldScroll && navIsScrolled) {
+    // Scrolling back up → fade out pill, then remove
+    nav.classList.add('pill-fade-out');
+    setTimeout(() => {
+      nav.classList.remove('scrolled', 'pill-fade-out');
+    }, 600);
+    navIsScrolled = false;
   }
 }, { passive: true });
 

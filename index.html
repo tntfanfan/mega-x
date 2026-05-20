@@ -732,12 +732,7 @@
 
     /* ===== Nav override for homepage ===== */
     .home-nav {
-      background: transparent;
       border-bottom: none;
-    }
-    /* Capsule stays transparent-bg on homepage until scrolled */
-    .home-nav.scrolled .nav-inner {
-      background: rgba(7, 9, 15, 0.4);
     }
 
     /* Scroll-top */
@@ -761,7 +756,6 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center 40%;
       z-index: 0;
     }
     .hero-image-overlay {
@@ -964,6 +958,10 @@
       .hero-image-inner {
         padding-bottom: clamp(5rem, 10vh, 8rem);
       }
+      .hero-image-bg {
+        object-fit: cover;
+        object-position: center center;
+      }
 
       /* Hero adjustments — portrait: headline must dominate */
       .hero-headline {
@@ -1037,7 +1035,7 @@
       <ul class="nav-links">
         <li><a href="phyntom-x8.html">Phyntom X8</a></li>
         <li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li>
-        <li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li>
+        <li><a href="wifi-iot-chips.html">ChipNexus Hub</a></li>
         <li><a href="about.html">Company</a></li>
         <li><a href="contact.html" class="btn btn-primary" style="padding:0.5rem 1.2rem;">Contact</a></li>
       </ul>
@@ -1049,7 +1047,7 @@
   <div class="mobile-menu" role="dialog" aria-label="Mobile navigation">
     <a href="phyntom-x8.html">Phyntom X8</a>
     <a href="fann-gaming-ai.html">FannX Gaming AI</a>
-    <a href="wifi-iot-chips.html">IoT Chip & Robotics</a>
+    <a href="wifi-iot-chips.html">ChipNexus Hub</a>
     <a href="about.html">Company</a>
     <a href="contact.html">Contact</a>
   </div>
@@ -1058,12 +1056,12 @@
 
     <!-- ===== HERO: ChipNexus Monument Image ===== -->
     <section class="hero-image">
-      <img class="hero-image-bg" src="assets/Iron structure 4.png" alt="ChipNexus infrastructure monument rising from desert landscape" loading="eager">
+      <img class="hero-image-bg" src="assets/smallhand.avif" alt="Mega X hero" loading="eager">
       <div class="hero-image-overlay"></div>
       <div class="hero-image-inner">
         <div class="hero-image-text-panel">
           <div class="hero-image-label">Mega X ChipNexus Hub</div>
-          <h1 class="hero-image-title">The Core Hub for <em>WiFi & AI Chip</em> & Integrated Computing Infrastructure</h1>
+          <h1 class="hero-image-title">The Core Hub for <em>WiFi Chip & AI</em> Computing Infrastructure</h1>
         </div>
         <div class="hero-image-scroll">
           <span>Scroll</span>
@@ -1164,7 +1162,7 @@
           <a href="phyntom-x8.html" class="pillar pillar-glass reveal" style="text-decoration:none;">
             <div class="pillar-num">Autonomy</div>
             <h3>Phyntom X8</h3>
-            <p>AI-native business units. Deploy a department — not a person. The operating system for autonomous enterprise.</p>
+            <p>Certified AI Departments for non-technical businesses. We encode your expertise into accountable, ongoing AI operations.</p>
             <span class="pillar-link">Explore →</span>
           </a>
           <a href="fann-gaming-ai.html" class="pillar pillar-glass reveal" style="text-decoration:none;">
@@ -1198,7 +1196,7 @@
       <div class="footer-grid">
         <div class="footer-brand"><a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2.png" alt="Mega X" height="88"></a><p>The core hub for AI-native enterprise, gaming intelligence, and integrated computing infrastructure.</p></div>
         <div class="footer-col"><h5>Company</h5><ul><li><a href="about.html">About</a></li><li><a href="about.html#leadership">Leadership</a></li><li><a href="about.html#careers">Careers</a></li></ul></div>
-        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="phyntom-x8.html">Phyntom X8</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
+        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="phyntom-x8.html">Phyntom X8</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">ChipNexus Hub</a></li></ul></div>
         <div class="footer-col"><h5>Connect</h5><ul><li><a href="contact.html">Contact</a></li><li><a href="contact.html">Investor Relations</a></li><li><a href="contact.html">Press</a></li></ul></div>
       </div>
       <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Phyntom X8 · Gaming AI · IoT Chip & Robotics</span></div>
