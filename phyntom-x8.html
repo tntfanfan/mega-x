@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ginni X — Mega X Holding Ltd.</title>
-  <meta name="description" content="Ginni X — The world's first platform for AI-native productivity business units. Deploy a department, not a person.">
-  <meta property="og:title" content="Ginni X — Mega X Holding Ltd.">
+  <title>Phyntom X8 — Mega X Holding Ltd.</title>
+  <meta name="description" content="Phyntom X8 — The world's first platform for AI-native productivity business units. Deploy a department, not a person.">
+  <meta property="og:title" content="Phyntom X8 — Mega X Holding Ltd.">
   <meta property="og:description" content="Instantly deploy AI-native business units at a fraction of the cost. The next enterprise infrastructure revolution.">
   <meta property="og:type" content="website">
 
@@ -19,16 +19,16 @@
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&family=Share+Tech+Mono&display=swap"></noscript>
   <link rel="stylesheet" href="styles/bundle.min.css">
   <style>
-    /* ===== Ginni X — Page Palette ===== */
-    .ginni-page {
-      --ginni: #5BA0E8;
-      --ginni-dim: rgba(91, 160, 232, 0.55);
-      --ginni-glow: rgba(91, 160, 232, 0.2);
-      --ginni-mint: #4ED8C0;
-      --ginni-mint-glow: rgba(78, 216, 192, 0.18);
-      --ginni-surface: rgba(18, 24, 38, 0.6);
+    /* ===== Phyntom X8 — Page Palette ===== */
+    .phyntom-page {
+      --phyntom: #5BA0E8;
+      --phyntom-dim: rgba(91, 160, 232, 0.55);
+      --phyntom-glow: rgba(91, 160, 232, 0.2);
+      --phyntom-mint: #4ED8C0;
+      --phyntom-mint-glow: rgba(78, 216, 192, 0.18);
+      --phyntom-surface: rgba(18, 24, 38, 0.6);
     }
-    body.ginni-page h1, body.ginni-page h2, body.ginni-page h3 {
+    body.phyntom-page h1, body.phyntom-page h2, body.phyntom-page h3 {
       font-family: var(--font-display);
       font-weight: 400;
       letter-spacing: -0.01em;
@@ -48,21 +48,21 @@
       0%, 100% { opacity: 0.6; }
       50% { opacity: 1; }
     }
-    .ginni-ambient-layer {
+    .phyntom-ambient-layer {
       position: absolute;
       inset: 0;
       z-index: 0;
       pointer-events: none;
       overflow: hidden;
     }
-    .ginni-orb {
+    .phyntom-orb {
       position: absolute;
       border-radius: 50%;
       filter: blur(80px);
       pointer-events: none;
       will-change: transform;
     }
-    .ginni-mesh {
+    .phyntom-mesh {
       position: absolute;
       inset: 0;
       pointer-events: none;
@@ -70,7 +70,7 @@
     }
 
     /* ===== HERO ===== */
-    .ginni-hero {
+    .phyntom-hero {
       position: relative;
       width: 100%;
       min-height: 100vh;
@@ -79,7 +79,7 @@
       justify-content: center;
       overflow: hidden;
     }
-    .ginni-hero-ambient {
+    .phyntom-hero-ambient {
       position: absolute;
       inset: 0;
       z-index: 0;
@@ -90,25 +90,25 @@
         conic-gradient(from 200deg at 60% 35%, rgba(91,160,232,0.06) 0deg, transparent 60deg, rgba(78,216,192,0.04) 120deg, transparent 180deg, rgba(91,160,232,0.03) 300deg, transparent 360deg),
         var(--color-bg);
     }
-    .ginni-hero-orb1 {
+    .phyntom-hero-orb1 {
       width: 600px; height: 600px;
       top: -15%; left: 15%;
       background: radial-gradient(circle, rgba(91,160,232,0.18) 0%, rgba(91,160,232,0.03) 50%, transparent 70%);
       animation: gradientDrift 18s ease-in-out infinite;
     }
-    .ginni-hero-orb2 {
+    .phyntom-hero-orb2 {
       width: 450px; height: 450px;
       bottom: -10%; right: 10%;
       background: radial-gradient(circle, rgba(78,216,192,0.14) 0%, rgba(78,216,192,0.02) 50%, transparent 70%);
       animation: gradientDrift2 22s ease-in-out infinite;
     }
-    .ginni-hero-orb3 {
+    .phyntom-hero-orb3 {
       width: 350px; height: 350px;
       top: 25%; right: 25%;
       background: radial-gradient(circle, rgba(120,100,220,0.1) 0%, transparent 60%);
       animation: gradientDrift 26s ease-in-out infinite reverse;
     }
-    .ginni-hero-grid {
+    .phyntom-hero-grid {
       position: absolute;
       inset: 0;
       z-index: 0;
@@ -119,14 +119,14 @@
       mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%);
       -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%);
     }
-    .ginni-hero-inner {
+    .phyntom-hero-inner {
       position: relative;
       z-index: 2;
       text-align: center;
       max-width: 820px;
       padding: 0 var(--space-lg);
     }
-    .ginni-hero-eyebrow {
+    .phyntom-hero-eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 14px;
@@ -135,20 +135,20 @@
       font-weight: 500;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      color: var(--ginni);
+      color: var(--phyntom);
       margin-bottom: var(--space-xl);
       opacity: 0;
       transform: translateY(10px);
-      animation: ginniReveal 1.1s var(--ease-out) 0.3s forwards;
+      animation: phyntomReveal 1.1s var(--ease-out) 0.3s forwards;
     }
-    .ginni-hero-eyebrow::before,
-    .ginni-hero-eyebrow::after {
+    .phyntom-hero-eyebrow::before,
+    .phyntom-hero-eyebrow::after {
       content: '';
       width: 36px;
       height: 1px;
-      background: var(--ginni-dim);
+      background: var(--phyntom-dim);
     }
-    .ginni-hero-title {
+    .phyntom-hero-title {
       font-family: var(--font-display);
       font-size: clamp(2.8rem, 7vw + 0.5rem, 7rem);
       font-weight: 400;
@@ -159,26 +159,26 @@
       margin-bottom: var(--space-lg);
       opacity: 0;
       transform: translateY(24px);
-      animation: ginniReveal 1.4s var(--ease-out) 0.6s forwards;
+      animation: phyntomReveal 1.4s var(--ease-out) 0.6s forwards;
     }
-    .ginni-hero-title em {
+    .phyntom-hero-title em {
       font-style: italic;
-      color: var(--ginni);
+      color: var(--phyntom);
     }
-    .ginni-hero-sub {
+    .phyntom-hero-sub {
       font-family: var(--font-body);
       font-weight: 300;
       font-size: clamp(1rem, 1.2vw + 0.3rem, 1.35rem);
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--color-text-body);
       letter-spacing: 0.04em;
       line-height: 1.75;
       max-width: 48ch;
       margin: 0 auto var(--space-xl);
       opacity: 0;
       transform: translateY(14px);
-      animation: ginniReveal 1.2s var(--ease-out) 1s forwards;
+      animation: phyntomReveal 1.2s var(--ease-out) 1s forwards;
     }
-    .ginni-hero-tag {
+    .phyntom-hero-tag {
       display: inline-flex;
       align-items: center;
       gap: 10px;
@@ -188,7 +188,7 @@
       font-size: 0.65rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      color: var(--ginni-mint);
+      color: var(--phyntom-mint);
       background: rgba(78, 216, 192, 0.06);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
@@ -198,9 +198,9 @@
       position: relative;
       overflow: hidden;
       opacity: 0;
-      animation: ginniReveal 1s var(--ease-out) 1.4s forwards;
+      animation: phyntomReveal 1s var(--ease-out) 1.4s forwards;
     }
-    .ginni-hero-tag::before {
+    .phyntom-hero-tag::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -212,34 +212,34 @@
       mask-composite: exclude;
       pointer-events: none;
     }
-    .ginni-hero-tag .dot {
+    .phyntom-hero-tag .dot {
       width: 6px; height: 6px;
       border-radius: 50%;
-      background: var(--ginni-mint);
-      box-shadow: 0 0 10px var(--ginni-mint);
+      background: var(--phyntom-mint);
+      box-shadow: 0 0 10px var(--phyntom-mint);
       animation: dotPulse 2s ease-in-out infinite;
     }
     @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    @keyframes ginniReveal { to { opacity:1; transform:translateY(0); } }
+    @keyframes phyntomReveal { to { opacity:1; transform:translateY(0); } }
 
     /* Scroll hint */
-    .ginni-scroll-hint {
+    .phyntom-scroll-hint {
       margin-top: var(--space-xl);
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 10px;
       opacity: 0;
-      animation: ginniReveal 1s var(--ease-out) 1.8s forwards;
+      animation: phyntomReveal 1s var(--ease-out) 1.8s forwards;
     }
-    .ginni-scroll-hint span {
+    .phyntom-scroll-hint span {
       font-family: var(--font-body);
       font-size: 0.6rem;
       letter-spacing: 0.3em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.3);
+      color: var(--color-text-dim);
     }
-    .ginni-scroll-hint .scroll-line {
+    .phyntom-scroll-hint .scroll-line {
       width: 1px;
       height: 40px;
       background: linear-gradient(180deg, rgba(91,160,232,0.4), transparent);
@@ -248,12 +248,12 @@
     @keyframes scrollPulse { 0%,100%{opacity:0.3} 50%{opacity:0.9} }
 
     /* ===== Section base ===== */
-    .ginni-section {
+    .phyntom-section {
       padding: clamp(6rem, 12vh, 11rem) 0;
       position: relative;
     }
 
-    .ginni-eyebrow {
+    .phyntom-eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 14px;
@@ -262,23 +262,23 @@
       font-weight: 500;
       letter-spacing: 0.24em;
       text-transform: uppercase;
-      color: var(--ginni);
+      color: var(--phyntom);
       margin-bottom: var(--space-lg);
     }
-    .ginni-eyebrow::before {
+    .phyntom-eyebrow::before {
       content: '';
       width: 28px;
       height: 1px;
-      background: var(--ginni);
+      background: var(--phyntom);
     }
 
     /* ===== VISION ===== */
-    .ginni-vision {
+    .phyntom-vision {
       text-align: center;
       overflow: hidden;
       position: relative;
     }
-    .ginni-vision::before {
+    .phyntom-vision::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -289,8 +289,8 @@
       pointer-events: none;
       z-index: 0;
     }
-    .ginni-vision .container { position: relative; z-index: 1; }
-    .ginni-vision-orb {
+    .phyntom-vision .container { position: relative; z-index: 1; }
+    .phyntom-vision-orb {
       position: absolute;
       width: 500px; height: 500px;
       border-radius: 50%;
@@ -299,38 +299,38 @@
       z-index: 0;
       will-change: transform;
     }
-    .ginni-vision-orb.orb-l { top: -80px; left: -180px; background: radial-gradient(circle, rgba(91,160,232,0.1), transparent 65%); animation: gradientDrift 20s ease-in-out infinite; }
-    .ginni-vision-orb.orb-r { bottom: -120px; right: -180px; background: radial-gradient(circle, rgba(78,216,192,0.07), transparent 65%); animation: gradientDrift2 24s ease-in-out infinite; }
-    .ginni-vision h2 {
+    .phyntom-vision-orb.orb-l { top: -80px; left: -180px; background: radial-gradient(circle, rgba(91,160,232,0.1), transparent 65%); animation: gradientDrift 20s ease-in-out infinite; }
+    .phyntom-vision-orb.orb-r { bottom: -120px; right: -180px; background: radial-gradient(circle, rgba(78,216,192,0.07), transparent 65%); animation: gradientDrift2 24s ease-in-out infinite; }
+    .phyntom-vision h2 {
       font-size: clamp(2.2rem, 4.2vw + 0.5rem, 4.6rem);
       line-height: 1.05;
-      color: var(--color-text);
+      color: var(--color-heading);
       max-width: 18ch;
       margin: 0 auto var(--space-lg);
     }
-    .ginni-vision h2 em { font-style: italic; color: var(--ginni); }
-    .ginni-vision-lede {
+    .phyntom-vision h2 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-vision-lede {
       font-weight: 300;
       font-size: var(--text-lg);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.8;
       max-width: 58ch;
       margin: 0 auto;
     }
-    .ginni-vision-divider {
+    .phyntom-vision-divider {
       width: 60px;
       height: 1px;
-      background: linear-gradient(90deg, transparent, var(--ginni-dim), transparent);
+      background: linear-gradient(90deg, transparent, var(--phyntom-dim), transparent);
       margin: var(--space-xl) auto;
     }
 
     /* ===== MARKET SIGNAL ===== */
-    .ginni-market {
+    .phyntom-market {
       background: var(--color-surface);
       overflow: hidden;
       position: relative;
     }
-    .ginni-market::before {
+    .phyntom-market::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -341,23 +341,23 @@
       pointer-events: none;
       z-index: 0;
     }
-    .ginni-market .container { position: relative; z-index: 1; }
-    .ginni-market-inner {
+    .phyntom-market .container { position: relative; z-index: 1; }
+    .phyntom-market-inner {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: var(--space-2xl);
       align-items: center;
     }
-    .ginni-market-number {
+    .phyntom-market-number {
       font-family: var(--font-display);
       font-style: italic;
       font-size: clamp(5rem, 12vw, 12rem);
-      color: var(--ginni);
+      color: var(--phyntom);
       line-height: 0.85;
       letter-spacing: -0.04em;
       opacity: 0.9;
     }
-    .ginni-market-number span {
+    .phyntom-market-number span {
       font-size: 0.35em;
       color: var(--color-text-muted);
       letter-spacing: 0;
@@ -366,39 +366,39 @@
       font-weight: 300;
       vertical-align: super;
     }
-    .ginni-market-caption {
+    .phyntom-market-caption {
       font-family: var(--font-mono);
       font-size: 0.66rem;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: var(--ginni-dim);
+      color: var(--phyntom-dim);
       margin-top: var(--space-md);
     }
-    .ginni-market-text h2 {
+    .phyntom-market-text h2 {
       font-size: clamp(2rem, 3.6vw, 3.2rem);
       line-height: 1.1;
-      color: var(--color-text);
+      color: var(--color-heading);
       margin-bottom: var(--space-md);
     }
-    .ginni-market-text h2 em { font-style: italic; color: var(--ginni); }
-    .ginni-market-text p {
+    .phyntom-market-text h2 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-market-text p {
       font-weight: 300;
       font-size: var(--text-base);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.75;
       max-width: 48ch;
     }
     @media (max-width: 900px) {
-      .ginni-market-inner { grid-template-columns: 1fr; gap: var(--space-xl); text-align: center; }
-      .ginni-market-text { text-align: left; }
+      .phyntom-market-inner { grid-template-columns: 1fr; gap: var(--space-xl); text-align: center; }
+      .phyntom-market-text { text-align: left; }
     }
 
     /* ===== THE GAP ===== */
-    .ginni-gap {
+    .phyntom-gap {
       position: relative;
       overflow: hidden;
     }
-    .ginni-gap::before {
+    .phyntom-gap::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -409,35 +409,35 @@
       pointer-events: none;
       z-index: 0;
     }
-    .ginni-gap .container { position: relative; z-index: 1; }
-    .ginni-gap-header {
+    .phyntom-gap .container { position: relative; z-index: 1; }
+    .phyntom-gap-header {
       text-align: center;
       max-width: 780px;
       margin: 0 auto var(--space-2xl);
     }
-    .ginni-gap-header h2 {
+    .phyntom-gap-header h2 {
       font-size: clamp(2rem, 3.8vw, 3.4rem);
       line-height: 1.1;
-      color: var(--color-text);
+      color: var(--color-heading);
       margin-bottom: var(--space-md);
     }
-    .ginni-gap-header h2 em { font-style: italic; color: var(--ginni); }
-    .ginni-gap-header p {
+    .phyntom-gap-header h2 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-gap-header p {
       font-weight: 300;
       font-size: var(--text-lg);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.7;
       max-width: 52ch;
       margin: 0 auto;
     }
-    .ginni-gaps-grid {
+    .phyntom-gaps-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1px;
       background: rgba(91, 160, 232, 0.08);
     }
-    .ginni-gap-card {
-      background: var(--ginni-surface);
+    .phyntom-gap-card {
+      background: var(--phyntom-surface);
       backdrop-filter: blur(18px) saturate(1.2);
       -webkit-backdrop-filter: blur(18px) saturate(1.2);
       padding: clamp(2rem, 3vw, 3rem) clamp(1.6rem, 2.4vw, 2.2rem);
@@ -447,57 +447,57 @@
       position: relative;
       transition: all 0.5s var(--ease-out);
     }
-    .ginni-gap-card::before {
+    .phyntom-gap-card::before {
       content: '';
       position: absolute;
       top: 0; left: 0;
       width: 32px;
       height: 1px;
-      background: linear-gradient(90deg, var(--ginni), transparent);
+      background: linear-gradient(90deg, var(--phyntom), transparent);
     }
-    .ginni-gap-card:hover {
+    .phyntom-gap-card:hover {
       background: rgba(26, 34, 52, 0.7);
     }
-    .ginni-gap-num {
+    .phyntom-gap-num {
       font-family: var(--font-mono);
       font-size: 0.6rem;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: var(--ginni-dim);
+      color: var(--phyntom-dim);
       margin-bottom: var(--space-lg);
     }
-    .ginni-gap-card h4 {
+    .phyntom-gap-card h4 {
       font-family: var(--font-display);
       font-weight: 400;
       font-size: clamp(1.3rem, 1.8vw, 1.6rem);
-      color: var(--color-text);
+      color: var(--color-heading);
       line-height: 1.15;
       margin-bottom: var(--space-md);
     }
-    .ginni-gap-card h4 em { font-style: italic; color: var(--ginni); }
-    .ginni-gap-card p {
+    .phyntom-gap-card h4 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-gap-card p {
       font-weight: 300;
       font-size: 0.88rem;
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.65;
       margin-top: auto;
       max-width: 28ch;
     }
     @media (max-width: 900px) {
-      .ginni-gaps-grid { grid-template-columns: 1fr 1fr; }
+      .phyntom-gaps-grid { grid-template-columns: 1fr 1fr; }
     }
     @media (max-width: 560px) {
-      .ginni-gaps-grid { grid-template-columns: 1fr; }
-      .ginni-gap-card { min-height: auto; }
+      .phyntom-gaps-grid { grid-template-columns: 1fr; }
+      .phyntom-gap-card { min-height: auto; }
     }
 
     /* ===== SOLUTION ===== */
-    .ginni-solution {
+    .phyntom-solution {
       background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
       overflow: hidden;
       position: relative;
     }
-    .ginni-solution::before {
+    .phyntom-solution::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -508,36 +508,36 @@
         conic-gradient(from 60deg at 50% 45%, rgba(91,160,232,0.025) 0deg, transparent 80deg, rgba(78,216,192,0.02) 160deg, transparent 240deg, rgba(91,160,232,0.015) 360deg);
       pointer-events: none;
     }
-    .ginni-solution .container { position: relative; z-index: 1; }
-    .ginni-solution-header {
+    .phyntom-solution .container { position: relative; z-index: 1; }
+    .phyntom-solution-header {
       text-align: center;
       max-width: 820px;
       margin: 0 auto var(--space-2xl);
     }
-    .ginni-solution-header h2 {
+    .phyntom-solution-header h2 {
       font-size: clamp(2.2rem, 4.2vw, 4rem);
       line-height: 1.05;
-      color: var(--color-text);
+      color: var(--color-heading);
       margin-bottom: var(--space-md);
     }
-    .ginni-solution-header h2 em { font-style: italic; color: var(--ginni); }
-    .ginni-solution-header p {
+    .phyntom-solution-header h2 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-solution-header p {
       font-weight: 300;
       font-size: var(--text-lg);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.7;
       max-width: 56ch;
       margin: 0 auto;
     }
-    .ginni-pillars {
+    .phyntom-pillars {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-lg);
       max-width: 1080px;
       margin: 0 auto;
     }
-    .ginni-pillar {
-      background: var(--ginni-surface);
+    .phyntom-pillar {
+      background: var(--phyntom-surface);
       backdrop-filter: blur(22px) saturate(1.3);
       -webkit-backdrop-filter: blur(22px) saturate(1.3);
       border-radius: 20px;
@@ -549,7 +549,7 @@
         inset 0 1px 0 rgba(255,255,255,0.08),
         0 10px 36px rgba(0,0,0,0.3);
     }
-    .ginni-pillar::before {
+    .phyntom-pillar::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -565,7 +565,7 @@
       mask-composite: exclude;
       pointer-events: none;
     }
-    .ginni-pillar::after {
+    .phyntom-pillar::after {
       content: '';
       position: absolute;
       top: 0; left: 12%;
@@ -574,15 +574,15 @@
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
       pointer-events: none;
     }
-    .ginni-pillar:hover {
+    .phyntom-pillar:hover {
       transform: translateY(-4px);
       background: rgba(26, 34, 52, 0.6);
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,0.14),
         0 18px 52px rgba(0,0,0,0.4),
-        0 0 50px var(--ginni-glow);
+        0 0 50px var(--phyntom-glow);
     }
-    .ginni-pillar-icon {
+    .phyntom-pillar-icon {
       width: 48px; height: 48px;
       border-radius: 14px;
       background: linear-gradient(135deg, rgba(91,160,232,0.15), rgba(78,216,192,0.1));
@@ -591,45 +591,45 @@
       justify-content: center;
       margin-bottom: var(--space-lg);
       font-size: 1.4rem;
-      color: var(--ginni);
+      color: var(--phyntom);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
     }
-    .ginni-pillar-num {
+    .phyntom-pillar-num {
       font-family: var(--font-mono);
       font-size: 0.58rem;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: var(--ginni-dim);
+      color: var(--phyntom-dim);
       margin-bottom: var(--space-md);
     }
-    .ginni-pillar h4 {
+    .phyntom-pillar h4 {
       font-family: var(--font-display);
       font-weight: 400;
       font-size: clamp(1.4rem, 2vw, 1.85rem);
-      color: var(--color-text);
+      color: var(--color-heading);
       line-height: 1.15;
       margin-bottom: var(--space-md);
     }
-    .ginni-pillar h4 em { font-style: italic; color: var(--ginni); }
-    .ginni-pillar p {
+    .phyntom-pillar h4 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-pillar p {
       font-weight: 300;
       font-size: 0.92rem;
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.7;
     }
     @media (max-width: 900px) {
-      .ginni-pillars { grid-template-columns: 1fr; max-width: 480px; }
+      .phyntom-pillars { grid-template-columns: 1fr; max-width: 480px; }
     }
 
     /* ===== VALUE ===== */
-    .ginni-value {
+    .phyntom-value {
       text-align: center;
       border-top: 1px solid rgba(91,160,232,0.08);
       border-bottom: 1px solid rgba(91,160,232,0.08);
       position: relative;
       overflow: hidden;
     }
-    .ginni-value::before {
+    .phyntom-value::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -640,54 +640,54 @@
       pointer-events: none;
       z-index: 0;
     }
-    .ginni-value > .container { position: relative; z-index: 1; }
-    .ginni-value-inner {
+    .phyntom-value > .container { position: relative; z-index: 1; }
+    .phyntom-value-inner {
       max-width: 820px;
       margin: 0 auto;
     }
-    .ginni-value h2 {
+    .phyntom-value h2 {
       font-size: clamp(2rem, 3.6vw, 3.2rem);
       line-height: 1.1;
-      color: var(--color-text);
+      color: var(--color-heading);
       margin-bottom: var(--space-2xl);
     }
-    .ginni-value h2 em { font-style: italic; color: var(--ginni); }
-    .ginni-value-items {
+    .phyntom-value h2 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-value-items {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: var(--space-xl);
       text-align: left;
     }
-    .ginni-value-item {
+    .phyntom-value-item {
       padding-top: var(--space-lg);
       border-top: 1px solid rgba(91,160,232,0.12);
     }
-    .ginni-value-item h5 {
+    .phyntom-value-item h5 {
       font-family: var(--font-display);
       font-weight: 400;
       font-style: italic;
       font-size: clamp(1.2rem, 1.6vw, 1.5rem);
-      color: var(--ginni);
+      color: var(--phyntom);
       margin-bottom: var(--space-sm);
     }
-    .ginni-value-item p {
+    .phyntom-value-item p {
       font-weight: 300;
       font-size: 0.92rem;
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.7;
     }
     @media (max-width: 700px) {
-      .ginni-value-items { grid-template-columns: 1fr; gap: var(--space-lg); }
+      .phyntom-value-items { grid-template-columns: 1fr; gap: var(--space-lg); }
     }
 
     /* ===== CLOSING ===== */
-    .ginni-closing {
+    .phyntom-closing {
       text-align: center;
       padding: clamp(7rem, 16vh, 14rem) var(--space-lg);
       position: relative;
       overflow: hidden;
     }
-    .ginni-closing-ambient {
+    .phyntom-closing-ambient {
       position: absolute;
       inset: 0;
       z-index: 0;
@@ -698,18 +698,18 @@
         radial-gradient(ellipse 35% 35% at 80% 30%, rgba(120,100,220,0.05) 0%, transparent 55%),
         conic-gradient(from 240deg at 50% 80%, rgba(91,160,232,0.04) 0deg, transparent 90deg, rgba(78,216,192,0.03) 180deg, transparent 270deg, rgba(91,160,232,0.02) 360deg);
     }
-    .ginni-closing > .container { position: relative; z-index: 1; }
-    .ginni-closing h2 {
+    .phyntom-closing > .container { position: relative; z-index: 1; }
+    .phyntom-closing h2 {
       font-family: var(--font-display);
       font-size: clamp(2rem, 4vw, 3.6rem);
       font-weight: 400;
-      color: var(--color-text);
+      color: var(--color-heading);
       line-height: 1.15;
       max-width: 680px;
       margin: 0 auto var(--space-xl);
     }
-    .ginni-closing h2 em { font-style: italic; color: var(--ginni); }
-    .ginni-cta {
+    .phyntom-closing h2 em { font-style: italic; color: var(--phyntom); }
+    .phyntom-cta {
       display: inline-flex;
       align-items: center;
       gap: var(--space-sm);
@@ -732,7 +732,7 @@
       overflow: hidden;
       transition: all 0.4s var(--ease-out);
     }
-    .ginni-cta::before {
+    .phyntom-cta::before {
       content: '';
       position: absolute;
       inset: 0;
@@ -744,7 +744,7 @@
       mask-composite: exclude;
       pointer-events: none;
     }
-    .ginni-cta:hover {
+    .phyntom-cta:hover {
       background: rgba(91, 160, 232, 0.28);
       transform: translateY(-2px);
       box-shadow:
@@ -755,14 +755,14 @@
 
     /* ===== Mobile ===== */
     @media (max-width: 768px) {
-      .ginni-hero { min-height: 88vh; }
-      .ginni-hero-inner { padding: 0 1.25rem; }
-      .ginni-scroll-hint { margin-top: var(--space-md); }
+      .phyntom-hero { min-height: 88vh; }
+      .phyntom-hero-inner { padding: 0 1.25rem; }
+      .phyntom-scroll-hint { margin-top: var(--space-md); }
       .container { padding: 0 1.25rem; }
     }
   </style>
 </head>
-<body class="ginni-page">
+<body class="phyntom-page">
   <a href="#main" class="skip-link">Skip to content</a>
 
   <nav class="nav" aria-label="Main navigation">
@@ -770,7 +770,7 @@
       <a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2_circle.png" alt="Mega X" height="48"></a>
       <ul class="nav-links">
         <li><a href="index.html">Home</a></li>
-        <li><a href="ginni-x.html" style="color:var(--ginni);">Ginni X</a></li>
+        <li><a href="phyntom-x8.html" style="color:var(--phyntom);">Phyntom X8</a></li>
         <li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li>
         <li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li>
         <li><a href="about.html">Company</a></li>
@@ -783,7 +783,7 @@
 
   <div class="mobile-menu" role="dialog" aria-label="Mobile navigation">
     <a href="index.html">Home</a>
-    <a href="ginni-x.html">Ginni X</a>
+    <a href="phyntom-x8.html">Phyntom X8</a>
     <a href="fann-gaming-ai.html">FannX Gaming AI</a>
     <a href="wifi-iot-chips.html">IoT Chip & Robotics</a>
     <a href="about.html">Company</a>
@@ -793,19 +793,19 @@
   <main id="main">
 
     <!-- ===== HERO ===== -->
-    <section class="ginni-hero">
-      <div class="ginni-hero-ambient" aria-hidden="true">
-        <div class="ginni-orb ginni-hero-orb1"></div>
-        <div class="ginni-orb ginni-hero-orb2"></div>
-        <div class="ginni-orb ginni-hero-orb3"></div>
+    <section class="phyntom-hero">
+      <div class="phyntom-hero-ambient" aria-hidden="true">
+        <div class="phyntom-orb phyntom-hero-orb1"></div>
+        <div class="phyntom-orb phyntom-hero-orb2"></div>
+        <div class="phyntom-orb phyntom-hero-orb3"></div>
       </div>
-      <div class="ginni-hero-grid" aria-hidden="true"></div>
-      <div class="ginni-hero-inner">
-        <div class="ginni-hero-eyebrow">Ginni X</div>
-        <h1 class="ginni-hero-title">Deploy a <em>department</em>. <br>Not a person.</h1>
-        <p class="ginni-hero-sub">The world's first platform for instantly deploying AI-native productivity business units — complete, outcome-accountable, running 24/7.</p>
-        <span class="ginni-hero-tag"><span class="dot"></span>AI-Workflow Factory</span>
-        <div class="ginni-scroll-hint">
+      <div class="phyntom-hero-grid" aria-hidden="true"></div>
+      <div class="phyntom-hero-inner">
+        <div class="phyntom-hero-eyebrow">Phyntom X8</div>
+        <h1 class="phyntom-hero-title">Deploy a <em>department</em>. <br>Not a person.</h1>
+        <p class="phyntom-hero-sub">The world's first platform for instantly deploying AI-native productivity business units — complete, outcome-accountable, running 24/7.</p>
+        <span class="phyntom-hero-tag"><span class="dot"></span>AI-Workflow Factory</span>
+        <div class="phyntom-scroll-hint">
           <span>Scroll</span>
           <div class="scroll-line"></div>
         </div>
@@ -813,27 +813,27 @@
     </section>
 
     <!-- ===== VISION ===== -->
-    <section class="ginni-section ginni-vision">
-      <div class="ginni-vision-orb orb-l" aria-hidden="true"></div>
-      <div class="ginni-vision-orb orb-r" aria-hidden="true"></div>
+    <section class="phyntom-section phyntom-vision">
+      <div class="phyntom-vision-orb orb-l" aria-hidden="true"></div>
+      <div class="phyntom-vision-orb orb-r" aria-hidden="true"></div>
       <div class="container">
-        <div class="ginni-eyebrow reveal" style="justify-content:center;display:inline-flex;">I · Vision</div>
+        <div class="phyntom-eyebrow reveal" style="justify-content:center;display:inline-flex;">I · Vision</div>
         <h2 class="reveal" style="transition-delay:100ms;">Every organization instantly owns a department that <em>didn't exist before</em>.</h2>
-        <div class="ginni-vision-divider reveal" style="transition-delay:180ms;"></div>
-        <p class="ginni-vision-lede reveal" style="transition-delay:260ms;">We upgrade traditional human-intensive departments into digital productivity modules — instantly deployed, scaled on demand, paid by results. The global economy shifts from human labor to AI agent factories, and Ginni X is the operating system that makes it happen.</p>
+        <div class="phyntom-vision-divider reveal" style="transition-delay:180ms;"></div>
+        <p class="phyntom-vision-lede reveal" style="transition-delay:260ms;">We upgrade traditional human-intensive departments into digital productivity modules — instantly deployed, scaled on demand, paid by results. The global economy shifts from human labor to AI agent factories, and Phyntom X8 is the operating system that makes it happen.</p>
       </div>
     </section>
 
     <!-- ===== MARKET SIGNAL ===== -->
-    <section class="ginni-section ginni-market">
+    <section class="phyntom-section phyntom-market">
       <div class="container">
-        <div class="ginni-market-inner reveal">
+        <div class="phyntom-market-inner reveal">
           <div style="text-align:center;">
-            <div class="ginni-market-number">$20<span>T+</span></div>
-            <div class="ginni-market-caption">Annual enterprise spend on standardizable BUs</div>
+            <div class="phyntom-market-number">$20<span>T+</span></div>
+            <div class="phyntom-market-caption">Annual enterprise spend on standardizable BUs</div>
           </div>
-          <div class="ginni-market-text">
-            <div class="ginni-eyebrow">II · Market</div>
+          <div class="phyntom-market-text">
+            <div class="phyntom-eyebrow">II · Market</div>
             <h2>A ten-trillion-dollar <em>restructuring</em> opportunity.</h2>
             <p>Customer service, financial reconciliation, compliance review, content moderation, recruitment screening — process-driven departments that account for trillions in annual cost. Fixed processes. Digitizable knowledge. Quantifiable output. Naturally suited for AI-native replacement.</p>
           </div>
@@ -842,35 +842,35 @@
     </section>
 
     <!-- ===== THE GAP ===== -->
-    <section class="ginni-section ginni-gap">
-      <div class="ginni-ambient-layer" aria-hidden="true">
-        <div class="ginni-orb" style="width:400px;height:400px;top:-5%;right:-8%;background:radial-gradient(circle,rgba(91,160,232,0.1),transparent 65%);animation:gradientDrift 22s ease-in-out infinite;"></div>
-        <div class="ginni-orb" style="width:300px;height:300px;bottom:5%;left:-5%;background:radial-gradient(circle,rgba(78,216,192,0.08),transparent 60%);animation:gradientDrift2 18s ease-in-out infinite;"></div>
+    <section class="phyntom-section phyntom-gap">
+      <div class="phyntom-ambient-layer" aria-hidden="true">
+        <div class="phyntom-orb" style="width:400px;height:400px;top:-5%;right:-8%;background:radial-gradient(circle,rgba(91,160,232,0.1),transparent 65%);animation:gradientDrift 22s ease-in-out infinite;"></div>
+        <div class="phyntom-orb" style="width:300px;height:300px;bottom:5%;left:-5%;background:radial-gradient(circle,rgba(78,216,192,0.08),transparent 60%);animation:gradientDrift2 18s ease-in-out infinite;"></div>
       </div>
       <div class="container">
-        <div class="ginni-gap-header reveal">
-          <div class="ginni-eyebrow" style="justify-content:center;display:inline-flex;">III · The Gap</div>
+        <div class="phyntom-gap-header reveal">
+          <div class="phyntom-eyebrow" style="justify-content:center;display:inline-flex;">III · The Gap</div>
           <h2>Four fundamental gaps the market <em>cannot fill</em>.</h2>
           <p>Thousands of AI tools exist. None deliver a complete, independently operating, outcome-accountable business unit.</p>
         </div>
-        <div class="ginni-gaps-grid reveal" style="transition-delay:140ms;">
-          <div class="ginni-gap-card">
-            <div class="ginni-gap-num">Gap 01</div>
+        <div class="phyntom-gaps-grid reveal" style="transition-delay:140ms;">
+          <div class="phyntom-gap-card">
+            <div class="phyntom-gap-num">Gap 01</div>
             <h4>No <em>end-to-end</em> delivery</h4>
             <p>AI tools are atomic capabilities, not departmental solutions. Enterprises still hire teams for work each subtask could handle.</p>
           </div>
-          <div class="ginni-gap-card">
-            <div class="ginni-gap-num">Gap 02</div>
+          <div class="phyntom-gap-card">
+            <div class="phyntom-gap-num">Gap 02</div>
             <h4>Domain know-how <em>locked</em> in silos</h4>
             <p>Core knowledge lives in SOPs, emails, and historical decisions — never structured, never made AI-executable.</p>
           </div>
-          <div class="ginni-gap-card">
-            <div class="ginni-gap-num">Gap 03</div>
+          <div class="phyntom-gap-card">
+            <div class="phyntom-gap-num">Gap 03</div>
             <h4>No structured <em>human-AI</em> collaboration</h4>
             <p>Full replacement fails. Frequent intervention loses efficiency. No platform defines the right boundary.</p>
           </div>
-          <div class="ginni-gap-card">
-            <div class="ginni-gap-num">Gap 04</div>
+          <div class="phyntom-gap-card">
+            <div class="phyntom-gap-num">Gap 04</div>
             <h4>No <em>outcome-based</em> pricing</h4>
             <p>Leaders need results, not API calls. No one charges per report delivered, per review completed, per row cleaned.</p>
           </div>
@@ -879,57 +879,57 @@
     </section>
 
     <!-- ===== SOLUTION ===== -->
-    <section class="ginni-section ginni-solution">
-      <div class="ginni-ambient-layer" aria-hidden="true">
-        <div class="ginni-orb" style="width:500px;height:500px;top:10%;left:-12%;background:radial-gradient(circle,rgba(91,160,232,0.09),transparent 60%);animation:gradientDrift2 25s ease-in-out infinite;"></div>
-        <div class="ginni-orb" style="width:380px;height:380px;bottom:-5%;right:-6%;background:radial-gradient(circle,rgba(120,100,220,0.07),transparent 60%);animation:gradientDrift 20s ease-in-out infinite reverse;"></div>
-        <div class="ginni-orb" style="width:250px;height:250px;top:35%;right:20%;background:radial-gradient(circle,rgba(78,216,192,0.06),transparent 55%);animation:gradientPulse 8s ease-in-out infinite;"></div>
+    <section class="phyntom-section phyntom-solution">
+      <div class="phyntom-ambient-layer" aria-hidden="true">
+        <div class="phyntom-orb" style="width:500px;height:500px;top:10%;left:-12%;background:radial-gradient(circle,rgba(91,160,232,0.09),transparent 60%);animation:gradientDrift2 25s ease-in-out infinite;"></div>
+        <div class="phyntom-orb" style="width:380px;height:380px;bottom:-5%;right:-6%;background:radial-gradient(circle,rgba(120,100,220,0.07),transparent 60%);animation:gradientDrift 20s ease-in-out infinite reverse;"></div>
+        <div class="phyntom-orb" style="width:250px;height:250px;top:35%;right:20%;background:radial-gradient(circle,rgba(78,216,192,0.06),transparent 55%);animation:gradientPulse 8s ease-in-out infinite;"></div>
       </div>
       <div class="container">
-        <div class="ginni-solution-header reveal">
-          <div class="ginni-eyebrow" style="justify-content:center;display:inline-flex;">IV · Solution</div>
+        <div class="phyntom-solution-header reveal">
+          <div class="phyntom-eyebrow" style="justify-content:center;display:inline-flex;">IV · Solution</div>
           <h2>Three components. One <em>instant</em> department.</h2>
-          <p>Each Ginni X business unit is a pre-trained agent swarm — deployed instantly, running autonomously, accountable by KPI.</p>
+          <p>Each Phyntom X8 business unit is a pre-trained agent swarm — deployed instantly, running autonomously, accountable by KPI.</p>
         </div>
-        <div class="ginni-pillars reveal" style="transition-delay:160ms;">
-          <div class="ginni-pillar">
-            <div class="ginni-pillar-icon">⧈</div>
-            <div class="ginni-pillar-num">Component 01</div>
+        <div class="phyntom-pillars reveal" style="transition-delay:160ms;">
+          <div class="phyntom-pillar">
+            <div class="phyntom-pillar-icon">⧈</div>
+            <div class="phyntom-pillar-num">Component 01</div>
             <h4>Department <em>Brain</em></h4>
             <p>Full SOP knowledge base, business materials, industry rules, and digital deposit of past cases — continuously learning from enterprise private data.</p>
           </div>
-          <div class="ginni-pillar">
-            <div class="ginni-pillar-icon">⟁</div>
-            <div class="ginni-pillar-num">Component 02</div>
+          <div class="phyntom-pillar">
+            <div class="phyntom-pillar-icon">⟁</div>
+            <div class="phyntom-pillar-num">Component 02</div>
             <h4>Human-AI <em>Division</em></h4>
             <p>Clearly defined boundaries between AI autonomous driving and human decision-makers. Critical nodes stay human. All biological redundancy eliminated.</p>
           </div>
-          <div class="ginni-pillar">
-            <div class="ginni-pillar-icon">⬡</div>
-            <div class="ginni-pillar-num">Component 03</div>
+          <div class="phyntom-pillar">
+            <div class="phyntom-pillar-icon">⬡</div>
+            <div class="phyntom-pillar-num">Component 03</div>
             <h4>Agent <em>Procedures</em></h4>
-            <p>Business logic defined in natural language — converted by Ginni X into AI-driven structured workflows that execute, learn, and improve continuously.</p>
+            <p>Business logic defined in natural language — converted by Phyntom X8 into AI-driven structured workflows that execute, learn, and improve continuously.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ===== VALUE ===== -->
-    <section class="ginni-section ginni-value">
+    <section class="phyntom-section phyntom-value">
       <div class="container">
-        <div class="ginni-value-inner reveal">
-          <div class="ginni-eyebrow" style="justify-content:center;display:inline-flex;">V · Value</div>
+        <div class="phyntom-value-inner reveal">
+          <div class="phyntom-eyebrow" style="justify-content:center;display:inline-flex;">V · Value</div>
           <h2>What this <em>changes</em>.</h2>
-          <div class="ginni-value-items">
-            <div class="ginni-value-item">
+          <div class="phyntom-value-items">
+            <div class="phyntom-value-item">
               <h5>For Enterprises</h5>
               <p>Instantly obtain a department that didn't exist before — at a fraction of labor cost. No recruiting, no training, no turnover. Scale up or down in one click.</p>
             </div>
-            <div class="ginni-value-item">
+            <div class="phyntom-value-item">
               <h5>For Industries</h5>
               <p>Domain know-how escapes private silos. Best practices circulate as AI-executable templates, accelerating the leap toward AI-native productivity.</p>
             </div>
-            <div class="ginni-value-item">
+            <div class="phyntom-value-item">
               <h5>For the Economy</h5>
               <p>Millions of SMEs gain access to capabilities they could never afford. Non-existent departments come to life. New business models emerge at the margin.</p>
             </div>
@@ -939,11 +939,11 @@
     </section>
 
     <!-- ===== CLOSING ===== -->
-    <section class="ginni-closing">
-      <div class="ginni-closing-ambient" aria-hidden="true"></div>
+    <section class="phyntom-closing">
+      <div class="phyntom-closing-ambient" aria-hidden="true"></div>
       <div class="container reveal">
         <h2>The operating system for the next generation of <em>global productivity</em>.</h2>
-        <a href="contact.html" class="ginni-cta">Get in Touch →</a>
+        <a href="contact.html" class="phyntom-cta">Get in Touch →</a>
       </div>
     </section>
 
@@ -954,10 +954,10 @@
       <div class="footer-grid">
         <div class="footer-brand"><a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2.png" alt="Mega X" height="88"></a><p>The core hub for AI-native enterprise, gaming intelligence, and integrated computing infrastructure.</p></div>
         <div class="footer-col"><h5>Company</h5><ul><li><a href="about.html">About</a></li><li><a href="about.html#leadership">Leadership</a></li><li><a href="about.html#careers">Careers</a></li></ul></div>
-        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="ginni-x.html">Ginni X</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
+        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="phyntom-x8.html">Phyntom X8</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
         <div class="footer-col"><h5>Connect</h5><ul><li><a href="contact.html">Contact</a></li><li><a href="contact.html">Investor Relations</a></li><li><a href="contact.html">Press</a></li></ul></div>
       </div>
-      <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Ginni X · Gaming AI · IoT Chip & Robotics</span></div>
+      <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Phyntom X8 · Gaming AI · IoT Chip & Robotics</span></div>
     </div>
   </footer>
 

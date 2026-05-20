@@ -237,7 +237,7 @@
       font-family: var(--font-body);
       font-weight: 400;
       font-size: clamp(1.05rem, 1.8vw, 1.4rem);
-      color: rgba(212, 188, 138, 0.75);
+      color: var(--color-text-body);
       letter-spacing: 0.12em;
       text-transform: uppercase;
       line-height: 1.7;
@@ -257,7 +257,7 @@
       font-weight: 500;
       letter-spacing: 0.18em;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.75);
+      color: var(--color-text-body);
       text-decoration: none;
       border-radius: 9999px;
       background: rgba(212, 168, 78, 0.08);
@@ -317,7 +317,7 @@
       font-weight: 400;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
+      color: var(--color-text-dim);
     }
     .scroll-line {
       width: 1px;
@@ -537,7 +537,7 @@
     }
     .philosophy-text h2 {
       font-size: clamp(2rem, 3.5vw, 3.6rem);
-      color: var(--color-text);
+      color: var(--color-heading);
       line-height: 1.08;
       margin-bottom: var(--space-lg);
     }
@@ -549,7 +549,7 @@
       font-family: var(--font-body);
       font-weight: 300;
       font-size: var(--text-base);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.75;
       max-width: 36ch;
     }
@@ -632,7 +632,7 @@
     }
     .pillar h3 {
       font-size: clamp(1.3rem, 2vw, 1.8rem);
-      color: var(--color-text);
+      color: var(--color-heading);
       margin-bottom: var(--space-md);
       line-height: 1.15;
     }
@@ -640,7 +640,7 @@
       font-family: var(--font-body);
       font-weight: 300;
       font-size: var(--text-sm);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.75;
       max-width: 32ch;
     }
@@ -704,7 +704,7 @@
       font-family: var(--font-display);
       font-size: clamp(1.8rem, 3vw, 3rem);
       font-weight: 400;
-      color: var(--color-text);
+      color: var(--color-heading);
       line-height: 1.2;
       max-width: 580px;
       margin: 0 auto var(--space-xl);
@@ -847,7 +847,7 @@
       font-weight: 400;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.5);
+      color: var(--color-text-dim);
     }
 
     /* ===== HERO TRANSITION — elegant crossfade zone ===== */
@@ -907,6 +907,9 @@
       }
       .philosophy-glass {
         padding: 1.8rem 1.6rem;
+        background: rgba(7, 9, 15, 0.6);
+        backdrop-filter: blur(24px) saturate(1.4);
+        -webkit-backdrop-filter: blur(24px) saturate(1.4);
       }
 
       /* Reduce section padding on mobile */
@@ -971,7 +974,7 @@
       .hero-epigraph {
         font-size: clamp(0.8rem, 2.5vw, 1rem) !important;
         letter-spacing: 0.12em !important;
-        color: rgba(212, 188, 138, 0.7) !important;
+        color: var(--color-text-body) !important;
         margin-bottom: var(--space-lg) !important;
       }
       .hero-cta {
@@ -1032,7 +1035,7 @@
     <div class="container nav-inner">
       <a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2_circle.png" alt="Mega X" height="48"></a>
       <ul class="nav-links">
-        <li><a href="ginni-x.html">Ginni X</a></li>
+        <li><a href="phyntom-x8.html">Phyntom X8</a></li>
         <li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li>
         <li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li>
         <li><a href="about.html">Company</a></li>
@@ -1044,7 +1047,7 @@
   </nav>
 
   <div class="mobile-menu" role="dialog" aria-label="Mobile navigation">
-    <a href="ginni-x.html">Ginni X</a>
+    <a href="phyntom-x8.html">Phyntom X8</a>
     <a href="fann-gaming-ai.html">FannX Gaming AI</a>
     <a href="wifi-iot-chips.html">IoT Chip & Robotics</a>
     <a href="about.html">Company</a>
@@ -1158,9 +1161,9 @@
     <section id="main-pillars" style="padding:0;">
       <div class="container" style="max-width:100%;padding:0;">
         <div class="pillars">
-          <a href="ginni-x.html" class="pillar pillar-glass reveal" style="text-decoration:none;">
+          <a href="phyntom-x8.html" class="pillar pillar-glass reveal" style="text-decoration:none;">
             <div class="pillar-num">Autonomy</div>
-            <h3>Ginni X</h3>
+            <h3>Phyntom X8</h3>
             <p>AI-native business units. Deploy a department — not a person. The operating system for autonomous enterprise.</p>
             <span class="pillar-link">Explore →</span>
           </a>
@@ -1195,10 +1198,10 @@
       <div class="footer-grid">
         <div class="footer-brand"><a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2.png" alt="Mega X" height="88"></a><p>The core hub for AI-native enterprise, gaming intelligence, and integrated computing infrastructure.</p></div>
         <div class="footer-col"><h5>Company</h5><ul><li><a href="about.html">About</a></li><li><a href="about.html#leadership">Leadership</a></li><li><a href="about.html#careers">Careers</a></li></ul></div>
-        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="ginni-x.html">Ginni X</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
+        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="phyntom-x8.html">Phyntom X8</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
         <div class="footer-col"><h5>Connect</h5><ul><li><a href="contact.html">Contact</a></li><li><a href="contact.html">Investor Relations</a></li><li><a href="contact.html">Press</a></li></ul></div>
       </div>
-      <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Ginni X · Gaming AI · IoT Chip & Robotics</span></div>
+      <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Phyntom X8 · Gaming AI · IoT Chip & Robotics</span></div>
     </div>
   </footer>
 

@@ -21,11 +21,12 @@
   --color-surface-3: #1E2838;
   --color-hover: #1E2838;
 
-  /* Text */
-  --color-text: #E8DCC8;
-  --color-heading: #E8DCC8;
-  --color-text-muted: #788498;
-  --color-text-body: #788498;
+  /* Text — 4-level hierarchy */
+  --color-text: #E8DCC8;            /* legacy alias → heading */
+  --color-heading: #E8DCC8;         /* L1  titles, h1-h4, hero lines   */
+  --color-text-body: #B8AFA0;       /* L2  paragraphs, descriptions    */
+  --color-text-muted: #8A95A8;      /* L3  labels, meta, captions      */
+  --color-text-dim: #5A6678;        /* L4  decorative, very subtle     */
 
   /* Primary gold */
   --color-primary: #D4A84E;
@@ -79,4 +80,14 @@
   --glass-border-light: rgba(255, 255, 255, 0.1);
   --glass-border-dim: rgba(255, 255, 255, 0.04);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Mobile readability boost ===== */
+@media (max-width: 900px) {
+  :root {
+    --color-text-body: #C4BAA8;     /* bump body for small screens     */
+    --color-text-muted: #9AA8B8;    /* bump muted for small screens    */
+    --color-text-dim: #6E7A8C;      /* bump dim for small screens      */
+    --glass-bg: rgba(255, 255, 255, 0.04);
+  }
 }

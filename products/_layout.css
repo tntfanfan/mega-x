@@ -5,7 +5,7 @@
 html { scroll-behavior: smooth; }
 body {
   background: var(--color-bg);
-  color: var(--color-text);
+  color: var(--color-text-body);
   font-family: var(--font-body);
   font-weight: 300;
   line-height: 1.65;
@@ -72,7 +72,7 @@ h1.bigtitle em { font-style: italic; color: var(--accent, var(--color-primary));
 
 .lede { font-family: var(--font-display); font-style: italic;
   font-size: clamp(1.3rem, 1.9vw, 1.85rem); line-height: 1.4;
-  color: rgba(255,255,255,0.78); max-width: 60ch; }
+  color: var(--color-text-body); max-width: 60ch; }
 
 .section-meta { font-family: var(--font-mono); font-size: 11px;
   letter-spacing: 0.28em; text-transform: uppercase;
@@ -81,12 +81,12 @@ h1.bigtitle em { font-style: italic; color: var(--accent, var(--color-primary));
 h2.section-title {
   font-family: var(--font-display); font-weight: 400;
   font-size: clamp(2.2rem, 4vw, 3.4rem); line-height: 1.05;
-  letter-spacing: -0.018em; color: var(--color-text); max-width: 22ch;
+  letter-spacing: -0.018em; color: var(--color-heading); max-width: 22ch;
 }
 h2.section-title em { font-style: italic; color: var(--accent, var(--color-primary)); }
 
 p.body { font-size: 17px; font-weight: 300; line-height: 1.65;
-  color: var(--color-text-muted); max-width: 62ch; }
+  color: var(--color-text-body); max-width: 62ch; }
 
 /* STATS strip */
 .stats-strip {
@@ -110,7 +110,7 @@ p.body { font-size: 17px; font-weight: 300; line-height: 1.65;
   color: var(--accent, var(--color-primary)); letter-spacing: -0.02em; }
 .stat .val em { font-style: italic; }
 .stat .val sup { font-size: 0.5em; vertical-align: super; opacity: 0.7; }
-.stat .val .unit { font-size: 0.45em; font-style: italic; color: rgba(255,255,255,0.5);
+.stat .val .unit { font-size: 0.45em; font-style: italic; color: var(--color-text-dim);
   margin-left: 6px; letter-spacing: 0; }
 .stat .lbl { font-family: var(--font-body); font-size: 11px;
   font-weight: 500; text-transform: uppercase; letter-spacing: 0.16em;
@@ -174,7 +174,7 @@ section.alt { background: var(--color-surface); }
 .tile-body { padding: 22px 22px 24px; }
 .tile-body h4 { font-family: var(--font-display); font-weight: 400;
   font-size: 1.35rem; letter-spacing: -0.01em; line-height: 1.2;
-  color: var(--color-text); margin-bottom: 8px; }
+  color: var(--color-heading); margin-bottom: 8px; }
 .tile-body h4 em { font-style: italic; color: var(--accent, var(--color-primary)); }
 .tile-body p { font-size: 13px; font-weight: 300; line-height: 1.55;
   color: var(--color-text-muted); }
@@ -203,7 +203,7 @@ section.alt { background: var(--color-surface); }
 .proof li::before { content: attr(data-num); font-family: var(--font-mono);
   font-size: 10px; letter-spacing: 0.2em; color: var(--accent, var(--color-primary));
   min-width: 32px; }
-.proof li b { color: var(--color-text); font-weight: 500; margin-right: 8px; }
+.proof li b { color: var(--color-heading); font-weight: 500; margin-right: 8px; }
 .proof li span { color: var(--color-text-muted); font-weight: 300; font-size: 14px; }
 
 /* Ambient orbs */
@@ -217,7 +217,7 @@ section.alt { background: var(--color-surface); }
   font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.05;
   letter-spacing: -0.02em; max-width: 18ch; margin: 0 auto 24px; }
 .endcap h2 em { font-style: italic; color: var(--accent, var(--color-primary)); }
-.endcap p { color: var(--color-text-muted); max-width: 50ch; margin: 0 auto 40px;
+.endcap p { color: var(--color-text-body); max-width: 50ch; margin: 0 auto 40px;
   font-size: 17px; font-weight: 300; }
 .endcap .cta { display: inline-flex; align-items: center; gap: 14px;
   padding: 16px 36px; border-radius: 999px;

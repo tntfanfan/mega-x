@@ -82,7 +82,7 @@
     .chip-hero-sub {
       font-weight: 300;
       font-size: clamp(1rem, 1.5vw, 1.35rem);
-      color: rgba(255,255,255,0.65);
+      color: var(--color-text-body);
       line-height: 1.8;
       max-width: 52ch;
     }
@@ -105,7 +105,7 @@
       font-size: 0.65rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: rgba(255,255,255,0.4);
+      color: var(--color-text-dim);
     }
     @media(max-width:900px) {
       .chip-hero { min-height: 70vh; }
@@ -163,7 +163,7 @@
     .split-section .body-text {
       font-weight: 300;
       font-size: clamp(0.95rem, 1.2vw, 1.15rem);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.85;
     }
     .split-section .body-text + .body-text {
@@ -224,18 +224,18 @@
     .product-card h4 {
       font-size: clamp(1.15rem, 1.8vw, 1.4rem);
       margin-bottom: var(--space-sm);
-      color: var(--color-text);
+      color: var(--color-heading);
     }
     .product-card .desc {
       font-size: clamp(0.85rem, 1vw, 0.95rem);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.75;
       margin-bottom: var(--space-lg);
     }
     .product-asp {
       font-family: var(--font-display);
       font-size: clamp(1.4rem, 2.5vw, 1.8rem);
-      color: var(--color-text);
+      color: var(--color-heading);
       margin-bottom: 0.3rem;
     }
     .product-asp span {
@@ -262,7 +262,7 @@
     }
     .section-header p {
       font-size: clamp(0.95rem, 1.2vw, 1.15rem);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.8;
       max-width: 48ch;
       margin-top: var(--space-lg);
@@ -281,7 +281,7 @@
     .market-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; }
     .market-bar { width:100%; max-width:90px; transition:height 1s var(--ease-out); }
     .market-bar-label { font-size:0.7rem; color:var(--color-text-muted); margin-top:var(--space-sm); text-align:center; letter-spacing:0.04em; }
-    .market-bar-value { font-family:var(--font-display); font-size:clamp(1rem, 1.5vw, 1.3rem); color:var(--color-text); margin-bottom:var(--space-sm); text-align:center; }
+    .market-bar-value { font-family:var(--font-display); font-size:clamp(1rem, 1.5vw, 1.3rem); color:var(--color-heading); margin-bottom:var(--space-sm); text-align:center; }
 
     /* ===== Channel Strip ===== */
     .channel-strip {
@@ -311,7 +311,7 @@
     }
     .channel-item p {
       font-size: clamp(0.85rem, 1vw, 0.95rem);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.7;
     }
     @media(max-width:900px) { .channel-strip { grid-template-columns:repeat(2,1fr); } }
@@ -337,7 +337,7 @@
     }
     .timeline-item p {
       font-size: clamp(0.88rem, 1.1vw, 1rem);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.75;
     }
 
@@ -376,7 +376,7 @@
     }
     .advantage-card p {
       font-size: clamp(0.88rem, 1.1vw, 1rem);
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       line-height: 1.75;
     }
     @media(max-width:900px) { .advantage-grid { grid-template-columns: 1fr; } }
@@ -394,7 +394,7 @@
       margin-bottom: var(--space-md);
     }
     .cta-section p {
-      color: var(--color-text-muted);
+      color: var(--color-text-body);
       max-width: 48ch;
       margin: 0 auto var(--space-xl);
       font-size: clamp(0.95rem, 1.2vw, 1.15rem);
@@ -411,7 +411,7 @@
       <a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2_circle.png" alt="Mega X" height="48"></a>
       <ul class="nav-links">
         <li><a href="index.html">Home</a></li>
-        <li><a href="ginni-x.html">Ginni X</a></li>
+        <li><a href="phyntom-x8.html">Phyntom X8</a></li>
         <li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li>
         <li><a href="wifi-iot-chips.html" style="color:var(--color-primary);">IoT Chip & Robotics</a></li>
         <li><a href="about.html">Company</a></li>
@@ -423,7 +423,7 @@
   </nav>
   <div class="mobile-menu" role="dialog" aria-label="Mobile navigation">
     <a href="index.html">Home</a>
-    <a href="ginni-x.html">Ginni X</a>
+    <a href="phyntom-x8.html">Phyntom X8</a>
     <a href="fann-gaming-ai.html">FannX Gaming AI</a>
     <a href="wifi-iot-chips.html">IoT Chip & Robotics</a>
     <a href="about.html">Company</a>
@@ -505,15 +505,15 @@
         .pcard-body h3 em { font-style: italic; color: var(--pcaccent); }
         .pcard-body .tag { font-family: var(--font-mono); font-size: 11px;
           letter-spacing: 0.22em; text-transform: uppercase;
-          color: rgba(255,255,255,0.5); margin-bottom: 18px; }
+          color: var(--color-text-dim); margin-bottom: 18px; }
         .pcard-body p { font-size: 15px; font-weight: 300; line-height: 1.6;
-          color: var(--color-text-muted); margin-bottom: 20px; }
+          color: var(--color-text-body); margin-bottom: 20px; }
         .pcard-meta { margin-top: auto; padding-top: 18px;
           border-top: 1px solid rgba(255,255,255,0.06);
           display: flex; align-items: center; justify-content: space-between;
           font-family: var(--font-mono); font-size: 11px;
           letter-spacing: 0.18em; text-transform: uppercase; }
-        .pcard-meta .domains { color: rgba(255,255,255,0.55); }
+        .pcard-meta .domains { color: var(--color-text-muted); }
         .pcard-meta .arrow { color: var(--pcaccent);
           transition: transform 0.4s var(--ease-out); }
         .pcard:hover .pcard-meta .arrow { transform: translateX(4px); }
@@ -676,10 +676,10 @@
       <div class="footer-grid">
         <div class="footer-brand"><a href="index.html" class="nav-logo" aria-label="Mega X Holding home"><img src="assets/MegaX_logo2.png" alt="Mega X" height="88"></a><p>The core hub for AI-native enterprise, gaming intelligence, and integrated computing infrastructure.</p></div>
         <div class="footer-col"><h5>Company</h5><ul><li><a href="about.html">About</a></li><li><a href="about.html#leadership">Leadership</a></li><li><a href="about.html#careers">Careers</a></li></ul></div>
-        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="ginni-x.html">Ginni X</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
+        <div class="footer-col"><h5>Divisions</h5><ul><li><a href="phyntom-x8.html">Phyntom X8</a></li><li><a href="fann-gaming-ai.html">FannX Gaming AI</a></li><li><a href="wifi-iot-chips.html">IoT Chip & Robotics</a></li></ul></div>
         <div class="footer-col"><h5>Connect</h5><ul><li><a href="contact.html">Contact</a></li><li><a href="contact.html">Investor Relations</a></li><li><a href="contact.html">Press</a></li></ul></div>
       </div>
-      <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Ginni X · Gaming AI · IoT Chip & Robotics</span></div>
+      <div class="footer-bottom"><span>&copy; 2026 Mega X Holding Ltd. All rights reserved.</span><span>Phyntom X8 · Gaming AI · IoT Chip & Robotics</span></div>
     </div>
   </footer>
 
