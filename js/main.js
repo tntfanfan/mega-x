@@ -9,22 +9,43 @@ window.addEventListener('load', () => {
 
 // ========== NAV SCROLL ==========
 const nav = document.querySelector('.nav');
+const navInner = nav ? nav.querySelector('.nav-inner') : null;
 let navIsScrolled = false;
+let navTransitioning = false;
+
 window.addEventListener('scroll', () => {
   if (!nav) return;
   const shouldScroll = window.scrollY > 60;
+
   if (shouldScroll && !navIsScrolled) {
-    // Scrolling down → add pill
-    nav.classList.remove('pill-fade-out');
-    nav.classList.add('scrolled');
+    // Scrolling down → show pill
     navIsScrolled = true;
-  } else if (!shouldScroll && navIsScrolled) {
-    // Scrolling back up → fade out pill, then remove
-    nav.classList.add('pill-fade-out');
-    setTimeout(() => {
-      nav.classList.remove('scrolled', 'pill-fade-out');
-    }, 600);
+    navTransitioning = false;
+    nav.classList.remove('pill-fade-out', 'bar-fade-in');
+    nav.classList.add('scrolled');
+
+  } else if (!shouldScroll && navIsScrolled && !navTransitioning) {
+    // Scrolling back up → fade out pill, then reveal bar
     navIsScrolled = false;
+    navTransitioning = true;
+
+    // Step 1: fade pill to opacity 0
+    nav.classList.add('pill-fade-out');
+
+    // Step 2: after fade done, strip pill styles (invisible, no flash)
+    setTimeout(() => {
+      nav.classList.remove('scrolled');
+      // Step 3: next frame, fade bar back in
+      requestAnimationFrame(() => {
+        nav.classList.remove('pill-fade-out');
+        nav.classList.add('bar-fade-in');
+        // Clean up after bar fade-in completes
+        setTimeout(() => {
+          nav.classList.remove('bar-fade-in');
+          navTransitioning = false;
+        }, 600);
+      });
+    }, 500);
   }
 }, { passive: true });
 

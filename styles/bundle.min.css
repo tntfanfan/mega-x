@@ -330,41 +330,43 @@ section {
   z-index: 100;
   padding: var(--space-md) 0;
   background: rgba(7, 9, 15, 0.15);
-  backdrop-filter: blur(12px) saturate(1.2);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
   transition: background 0.8s var(--ease-out),
-              backdrop-filter 0.8s var(--ease-out),
-              -webkit-backdrop-filter 0.8s var(--ease-out),
               padding 0.6s var(--ease-out);
 }
 
 /* ---- Scrolled state: floating capsule pill ---- */
 .nav.scrolled {
   padding: 12px 0;
-  background: rgba(7, 9, 15, 0);
-  backdrop-filter: blur(0px) saturate(1);
-  -webkit-backdrop-filter: blur(0px) saturate(1);
+  background: transparent;
 }
 /* Pill fade-out when returning to top */
 .nav.pill-fade-out .nav-inner {
-  opacity: 0;
-  transition: opacity 0.6s var(--ease-out);
+  opacity: 0 !important;
+  transition: opacity 0.5s var(--ease-out) !important;
+}
+/* Bar fade-in after pill removed */
+.nav.bar-fade-in {
+  animation: barFadeIn 0.6s var(--ease-out) forwards;
+}
+@keyframes barFadeIn {
+  from { background: rgba(7, 9, 15, 0); }
+  to   { background: rgba(7, 9, 15, 0.15); }
 }
 .nav.scrolled .nav-inner {
   max-width: 900px;
   margin: 0 auto;
-  background: rgba(7, 9, 15, 0.35);
-  backdrop-filter: blur(32px) saturate(1.6) brightness(1.05);
-  -webkit-backdrop-filter: blur(32px) saturate(1.6) brightness(1.05);
+  background: rgba(7, 9, 15, 0.25);
+  backdrop-filter: blur(48px) saturate(1.8) brightness(1.1);
+  -webkit-backdrop-filter: blur(48px) saturate(1.8) brightness(1.1);
   border-radius: 9999px;
-  padding: 8px 8px 8px 24px;
+  padding: 8px;
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.12),
     inset 0 -0.5px 0.5px rgba(255, 255, 255, 0.03),
     0 8px 32px rgba(0, 0, 0, 0.4),
     0 1px 3px rgba(0, 0, 0, 0.2);
   position: relative;
-  overflow: hidden;
+  overflow: clip;
 }
 /* Capsule gradient border */
 .nav.scrolled .nav-inner::before {
@@ -452,6 +454,9 @@ section {
   height: 36px !important;
   transition: height 0.4s var(--ease-out);
 }
+.nav.scrolled .nav-logo {
+  margin-left: 4px;
+}
 .nav-links {
   display: flex;
   align-items: center;
@@ -460,8 +465,8 @@ section {
 }
 .nav-links a {
   font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.7);
@@ -482,14 +487,15 @@ section {
   display: none; /* Remove underline in capsule design */
 }
 
-/* CTA button — gold glass pill */
+/* CTA button — gold glass pill, aligned to capsule edge */
 .nav-links .btn-primary {
   background: rgba(212, 168, 78, 0.15);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: none;
   border-radius: 9999px;
-  padding: 8px 20px;
+  padding: 10px 22px;
+  margin-right: 8px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     inset 0 0 0 1px rgba(212, 168, 78, 0.25),
