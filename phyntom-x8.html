@@ -342,11 +342,11 @@
         </h1>
         <div class="px-hero-bottom">
           <div class="px-hero-stat">
-            <div class="px-stat-n">3×</div>
+            <div class="px-stat-n"><span id="hero-stat-mult">1</span>×</div>
             <div class="px-stat-l">Avg. Productivity Gain</div>
           </div>
           <div class="px-hero-stat">
-            <div class="px-stat-n">30 days</div>
+            <div class="px-stat-n"><span id="hero-stat-days">30</span> days</div>
             <div class="px-stat-l">To Full Deployment</div>
           </div>
         </div>
@@ -490,7 +490,7 @@
     <!-- PROCESS -->
     <section class="px-section" id="process">
       <p class="px-section-label">04 / How It Works</p>
-      <h2 class="px-section-title">Up and Running<br>In 30 Days.</h2>
+      <h2 class="px-section-title">Up and Running<br>In <span id="countdown-num">30</span> Days.</h2>
       <div class="px-process-grid">
         <div class="px-process-step">
           <div class="px-process-arrow">→</div>
@@ -668,5 +668,40 @@
     })();
   </script>
   <script src="js/main.js"></script>
+  <script>
+  // Animated number on scroll into view
+  (function(){
+    function animateNum(el, from, to, delayStart) {
+      if (!el) return;
+      var fired = false;
+      var dir = to > from ? 1 : -1; // 1=count up, -1=count down
+      var total = Math.abs(to - from);
+      var observer = new IntersectionObserver(function(entries){
+        if (entries[0].isIntersecting && !fired) {
+          fired = true;
+          observer.disconnect();
+          var n = from;
+          el.textContent = n;
+          function tick() {
+            if (n === to) return;
+            n += dir;
+            el.textContent = n;
+            var progress = Math.abs(n - from) / total;
+            var delay = 40 + 160 * Math.pow(progress, 2.5);
+            setTimeout(tick, delay);
+          }
+          setTimeout(tick, delayStart || 300);
+        }
+      }, { threshold: 0.3 });
+      observer.observe(el.closest('.px-hero-stat') || el.closest('.px-section') || el);
+    }
+
+    // Hero stats
+    animateNum(document.getElementById('hero-stat-mult'), 1, 3, 200);   // count UP 1→3
+    animateNum(document.getElementById('hero-stat-days'), 30, 5, 200);   // count DOWN 30→5
+    // Process section
+    animateNum(document.getElementById('countdown-num'), 30, 5, 300);    // count DOWN 30→5
+  })();
+  </script>
 </body>
 </html>
