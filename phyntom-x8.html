@@ -696,9 +696,18 @@
       observer.observe(el.closest('.px-hero-stat') || el.closest('.px-section') || el);
     }
 
-    // Hero stats
-    animateNum(document.getElementById('hero-stat-mult'), 1, 3, 200);   // count UP 1→3
-    animateNum(document.getElementById('hero-stat-days'), 30, 5, 200);   // count DOWN 30→5
+    // Hero stats — visible on load, so use timeout directly
+    var multEl = document.getElementById('hero-stat-mult');
+    if (multEl) {
+      multEl.textContent = '1';
+      setTimeout(function(){
+        multEl.textContent = '2';
+        setTimeout(function(){
+          multEl.textContent = '3';
+        }, 600);
+      }, 800);
+    }
+    animateNum(document.getElementById('hero-stat-days'), 30, 5, 800);   // count DOWN 30→5
     // Process section
     animateNum(document.getElementById('countdown-num'), 30, 5, 300);    // count DOWN 30→5
   })();
