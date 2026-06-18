@@ -1,0 +1,5 @@
+  :root { --accent: #D4A84E; --accent-soft: rgba(212,168,78,0.08); }
+  body::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+    background:
+      radial-gradient(ellipse at 15% 10%, rgba(212,168,78,0.10), transparent 55%),
+      radial-gradient(ellipse at 90% 80%, rgba(180,140,60,0.07), transparent 50%); }
