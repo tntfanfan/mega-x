@@ -1,3 +1,6 @@
+(() => {
+'use strict';
+
 // ========== LOADER ==========
 window.addEventListener('load', () => {
   const loader = document.querySelector('.loader-overlay');
@@ -163,3 +166,5 @@ if (scrollTopBtn) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 }
+
+})();
