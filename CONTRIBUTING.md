@@ -179,6 +179,8 @@ which only works under `defer`'s "execute after DOM parsed" semantics.
 
 * Vanilla DOM, no framework.
 * `defer`-loaded — top-level DOM queries are safe.
+* Wrapped in an IIFE with `'use strict'` at the top — top-level `const`/`let`
+  do **not** leak to `window`. Don't undo that.
 * Wrap any new feature in a `if (root) { … }` null-guard. We don't ship
   per-page bundles, so a missing element on one page must not crash the rest.
 * If you add a third-party `<script>`, defer it too and put it in **page-level
@@ -217,6 +219,46 @@ python tools/convert_images.py
 python tools/upgrade_images.py
 ```
 
+## Adding a new video
+
+```bash
+# 1. Drop the source MP4 into assets/  (kebab-case filename, no audio for
+#    decorative loops)
+cp ~/Movies/our-new-loop.mp4 assets/our-new-loop.mp4
+
+# 2. Reference it in HTML — copy the existing pattern from index.html:
+#      <video class="lazy-video" loop muted playsinline preload="none"
+#             poster="assets/our-new-loop-poster.jpg">
+#        <source data-src="assets/our-new-loop.mp4" type="video/mp4">
+#      </video>
+
+# 3. Encode WebM (VP9, no audio) sibling and inject the <source> tag
+python tools/convert_videos.py
+python tools/upgrade_videos.py
+```
+
+`convert_videos.py` skips files where the WebM came out larger than the MP4
+(rare, but happens for already-aggressive sources). For those, leave the
+single `<source type="video/mp4">` in place.
+
+## Favicon
+
+Each page links three icons:
+
+```html
+<link rel="icon" type="image/svg+xml" href="favicon.svg">     ← modern browsers
+<link rel="icon" href="assets/final-favicon.ico" type="image/x-icon">
+<link rel="icon" href="assets/final-favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/final-apple-touch-icon.png">
+```
+
+`favicon.svg` lives at site root (so the URL stays `/favicon.svg`). If you
+ever need to add the SVG link to a fresh page, run
+[`tools/add_svg_favicon.py`][af] — it inserts the line above any existing
+`final-favicon.ico` reference, idempotently.
+
+[af]: tools/add_svg_favicon.py
+
 ## Building
 
 The site has **no continuous build watcher**. Run scripts before committing,
@@ -225,9 +267,12 @@ in this order:
 ```bash
 python tools/extract_inline_styles.py   # if you accidentally inlined <style>
 python tools/unify_font_loading.py      # if you added Google Fonts a different way
+python tools/add_svg_favicon.py         # if you created a new HTML page from scratch
 python tools/inject_partials.py         # always — sync partials → pages
 python tools/convert_images.py          # if you added new PNG/JPG
 python tools/upgrade_images.py          # always — wrap any new <img>
+python tools/convert_videos.py          # if you added new MP4
+python tools/upgrade_videos.py          # always — inject WebM <source> when sibling exists
 python tools/build_css.py               # if you edited any styles/*.css source
 ```
 
@@ -237,8 +282,11 @@ when they have nothing to do.
 To run them all in one shot:
 
 ```bash
-for s in extract_inline_styles unify_font_loading inject_partials \
-         convert_images upgrade_images build_css; do
+for s in extract_inline_styles unify_font_loading add_svg_favicon \
+         inject_partials \
+         convert_images upgrade_images \
+         convert_videos upgrade_videos \
+         build_css; do
     python tools/$s.py
 done
 ```
@@ -253,7 +301,10 @@ done
 | [`inject_partials.py`][t4]                | Render partials into pages from `partials/pages.json`          | After editing a partial or page config |
 | [`convert_images.py`][t5]                 | Generate AVIF + WebP siblings for every referenced PNG/JPG     | After adding any image |
 | [`upgrade_images.py`][t6]                 | Wrap `<img>` in `<picture>` + add `decoding/loading/fetchpriority` | After adding any image |
-| [`rename_to_kebab_case.py`][t7]           | One-shot folder/file rename to kebab-case + ref patches        | Won't be needed again unless you intentionally introduce new bad names |
+| [`convert_videos.py`][t7]                 | Encode referenced MP4 → WebM (VP9, no audio) using imageio-ffmpeg | After adding any video |
+| [`upgrade_videos.py`][t8]                 | Inject `<source type="video/webm">` before each MP4 source    | After adding any video |
+| [`add_svg_favicon.py`][t9]                | Add SVG favicon `<link>` to every page that has the ICO link   | When creating a new page from scratch |
+| [`rename_to_kebab_case.py`][t10]          | One-shot folder/file rename to kebab-case + ref patches        | Won't be needed again unless you intentionally introduce new bad names |
 | `rename_spaced_files.py`                  | Historical (kept for archeology) — superseded by the above     | Never |
 
 [t1]: tools/build_css.py
@@ -262,16 +313,21 @@ done
 [t4]: tools/inject_partials.py
 [t5]: tools/convert_images.py
 [t6]: tools/upgrade_images.py
-[t7]: tools/rename_to_kebab_case.py
+[t7]: tools/convert_videos.py
+[t8]: tools/upgrade_videos.py
+[t9]: tools/add_svg_favicon.py
+[t10]: tools/rename_to_kebab_case.py
 
 ## Pre-commit checklist
 
 - [ ] `python tools/inject_partials.py` reports `0 files updated`
 - [ ] `python tools/upgrade_images.py` reports `0 files updated`
+- [ ] `python tools/upgrade_videos.py` reports `0 files updated`
 - [ ] `python tools/build_css.py` writes the same `bundle.min.css`
 - [ ] No new file/folder name has uppercase letters, spaces, or `_`
       (other than the documented exceptions)
 - [ ] No new inline `<style>` block in `<head>`
+- [ ] Each page has exactly one `<h1>`
 - [ ] `git status` is clean except for files you actually intend to change
 - [ ] Local smoke test passed: `python -m http.server 8000` then visit each touched page
 
@@ -282,9 +338,10 @@ The scripts in `tools/` use only:
 * Standard library
 * [`Pillow`](https://pypi.org/project/Pillow/) + [`pillow-avif-plugin`](https://pypi.org/project/pillow-avif-plugin/) — for AVIF/WebP encoding
 * [`rcssmin`](https://pypi.org/project/rcssmin/) — for CSS minification
+* [`imageio-ffmpeg`](https://pypi.org/project/imageio-ffmpeg/) — bundled FFmpeg binary for VP9 encoding (no system install required)
 
 Install with:
 
 ```bash
-pip install --user Pillow pillow-avif-plugin rcssmin
+pip install --user Pillow pillow-avif-plugin rcssmin imageio-ffmpeg
 ```

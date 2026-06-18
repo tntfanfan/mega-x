@@ -74,6 +74,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes.
 | Tweak a design token (color, font…)   | `styles/variables.css`         | `python tools/build_css.py`           |
 | Edit per-page styling                 | `styles/pages/<page>.css`      | (just save)                           |
 | Add an image                          | drop in `assets/`              | `python tools/convert_images.py && python tools/upgrade_images.py` |
+| Add a video                           | drop in `assets/`              | `python tools/convert_videos.py && python tools/upgrade_videos.py` |
 | Add a new page                        | new `<page>.html` + entry in `partials/pages.json` | `python tools/inject_partials.py`     |
 
 ## Naming conventions (strict)
@@ -95,15 +96,18 @@ This site is heavily optimized for cold-load speed:
 * Google Fonts loaded via `media="print" onload` (non-blocking)
 * All `<img>` wrapped in `<picture>` with AVIF + WebP + PNG/JPG fallback
   (≈ 38 MB → 3 MB on AVIF-capable browsers)
-* `<script src="js/main.js" defer>` — no parser blocking
+* All `<video>` use `<source type="video/webm">` before `video/mp4`
+  (≈ 35 MB → 22 MB on VP9-capable browsers; some clips down 84%)
+* `<script src="js/main.js" defer>` — no parser blocking; IIFE + `'use strict'`
 * Hero / above-the-fold images: `loading="eager"` + `fetchpriority="high"`
 * Everything else: `loading="lazy"` + `decoding="async"`
 * CSS: 5 source files concat-and-minified into one `bundle.min.css`
+* SVG favicon (modern browsers) with ICO/PNG fallback chain
 
 ## Build dependencies
 
 ```bash
-pip install --user Pillow pillow-avif-plugin rcssmin
+pip install --user Pillow pillow-avif-plugin rcssmin imageio-ffmpeg
 ```
 
 (That's it — no Node, no `npm`, no Webpack.)
