@@ -54,14 +54,24 @@ mega-x/
 
 ## Quick start
 
+Plain local server:
+
 ```bash
-# Run a local server
-python -m http.server 8000
+python tools/dev_server.py 8000
 # then open http://localhost:8000
 ```
 
-VS Code users: an `F5` debug config (Edge → :8000) is in
-`.vscode/launch.json` (local-only, not in git).
+VS Code users (debug with breakpoints):
+
+1. Double-click [`tools/debug-edge.bat`](tools/debug-edge.bat) — starts the
+   dev server **and** an Edge instance with CDP on port 9223.
+2. In VS Code select **`mega-x (attach Edge :9223)`** from the Run & Debug
+   dropdown and press F5.
+
+The `.vscode/launch.json` configs are local-only (`.git/info/exclude`-ignored).
+The `(launch)` configs in there are kept for posterity but are flaky — Edge
+single-instance behaviour can swallow `--remote-debugging-port`. Always
+prefer the **attach** flow above.
 
 ## Editing the site
 

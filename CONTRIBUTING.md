@@ -318,6 +318,29 @@ done
 [t9]: tools/add_svg_favicon.py
 [t10]: tools/rename_to_kebab_case.py
 
+## Debugging in VS Code (Edge)
+
+The recommended flow is **attach**, not launch. Edge's single-instance /
+compat-layer behaviour swallows the launch-time `--remote-debugging-port`
+flag too often to be reliable.
+
+1. Double-click [`tools/debug-edge.bat`][tdbg] — opens a side window that:
+   - spawns `tools/dev_server.py` on port 8000
+   - launches Edge with `--remote-debugging-port=9223` and an isolated
+     `--user-data-dir=.vscode/.edge-profile`
+   - Edge navigates to `http://localhost:8000/`
+2. In VS Code, Run & Debug → select **`mega-x (attach Edge :9223)`** → F5.
+
+Stop debugging in VS Code → only detaches; Edge and the dev_server keep
+running. To fully shut down, close the bat's terminal window (kills
+Edge) and the minimized dev_server cmd window.
+
+The `(launch)` configs in `.vscode/launch.json` are kept for
+documentation but should be considered fallback only — see git log of
+this file for the diagnostic notes.
+
+[tdbg]: tools/debug-edge.bat
+
 ## Pre-commit checklist
 
 - [ ] `python tools/inject_partials.py` reports `0 files updated`
