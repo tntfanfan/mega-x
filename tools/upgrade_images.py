@@ -27,7 +27,7 @@ EAGER_IMAGES = {
     "assets/logo-loader.png",
     # known hero patterns (above-the-fold backgrounds)
     "assets/hero-bg.png",
-    "assets/Gamehero.png",
+    "assets/game-hero.png",
 }
 
 IMG_RE = re.compile(

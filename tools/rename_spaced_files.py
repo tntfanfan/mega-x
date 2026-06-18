@@ -1,7 +1,13 @@
-"""Rename files containing spaces to snake_case (PhyntomX8/) or kebab-case (logos),
+"""[HISTORICAL — superseded by tools/rename_to_kebab_case.py]
+
+Rename files containing spaces to snake_case (PhyntomX8/) or kebab-case (logos),
 and patch all references in HTML/CSS.
 
 Idempotent: skips renames whose target already exists (and warns).
+
+This was the first cleanup pass (P2.2). Its results have since been further
+normalized by tools/rename_to_kebab_case.py (P3) — running this script today
+is a no-op because all sources are already absent.
 
 Run: python tools/rename_spaced_files.py
 """
