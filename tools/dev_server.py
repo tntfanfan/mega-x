@@ -18,7 +18,16 @@ os.chdir(ROOT)
 class ReuseTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
-handler = http.server.SimpleHTTPRequestHandler
+class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    """Suppress noisy ConnectionAbortedError tracebacks when the browser
+    disconnects mid-response (e.g. user closes Edge while a video is loading)."""
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError):
+            self.close_connection = True
+
+handler = QuietHandler
 httpd = ReuseTCPServer((HOST, PORT), handler)
 
 def shutdown(*_):
