@@ -245,7 +245,31 @@
   <button class="scroll-top" aria-label="Scroll to top"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15V3"/><path d="M3 8l6-6 6 6"/></svg></button>
   <script src="js/main.js" defer></script>
 
-  <!-- ═══ Interactive Grid Canvas (gold highlights on mouse) ═══ -->
+  <!-- ═══ Interactive Grid Canvas — cursor ripple ═══ -->
+  <!--
+    PHYSICS MODEL: Projectile Kinematics + Circular Ripple
+
+    ❶ Brightness curve — Newtonian projectile (NOT spring)
+
+    Rise phase (throw upward):
+      v(t) = v₀ − g·t          (deceleration under gravity)
+      s(t) = v₀t − ½gt²        (position = brightness)
+      Normalized: b(n) = n(2−n)   n = t / t_peak
+
+    Fall phase (free fall):
+      v(t) = g·Δt              (acceleration under gravity)
+      s(t) = s_max − ½g·Δt²
+      Normalized: b(m) = 1 − m²   m = Δt / t_fall
+
+    Asymmetry: ATTACK = 0.30
+      Rise compressed to 30% → punchy, impulsive
+      Fall stretched to 70% → inertia carries the glow
+
+    ❷ Ripple: concentric wavefronts from MOUSE CENTER
+      v_wave = const (shallow water approximation)
+      Amplitude: A ∝ 1/√r  (2D energy conservation)
+      Each grid segment lit based on 2D distance to cursor
+  -->
   <script>
   (function(){
     const gc = document.getElementById('hgGridCanvas');
@@ -255,6 +279,29 @@
     const CELL = 80;
     let mouseX = -999, mouseY = -999;
 
+    /* ── Heartbeat ripple parameters ──
+     *
+     *  Real cardiac rhythm:  lub ··· dub ········ lub ··· dub ········
+     *                        S1  ~0.3s  S2   ~0.7s rest
+     *
+     *  S1 (systolic) = strong contraction → large ripple
+     *  S2 (diastolic) = valve closure → smaller, softer ripple
+     *  Then ~0.7s of diastolic rest before next cycle           */
+    const WAVE_V    = 280;    // px/s — wavefront speed
+    const CYCLE     = 1.15;   // s — full heartbeat cycle (~52 BPM)
+    const HALF_W    = 85;     // px — half wavefront thickness
+    const ATTACK    = 0.30;   // 30% rise, 70% fall
+    // Two beats per cycle: lub (strong) then dub (weak)
+    const BEATS = [
+      { offset: 0.00, strength: 1.0  },   // S1 — lub
+      { offset: 0.28, strength: 0.45 },   // S2 — dub (softer, ~0.28s later)
+    ];
+    // Waves live for ~3 full heartbeats before 1/√r decay
+    // makes them invisible — no artificial cutoff
+    const MAX_AGE   = CYCLE * 3.5;
+    const MAX_REACH = MAX_AGE * WAVE_V + HALF_W;
+    const MAX_HIST  = Math.ceil(MAX_AGE / CYCLE) + 1; // cycles to check
+
     function gResize(){
       gdpr = Math.min(window.devicePixelRatio||1, 2);
       gw = gc.offsetWidth; gh = gc.offsetHeight;
@@ -262,101 +309,153 @@
       gctx.setTransform(gdpr,0,0,gdpr,0,0);
     }
 
-    document.querySelector('.hero-grid').addEventListener('mousemove', function(e){
+    const hero = document.querySelector('.hero-grid');
+    hero.addEventListener('mousemove', function(e){
       const r = gc.getBoundingClientRect();
       mouseX = e.clientX - r.left;
       mouseY = e.clientY - r.top;
     });
-    document.querySelector('.hero-grid').addEventListener('mouseleave', function(){
+    hero.addEventListener('mouseleave', function(){
       mouseX = -999; mouseY = -999;
     });
 
-    function gDraw(){
-      gctx.clearRect(0,0,gw,gh);
+    /*  Projectile brightness: b(n) = n(2−n) rise, b(m) = 1−m² fall
+     *  Derived from s = v₀t − ½gt²  (Newton's 2nd law, F = ma)
+     *
+     *  Rise:  v₀ = 2/A,  g = 2/A²   → peak at t=A with b=1
+     *    db/dn = 2(1−n): starts at 2 (fast), → 0 at peak (deceleration)
+     *    d²b/dn² = −2: constant negative accel (gravity opposes throw)
+     *
+     *  Fall:  released from rest, free-fall under g = 2/(1−A)²
+     *    db/dm = −2m: starts at 0 (inertia), accelerates toward dark
+     *    d²b/dm² = −2: constant accel (gravity pulls brightness down) */
+    function kBright(phase){
+      if(phase <= 0 || phase >= 1) return 0;
+      if(phase < ATTACK){
+        const n = phase / ATTACK;
+        return n * (2 - n);          // s = v₀t − ½gt²
+      }
+      const m = (phase - ATTACK) / (1 - ATTACK);
+      return 1 - m * m;              // free-fall: s_max − ½gΔt²
+    }
 
-      // Radial mask center
-      const mcx = gw*0.5, mcy = gh*0.5;
-      const maxMaskR = Math.max(gw,gh)*0.55;
+    /* Gold intensity at distance d from cursor.
+     * Finds the MOST RECENT firings of each beat, then checks
+     * backwards MAX_HIST cycles. Old waves expand and fade
+     * naturally via 1/√r — never artificially cancelled. */
+    function goldAt(dist, t){
+      let b = 0;
+      const r0 = 40;
+      for(const beat of BEATS){
+        const elapsed = t - beat.offset;
+        if(elapsed < 0) continue;
+        // Most recent cycle this beat fired in
+        const latest = Math.floor(elapsed / CYCLE);
+        // Check from latest backwards (oldest first would miss recent ones)
+        const oldest = Math.max(0, latest - MAX_HIST + 1);
+        for(let c = latest; c >= oldest; c--){
+          const age = elapsed - c * CYCLE;
+          const radius = age * WAVE_V;
+          if(radius > MAX_REACH) break; // older = even farther, stop
+          const delta = dist - radius;
+          if(delta < -HALF_W || delta > HALF_W) continue;
+          const phase = (HALF_W - delta) / (2 * HALF_W);
+          const decay = Math.sqrt(r0 / Math.max(r0, radius));
+          b += kBright(phase) * decay * beat.strength;
+        }
+      }
+      return Math.min(1, b);
+    }
 
-      // Draw grid lines
-      const cols = Math.ceil(gw/CELL)+1;
-      const rows = Math.ceil(gh/CELL)+1;
-      const INFLUENCE = 220; // px radius of gold highlight
+    function gDraw(ts){
+      const t = ts * 0.001;
+      gctx.clearRect(0, 0, gw, gh);
 
-      // Vertical lines
-      for(let i=0; i<cols; i++){
+      const mcx = gw * 0.5, mcy = gh * 0.5;
+      const maxR = Math.max(gw, gh) * 0.55;
+      const hasMouse = mouseX > -900;
+      const cols = Math.ceil(gw / CELL) + 1;
+      const rows = Math.ceil(gh / CELL) + 1;
+
+      /* ── Base white grid ── */
+      for(let i = 0; i < cols; i++){
         const x = i * CELL;
-        // Fade at edges (radial mask emulation)
-        const dx = (x - mcx)/maxMaskR;
-        const edgeFade = Math.max(0, 1 - dx*dx*1.8);
-
-        // Mouse proximity for this line
-        const distToMouse = Math.abs(x - mouseX);
-        const goldStrength = Math.max(0, 1 - distToMouse / INFLUENCE);
-        const goldAlpha = goldStrength * goldStrength * 0.5 * edgeFade;
-        const baseAlpha = 0.04 * edgeFade;
-
-        // Base line
-        gctx.beginPath();
-        gctx.moveTo(x, 0); gctx.lineTo(x, gh);
-        gctx.strokeStyle = `rgba(255,255,255,${baseAlpha})`;
-        gctx.lineWidth = 1;
-        gctx.stroke();
-
-        // Gold highlight line
-        if(goldAlpha > 0.005){
-          gctx.beginPath();
-          gctx.moveTo(x, 0); gctx.lineTo(x, gh);
-          gctx.strokeStyle = `rgba(212,168,78,${goldAlpha})`;
-          gctx.lineWidth = 1.5;
-          gctx.stroke();
-        }
+        const ef = Math.max(0, 1 - ((x - mcx) / maxR) ** 2 * 1.8);
+        if(ef < 0.005) continue;
+        gctx.beginPath(); gctx.moveTo(x, 0); gctx.lineTo(x, gh);
+        gctx.strokeStyle = `rgba(255,255,255,${0.04 * ef})`;
+        gctx.lineWidth = 1; gctx.stroke();
       }
-
-      // Horizontal lines
-      for(let j=0; j<rows; j++){
+      for(let j = 0; j < rows; j++){
         const y = j * CELL;
-        const dy = (y - mcy)/maxMaskR;
-        const edgeFade = Math.max(0, 1 - dy*dy*2.2);
+        const ef = Math.max(0, 1 - ((y - mcy) / maxR) ** 2 * 2.2);
+        if(ef < 0.005) continue;
+        gctx.beginPath(); gctx.moveTo(0, y); gctx.lineTo(gw, y);
+        gctx.strokeStyle = `rgba(255,255,255,${0.04 * ef})`;
+        gctx.lineWidth = 1; gctx.stroke();
+      }
 
-        const distToMouse = Math.abs(y - mouseY);
-        const goldStrength = Math.max(0, 1 - distToMouse / INFLUENCE);
-        const goldAlpha = goldStrength * goldStrength * 0.5 * edgeFade;
-        const baseAlpha = 0.04 * edgeFade;
+      if(!hasMouse){ requestAnimationFrame(gDraw); return; }
 
-        gctx.beginPath();
-        gctx.moveTo(0, y); gctx.lineTo(gw, y);
-        gctx.strokeStyle = `rgba(255,255,255,${baseAlpha})`;
-        gctx.lineWidth = 1;
-        gctx.stroke();
-
-        if(goldAlpha > 0.005){
-          gctx.beginPath();
-          gctx.moveTo(0, y); gctx.lineTo(gw, y);
-          gctx.strokeStyle = `rgba(212,168,78,${goldAlpha})`;
-          gctx.lineWidth = 1.5;
+      /* ── Gold ripple: vertical segments ── */
+      for(let i = 0; i < cols; i++){
+        const x = i * CELL;
+        const efx = Math.max(0, 1 - ((x - mcx) / maxR) ** 2 * 1.8);
+        if(efx < 0.01) continue;
+        for(let j = 0; j < rows; j++){
+          const y0 = j * CELL;
+          const y1 = Math.min(y0 + CELL, gh);
+          const midY = (y0 + y1) * 0.5;
+          const dist = Math.sqrt((x - mouseX) ** 2 + (midY - mouseY) ** 2);
+          if(dist > MAX_REACH) continue;
+          const efy = Math.max(0, 1 - ((midY - mcy) / maxR) ** 2 * 2.2);
+          const b = goldAt(dist, t) * Math.min(efx, efy);
+          if(b < 0.005) continue;
+          gctx.beginPath(); gctx.moveTo(x, y0); gctx.lineTo(x, y1);
+          gctx.strokeStyle = `rgba(212,168,78,${b * 0.45})`;
+          gctx.lineWidth = 1 + b * 1.2;
           gctx.stroke();
         }
       }
 
-      // Gold glow spot at mouse position
-      if(mouseX > -900){
-        const glowR = 160;
-        const glow = gctx.createRadialGradient(mouseX,mouseY,0,mouseX,mouseY,glowR);
-        glow.addColorStop(0,'rgba(212,168,78,0.08)');
-        glow.addColorStop(0.5,'rgba(212,168,78,0.02)');
-        glow.addColorStop(1,'rgba(0,0,0,0)');
-        gctx.fillStyle = glow;
-        gctx.fillRect(mouseX-glowR,mouseY-glowR,glowR*2,glowR*2);
+      /* ── Gold ripple: horizontal segments ── */
+      for(let j = 0; j < rows; j++){
+        const y = j * CELL;
+        const efy = Math.max(0, 1 - ((y - mcy) / maxR) ** 2 * 2.2);
+        if(efy < 0.01) continue;
+        for(let i = 0; i < cols; i++){
+          const x0 = i * CELL;
+          const x1 = Math.min(x0 + CELL, gw);
+          const midX = (x0 + x1) * 0.5;
+          const dist = Math.sqrt((midX - mouseX) ** 2 + (y - mouseY) ** 2);
+          if(dist > MAX_REACH) continue;
+          const efx = Math.max(0, 1 - ((midX - mcx) / maxR) ** 2 * 1.8);
+          const b = goldAt(dist, t) * Math.min(efx, efy);
+          if(b < 0.005) continue;
+          gctx.beginPath(); gctx.moveTo(x0, y); gctx.lineTo(x1, y);
+          gctx.strokeStyle = `rgba(212,168,78,${b * 0.45})`;
+          gctx.lineWidth = 1 + b * 1.2;
+          gctx.stroke();
+        }
       }
+
+      /* ── Soft gold halo at cursor ── */
+      const glR = 55;
+      const gl = gctx.createRadialGradient(mouseX,mouseY,0,mouseX,mouseY,glR);
+      gl.addColorStop(0,'rgba(212,168,78,0.04)');
+      gl.addColorStop(1,'rgba(0,0,0,0)');
+      gctx.fillStyle = gl;
+      gctx.fillRect(mouseX-glR,mouseY-glR,glR*2,glR*2);
 
       requestAnimationFrame(gDraw);
     }
+
     gResize();
     requestAnimationFrame(gDraw);
     window.addEventListener('resize', gResize);
   })();
   </script>
+
 
   <!-- ═══ Canvas light beam + red smoke particles ═══ -->
   <script>
