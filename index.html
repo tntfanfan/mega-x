@@ -69,27 +69,44 @@
 
   <main id="main">
 
-    <!-- ===== HERO: ChipNexus Monument Image ===== -->
-    <section class="hero-image">
-      <img class="hero-image-bg" src="assets/smallhand.avif" alt="Mega X hero" loading="eager">
-      <div class="hero-image-overlay"></div>
-      <div class="hero-image-inner">
-        <div class="hero-image-text-panel">
-          <div class="hero-image-label">Mega X ChipNexus Hub</div>
-          <h2 class="hero-image-title">The Core Hub for <em>WiFi Chip & AI</em> Computing Infrastructure</h2>
-        </div>
-        <div class="hero-image-scroll">
-          <span>Scroll</span>
-          <div class="scroll-line"></div>
-        </div>
+    <!-- ===== HERO: Dark grid + SVG spotlight ===== -->
+    <section class="hero-grid">
+      <!-- Interactive grid canvas (mouse-reactive gold highlights) -->
+      <div class="hg-grid-canvas" aria-hidden="true">
+        <canvas id="hgGridCanvas"></canvas>
+      </div>
+
+      <!-- Background figure — semi-transparent, high saturation -->
+      <div class="hg-figure" aria-hidden="true">
+        <img src="assets/WechatIMG920.png" alt="">
+      </div>
+
+      <!-- Canvas light + red smoke effect -->
+      <div class="hg-canvas-wrap">
+        <canvas id="hgCanvas"></canvas>
+      </div>
+
+      <!-- Big title + pill CTA — positioned at bottom -->
+      <div class="hg-inner">
+        <div class="hg-title">Sparking Intelligence</div>
+        <div class="hg-sub">M E G A &ensp; X &ensp; H O L D I N G S</div>
+        <a href="#main-pillars" class="hg-pill liquid-glass-dark liquid-glass-pill">
+          <span class="hg-pill-plus">+</span>
+          <span class="hg-pill-text">Explore</span>
+          <span class="hg-pill-div"></span>
+          <span class="hg-pill-sec">Our Vision</span>
+        </a>
+      </div>
+
+      <div class="hg-bottom">
+        <svg viewBox="0 0 14 14" fill="none" stroke-width="1.5" stroke-linecap="round"><path d="M7 2v10M3 8l4 4 4-4"/></svg>
       </div>
     </section>
 
-    <!-- ===== SECTION 2: city-rotate.mp4 cinematic ===== -->
+    <!-- ===== SECTION 2: City_rotate.mp4 cinematic ===== -->
     <section class="hero-cinematic">
-      <video class="hero-video" autoplay loop muted playsinline preload="none" poster="assets/city-rotate-poster.jpg">
-        <source data-src="assets/city-rotate.webm" type="video/webm">
-            <source data-src="assets/city-rotate.mp4" type="video/mp4">
+      <video class="hero-video" autoplay loop muted playsinline preload="none" poster="assets/City_rotate_poster.jpg">
+        <source data-src="assets/City_rotate.mp4" type="video/mp4">
       </video>
       <div class="hero-overlay"></div>
       <div class="hero-inner">
@@ -118,7 +135,7 @@
         </div>
         <div class="philosophy-illus reveal-right">
           <div class="illus-frame illus-frame-video glass-card">
-            <video class="lazy-video" loop muted playsinline preload="none" poster="assets/think-poster.jpg">
+            <video class="lazy-video" loop muted playsinline preload="none" poster="assets/think_poster.jpg">
               <source data-src="assets/think.mp4" type="video/mp4">
             </video>
           </div>
@@ -136,7 +153,7 @@
       <div class="container philosophy-split philosophy-split-reverse" style="position:relative;z-index:1;">
         <div class="philosophy-illus reveal-left">
           <div class="illus-frame glass-card" style="--fade-color:var(--color-surface);">
-            <picture><source type="image/avif" srcset="assets/image-set/c59ab7fc-3035-486c-9faa-8579b9b388b0.avif"><source type="image/webp" srcset="assets/image-set/c59ab7fc-3035-486c-9faa-8579b9b388b0.webp"><img src="assets/image-set/c59ab7fc-3035-486c-9faa-8579b9b388b0.png" alt="" loading="lazy" decoding="async"></picture>
+            <img src="assets/image_set/c59ab7fc-3035-486c-9faa-8579b9b388b0.png" alt="" loading="lazy">
           </div>
         </div>
         <div class="philosophy-text philosophy-glass reveal" style="text-align:right;">
@@ -163,9 +180,8 @@
         </div>
         <div class="philosophy-illus reveal-right">
           <div class="illus-frame illus-frame-video glass-card">
-            <video class="lazy-video" loop muted playsinline preload="none" poster="assets/bighand-poster.jpg">
-              <source data-src="assets/bighand.webm" type="video/webm">
-            <source data-src="assets/bighand.mp4" type="video/mp4">
+            <video class="lazy-video" loop muted playsinline preload="none" poster="assets/bighand_poster.jpg">
+              <source data-src="assets/bighand.mp4" type="video/mp4">
             </video>
           </div>
         </div>
@@ -228,6 +244,301 @@
 
   <button class="scroll-top" aria-label="Scroll to top"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15V3"/><path d="M3 8l6-6 6 6"/></svg></button>
   <script src="js/main.js" defer></script>
+
+  <!-- ═══ Interactive Grid Canvas (gold highlights on mouse) ═══ -->
+  <script>
+  (function(){
+    const gc = document.getElementById('hgGridCanvas');
+    if(!gc) return;
+    const gctx = gc.getContext('2d');
+    let gw, gh, gdpr;
+    const CELL = 80;
+    let mouseX = -999, mouseY = -999;
+
+    function gResize(){
+      gdpr = Math.min(window.devicePixelRatio||1, 2);
+      gw = gc.offsetWidth; gh = gc.offsetHeight;
+      gc.width = gw * gdpr; gc.height = gh * gdpr;
+      gctx.setTransform(gdpr,0,0,gdpr,0,0);
+    }
+
+    document.querySelector('.hero-grid').addEventListener('mousemove', function(e){
+      const r = gc.getBoundingClientRect();
+      mouseX = e.clientX - r.left;
+      mouseY = e.clientY - r.top;
+    });
+    document.querySelector('.hero-grid').addEventListener('mouseleave', function(){
+      mouseX = -999; mouseY = -999;
+    });
+
+    function gDraw(){
+      gctx.clearRect(0,0,gw,gh);
+
+      // Radial mask center
+      const mcx = gw*0.5, mcy = gh*0.5;
+      const maxMaskR = Math.max(gw,gh)*0.55;
+
+      // Draw grid lines
+      const cols = Math.ceil(gw/CELL)+1;
+      const rows = Math.ceil(gh/CELL)+1;
+      const INFLUENCE = 220; // px radius of gold highlight
+
+      // Vertical lines
+      for(let i=0; i<cols; i++){
+        const x = i * CELL;
+        // Fade at edges (radial mask emulation)
+        const dx = (x - mcx)/maxMaskR;
+        const edgeFade = Math.max(0, 1 - dx*dx*1.8);
+
+        // Mouse proximity for this line
+        const distToMouse = Math.abs(x - mouseX);
+        const goldStrength = Math.max(0, 1 - distToMouse / INFLUENCE);
+        const goldAlpha = goldStrength * goldStrength * 0.5 * edgeFade;
+        const baseAlpha = 0.04 * edgeFade;
+
+        // Base line
+        gctx.beginPath();
+        gctx.moveTo(x, 0); gctx.lineTo(x, gh);
+        gctx.strokeStyle = `rgba(255,255,255,${baseAlpha})`;
+        gctx.lineWidth = 1;
+        gctx.stroke();
+
+        // Gold highlight line
+        if(goldAlpha > 0.005){
+          gctx.beginPath();
+          gctx.moveTo(x, 0); gctx.lineTo(x, gh);
+          gctx.strokeStyle = `rgba(212,168,78,${goldAlpha})`;
+          gctx.lineWidth = 1.5;
+          gctx.stroke();
+        }
+      }
+
+      // Horizontal lines
+      for(let j=0; j<rows; j++){
+        const y = j * CELL;
+        const dy = (y - mcy)/maxMaskR;
+        const edgeFade = Math.max(0, 1 - dy*dy*2.2);
+
+        const distToMouse = Math.abs(y - mouseY);
+        const goldStrength = Math.max(0, 1 - distToMouse / INFLUENCE);
+        const goldAlpha = goldStrength * goldStrength * 0.5 * edgeFade;
+        const baseAlpha = 0.04 * edgeFade;
+
+        gctx.beginPath();
+        gctx.moveTo(0, y); gctx.lineTo(gw, y);
+        gctx.strokeStyle = `rgba(255,255,255,${baseAlpha})`;
+        gctx.lineWidth = 1;
+        gctx.stroke();
+
+        if(goldAlpha > 0.005){
+          gctx.beginPath();
+          gctx.moveTo(0, y); gctx.lineTo(gw, y);
+          gctx.strokeStyle = `rgba(212,168,78,${goldAlpha})`;
+          gctx.lineWidth = 1.5;
+          gctx.stroke();
+        }
+      }
+
+      // Gold glow spot at mouse position
+      if(mouseX > -900){
+        const glowR = 160;
+        const glow = gctx.createRadialGradient(mouseX,mouseY,0,mouseX,mouseY,glowR);
+        glow.addColorStop(0,'rgba(212,168,78,0.08)');
+        glow.addColorStop(0.5,'rgba(212,168,78,0.02)');
+        glow.addColorStop(1,'rgba(0,0,0,0)');
+        gctx.fillStyle = glow;
+        gctx.fillRect(mouseX-glowR,mouseY-glowR,glowR*2,glowR*2);
+      }
+
+      requestAnimationFrame(gDraw);
+    }
+    gResize();
+    requestAnimationFrame(gDraw);
+    window.addEventListener('resize', gResize);
+  })();
+  </script>
+
+  <!-- ═══ Canvas light beam + red smoke particles ═══ -->
+  <script>
+  (function(){
+    const c = document.getElementById('hgCanvas');
+    if(!c) return;
+    const ctx = c.getContext('2d');
+    let w, h, dpr;
+    let particles = [], smokeParticles = [];
+
+    function resize(){
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = c.offsetWidth; h = c.offsetHeight;
+      c.width = w * dpr; c.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // White floating particles (original)
+    function initParticles(){
+      particles = [];
+      for(let i = 0; i < 30; i++){
+        particles.push({
+          x: Math.random()*w, y: Math.random()*h,
+          r: Math.random()*1.5+0.3,
+          vx: (Math.random()-0.4)*0.15, vy: (Math.random()-0.5)*0.08,
+          a: Math.random()*0.4+0.1, phase: Math.random()*Math.PI*2
+        });
+      }
+    }
+
+    // Red smoke / ember particles
+    function initSmoke(){
+      smokeParticles = [];
+      for(let i = 0; i < 50; i++){
+        smokeParticles.push({
+          x: w*0.3 + Math.random()*w*0.4,
+          y: h*0.2 + Math.random()*h*0.5,
+          r: Math.random()*18 + 4,
+          vx: (Math.random()-0.5)*0.3,
+          vy: -Math.random()*0.25 - 0.05,
+          a: Math.random()*0.12+0.02,
+          life: Math.random(),
+          speed: Math.random()*0.3+0.1,
+          phase: Math.random()*Math.PI*2,
+          hue: Math.random()*30 // 0-30 for red-orange range
+        });
+      }
+    }
+
+    function draw(t){
+      t *= 0.001;
+      ctx.clearRect(0,0,w,h);
+
+      const cx = w * 0.46, cy = h * 0.43;
+
+      // ── Layer 1: Ambient glow ──
+      const ambR = w*0.55;
+      const amb = ctx.createRadialGradient(cx,cy,0,cx,cy,ambR);
+      amb.addColorStop(0,'rgba(255,255,255,0.16)');
+      amb.addColorStop(0.3,'rgba(255,255,255,0.05)');
+      amb.addColorStop(0.7,'rgba(255,255,255,0.012)');
+      amb.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = amb;
+      ctx.fillRect(0,0,w,h);
+
+      // ── Layer 2: Anamorphic streaks ──
+      for(let i=0;i<3;i++){
+        ctx.save();
+        ctx.translate(cx,cy);
+        const breathe = 1+Math.sin(t*0.8)*0.04;
+        const scaleY = [0.008,0.025,0.06][i];
+        const alpha = [0.9,0.5,0.2][i];
+        ctx.scale(breathe,scaleY*breathe);
+        const sR = w*0.85;
+        const s = ctx.createRadialGradient(0,0,0,0,0,sR);
+        s.addColorStop(0,`rgba(255,255,255,${alpha})`);
+        s.addColorStop(0.12,`rgba(255,255,255,${alpha*0.5})`);
+        s.addColorStop(0.35,`rgba(255,255,255,${alpha*0.12})`);
+        s.addColorStop(0.7,`rgba(255,255,255,${alpha*0.02})`);
+        s.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle = s;
+        ctx.fillRect(-sR,-sR,sR*2,sR*2);
+        ctx.restore();
+      }
+
+      // ── Layer 3: Rightward beam ──
+      ctx.save();
+      ctx.translate(cx+w*0.06,cy);
+      ctx.scale(1.4,0.035);
+      const beamR = w*0.6;
+      const beam = ctx.createRadialGradient(0,0,0,0,0,beamR);
+      beam.addColorStop(0,'rgba(255,255,255,0.7)');
+      beam.addColorStop(0.15,'rgba(255,255,255,0.3)');
+      beam.addColorStop(0.4,'rgba(255,255,255,0.06)');
+      beam.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = beam;
+      ctx.fillRect(-beamR,-beamR,beamR*2,beamR*2);
+      ctx.restore();
+
+      // ── Layer 4: Hot core ──
+      const coreR = w*0.1;
+      const core = ctx.createRadialGradient(cx,cy,0,cx,cy,coreR);
+      const corePulse = 0.6+Math.sin(t*1.2)*0.12;
+      core.addColorStop(0,`rgba(255,255,255,${corePulse})`);
+      core.addColorStop(0.2,'rgba(255,255,255,0.25)');
+      core.addColorStop(0.5,'rgba(255,255,255,0.06)');
+      core.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = core;
+      ctx.fillRect(cx-coreR,cy-coreR,coreR*2,coreR*2);
+
+      // ── Layer 5: White point ──
+      const ptR = w*0.015;
+      const pt = ctx.createRadialGradient(cx,cy,0,cx,cy,ptR);
+      pt.addColorStop(0,'rgba(255,255,255,1)');
+      pt.addColorStop(0.4,'rgba(255,255,255,0.5)');
+      pt.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = pt;
+      ctx.beginPath(); ctx.arc(cx,cy,ptR*2,0,Math.PI*2); ctx.fill();
+
+      // ── Layer 6: RED SMOKE / EMBERS ──
+      ctx.globalCompositeOperation = 'screen';
+      for(const s of smokeParticles){
+        s.life += s.speed * 0.003;
+        if(s.life > 1){
+          s.life = 0;
+          s.x = w*0.3 + Math.random()*w*0.4;
+          s.y = h*0.35 + Math.random()*h*0.25;
+          s.r = Math.random()*18+4;
+          s.a = Math.random()*0.12+0.02;
+        }
+        s.x += s.vx + Math.sin(t*0.5+s.phase)*0.3;
+        s.y += s.vy;
+
+        // Fade in and out based on life
+        const lifeFade = s.life < 0.2 ? s.life/0.2 : s.life > 0.7 ? (1-s.life)/0.3 : 1;
+        const alpha = s.a * lifeFade * (0.7+0.3*Math.sin(t*2+s.phase));
+        const radius = s.r * (0.6 + s.life*0.8);
+
+        const sg = ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,radius);
+        const hue = s.hue;
+        sg.addColorStop(0,`hsla(${hue},95%,55%,${alpha})`);
+        sg.addColorStop(0.4,`hsla(${hue},90%,45%,${alpha*0.5})`);
+        sg.addColorStop(0.7,`hsla(${hue},85%,35%,${alpha*0.15})`);
+        sg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(s.x-radius,s.y-radius,radius*2,radius*2);
+      }
+
+      // Red ambient glow around the figure's eye band area
+      const redGlowR = w*0.25;
+      const redGlow = ctx.createRadialGradient(cx,cy-h*0.02,0,cx,cy-h*0.02,redGlowR);
+      redGlow.addColorStop(0,'rgba(220,40,30,0.08)');
+      redGlow.addColorStop(0.3,'rgba(200,30,20,0.04)');
+      redGlow.addColorStop(0.7,'rgba(180,20,10,0.01)');
+      redGlow.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle = redGlow;
+      ctx.fillRect(cx-redGlowR,cy-h*0.02-redGlowR,redGlowR*2,redGlowR*2);
+
+      ctx.globalCompositeOperation = 'source-over';
+
+      // ── Layer 7: White particles ──
+      for(const p of particles){
+        p.x += p.vx; p.y += p.vy;
+        if(p.x<-10)p.x=w+10; if(p.x>w+10)p.x=-10;
+        if(p.y<-10)p.y=h+10; if(p.y>h+10)p.y=-10;
+        const flicker = p.a*(0.6+0.4*Math.sin(t*1.5+p.phase));
+        const dx=(p.x-cx)/w, dy=(p.y-cy)/h;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        const proximity = Math.max(0,1-dist*2);
+        const alpha = flicker*(0.4+proximity*0.6);
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,255,255,${alpha})`; ctx.fill();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    resize(); initParticles(); initSmoke();
+    requestAnimationFrame(draw);
+    window.addEventListener('resize',function(){ resize(); initParticles(); initSmoke(); });
+  })();
+  </script>
 
 </body>
 </html>
