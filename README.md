@@ -55,9 +55,13 @@ mega-x/
 │   ├── bundle.min.css        ← generated for marketing; loaded by every marketing page
 │   └── pages/<page>.css      ← per-page CSS
 │
-├── js/main.js                ← single global script (still vanilla; Vite serves as-is)
-├── assets/                   ← images, video, logos (kebab-case)
-├── assets/chipnexus-content/ ← imagery for ChipNexus product pages
+├── public/                   ← Vite verbatim-copy directory (no hashing, no tracking)
+│   ├── js/main.js            ← single global script (vanilla, defer)
+│   └── assets/               ← ALL static assets — images, video, logos, chipnexus-content, team, etc.
+│       ├── chipnexus-content/  ← imagery for ChipNexus product pages (PPT-derived)
+│       ├── phyntom-x8/         ← Phyntom X8 product imagery + cropped/ scatter PNGs
+│       ├── team/               ← team photos
+│       └── *.{png,webp,avif,mp4,webm,ico,svg}  ← top-level shared assets
 │
 ├── tools/
 │   ├── vite-plugin-partials.ts          ← TS port of inject_partials.py (dev + build)

@@ -30,14 +30,15 @@ mega-x/
 │   ├── bundle.min.css         ← generated; do NOT edit
 │   └── pages/<page>.css       ← per-page CSS (extracted from inline <style>)
 │
-├── js/main.js                 ← single global script (loader, nav, scroll, lazy video)
-├── assets/chipnexus-content/  ← imagery for ChipNexus products (PPT-derived; moved under assets/ 2026-06-24)
-├── assets/                    ← images, video, logos
-│   ├── phyntom-x8/            ← per-product imagery
-│   ├── team/
-│   ├── fann/
-│   ├── image-set/
-│   └── …
+├── public/                    ← Vite verbatim-copy dir (no hashing, no tracking)
+│   ├── js/main.js             ← single global script (loader, nav, scroll, lazy video)
+│   └── assets/                ← ALL static assets live here (since 2026-06-24)
+│       ├── chipnexus-content/ ← imagery for ChipNexus products (PPT-derived)
+│       ├── phyntom-x8/        ← per-product imagery + cropped/ scatter PNGs
+│       ├── team/              ← team photos
+│       ├── fann/
+│       ├── image-set/
+│       └── …
 ├── tools/                     ← build / maintenance scripts (Vite plugins + Python image/video pipeline)
 └── console/                   ← Phyntom X8 Console React SPA (src + index.html only; build
                                  config lives at mega-x root since the Vite migration)
@@ -50,6 +51,7 @@ mega-x/
 > - The Console SPA at `console/index.html` + `console/src/` is the only React+Tailwind+TS subtree.
 > - The Python image/video tools under `tools/` (`convert_images.py`, `convert_videos.py`, etc.) are still used — Vite does HTML/CSS/JS bundling but not Pillow/ffmpeg work.
 > - `tools/inject_partials.py` is **legacy** (kept for one-off wrapping of new page files). At dev/build time the partial injection happens via [`tools/vite-plugin-partials.ts`](tools/vite-plugin-partials.ts) which mirrors the Python rendering rules.
+> - **Static asset policy (since 2026-06-24)**: every image / video / font / icon lives in `public/assets/`. Vite copies the folder verbatim; URLs in HTML and CSS write `assets/foo.png` (relative) or `/assets/foo.png` (absolute). No filename hashing — when an asset changes, use Amplify CloudFront invalidation. Rationale: avoids "Vite can't see this dynamic ref" bugs from inline JS, CSS url() chains, data-src lazy loading, etc.
 
 ## Naming conventions
 
