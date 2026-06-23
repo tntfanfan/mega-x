@@ -38,8 +38,18 @@ mega-x/
 │   ├── fann/
 │   ├── image-set/
 │   └── …
-└── tools/                     ← build / maintenance Python scripts
+├── tools/                     ← build / maintenance scripts (Vite plugins + Python image/video pipeline)
+└── console/                   ← Phyntom X8 Console React SPA (src + index.html only; build
+                                 config lives at mega-x root since the Vite migration)
 ```
+
+> **Build model (post-Vite migration, 2026-06-23)**:
+>
+> - The whole site is one Vite project — `npm install` + `npm run dev` at this directory's root.
+> - Marketing pages stay vanilla HTML/CSS/JS; Vite serves and HMR-reloads them.
+> - The Console SPA at `console/index.html` + `console/src/` is the only React+Tailwind+TS subtree.
+> - The Python image/video tools under `tools/` (`convert_images.py`, `convert_videos.py`, etc.) are still used — Vite does HTML/CSS/JS bundling but not Pillow/ffmpeg work.
+> - `tools/inject_partials.py` is **legacy** (kept for one-off wrapping of new page files). At dev/build time the partial injection happens via [`tools/vite-plugin-partials.ts`](tools/vite-plugin-partials.ts) which mirrors the Python rendering rules.
 
 ## Naming conventions
 

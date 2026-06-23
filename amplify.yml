@@ -1,0 +1,28 @@
+# AWS Amplify Hosting build spec for the unified mega-x site.
+#
+# This file is auto-detected by Amplify when present at the repo root.
+# Vite build emits everything to dist/ — that's what Amplify uploads to its CDN.
+#
+# Mock mode is on in production via .env.production (VITE_USE_MOCK=true), so
+# the deployed site runs without any backend. When the FastAPI service is
+# deployed later, flip that env var to false and rebuild.
+
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - node --version
+        - npm --version
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*
+      - .vite/**/*

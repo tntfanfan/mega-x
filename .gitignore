@@ -1,2 +1,14 @@
 .claude
 .DS_Store
+
+# Vite / Node artifacts
+node_modules/
+dist/
+.vite/
+.cache/
+*.tsbuildinfo
+*.log
+
+# Vite env locals (not committed)
+.env.local
+.env.*.local

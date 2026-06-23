@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phyntom X8 Console</title>
+    <meta name="description" content="Phyntom X8 — AI Workforce SaaS Marketplace. Console for Business, Solo, Builders, Admin." />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Share+Tech+Mono&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-bg text-heading font-body antialiased">
+    <div id="root"></div>
+    <!-- Absolute path: required because the SPA shell is also served at deep
+         routes like /console/business/dashboard via the consoleSpaFallback
+         middleware. A relative href there would resolve to the wrong URL. -->
+    <script type="module" src="/console/src/main.tsx"></script>
+  </body>
+</html>

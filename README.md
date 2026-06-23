@@ -28,7 +28,9 @@ Python scripts; production deploys are a `cp -r` away (see [DEPLOY.md](DEPLOY.md
 * Accessibility: `<a class="skip-link">`, `aria-label` on nav/dialogs,
   every `<img>` carries `alt`
 
-## Architecture
+## Architecture (Vite MPA)
+
+The whole site — marketing static pages **and** the Phyntom X8 Console SPA — is now a single Vite project at this directory's root. One `npm install`, one `npm run dev`, one `npm run build`.
 
 ```
 mega-x/
@@ -36,56 +38,82 @@ mega-x/
 ├── CONTRIBUTING.md           ← style + workflow rules
 ├── DEPLOY.md                 ← deployment recipes
 │
-├── *.html                    ← pages, kebab-case
-├── partials/                 ← reusable HTML (nav / footer / SEO meta)
+├── package.json              ← Vite + plugins + React (for console SPA)
+├── vite.config.ts            ← MPA entries + custom partials plugin + console SPA fallback
+├── tsconfig.json             ← TypeScript (mostly for console/src/*.tsx)
+├── tailwind.config.ts        ← scoped to console/ subtree (marketing CSS untouched)
+├── postcss.config.js
+├── .env.development          ← VITE_USE_MOCK=true (console mock mode default)
+│
+├── *.html                    ← marketing pages, kebab-case (each is a Vite MPA entry)
+├── partials/                 ← reusable HTML fragments
 │   ├── *.html                ← templates with {{placeholders}}
-│   └── pages.json            ← per-page values
+│   └── pages.json            ← per-page values (now consumed by tools/vite-plugin-partials.ts)
 │
 ├── styles/
-│   ├── *.css                 ← split sources (variables, base, components, …)
-│   ├── bundle.min.css        ← generated; loaded by every page
-│   └── pages/<page>.css      ← per-page CSS (extracted from inline <style>)
+│   ├── *.css                 ← split sources for marketing static site
+│   ├── bundle.min.css        ← generated for marketing; loaded by every marketing page
+│   └── pages/<page>.css      ← per-page CSS
 │
-├── js/main.js                ← single global script (defer-loaded)
-├── tools/                    ← Python build / maintenance scripts
+├── js/main.js                ← single global script (still vanilla; Vite serves as-is)
 ├── assets/                   ← images, video, logos (kebab-case)
-└── chipnexus-content/        ← imagery for ChipNexus product pages
+├── chipnexus-content/        ← imagery for ChipNexus product pages
+│
+├── tools/
+│   ├── vite-plugin-partials.ts          ← TS port of inject_partials.py (dev + build)
+│   ├── vite-plugin-console-fallback.ts  ← /console/* SPA fallback middleware
+│   ├── inject_partials.py               ← legacy; kept for one-off wrapping of new pages
+│   ├── build_css.py                     ← legacy; Vite now bundles CSS automatically
+│   ├── convert_images.py / upgrade_images.py  ← active (Pillow + AVIF pipeline)
+│   └── convert_videos.py / upgrade_videos.py  ← active (ffmpeg pipeline)
+│
+└── console/                  ← Phyntom X8 Console React SPA
+    ├── index.html            ← SPA shell — one of the Vite MPA entries
+    └── src/                  ← React components, pages, lib (api/mocks/auth/utils)
 ```
+
+**Routing model:**
+- `/` → `index.html` (marketing home)
+- `/about.html`, `/phyntom-x8.html`, … → respective marketing pages
+- `/console/` → `console/index.html` (React SPA shell)
+- `/console/business/dashboard` and other client-side routes → also `console/index.html` (handled by the `consoleSpaFallback` plugin in dev, by nginx `try_files` in prod). React Router with `basename="/console"` matches the rest.
 
 ## Quick start
 
-Plain local server:
-
 ```bash
-python tools/dev_server.py 8000
-# then open http://localhost:8000
+npm install      # first time (installs Vite + React + Tailwind + plugins)
+npm run dev      # http://localhost:5173
 ```
 
-VS Code users (debug with breakpoints):
+- `http://localhost:5173/` — marketing home
+- `http://localhost:5173/console/` — Console SPA (selector landing)
+- `http://localhost:5173/console/business/dashboard` — Console pages (mock data by default; see [.env.development](.env.development))
 
-1. Double-click [`tools/debug-edge.bat`](tools/debug-edge.bat) — starts the
-   dev server **and** an Edge instance with CDP on port 9223.
-2. In VS Code select **`mega-x (attach Edge :9223)`** from the Run & Debug
-   dropdown and press F5.
+Edit any `*.html` / `partials/*.html` / `partials/pages.json` / `console/src/**` — HMR refreshes the browser instantly. No more `python tools/inject_partials.py` chore; the Vite plugin does it on each request.
 
-The `.vscode/launch.json` configs are local-only (`.git/info/exclude`-ignored).
-The `(launch)` configs in there are kept for posterity but are flaky — Edge
-single-instance behaviour can swallow `--remote-debugging-port`. Always
-prefer the **attach** flow above.
+### VS Code F5 debug
+
+[.vscode/launch.json](.vscode/launch.json) was set up to attach Edge on port 9223 to a Python static server. After the Vite migration, easiest path is to:
+
+1. Run `npm run dev` in a terminal
+2. Open `http://localhost:5173/` in Edge with `--remote-debugging-port=9223 --user-data-dir=...`
+3. Select **`mega-x (attach Edge :9223)`** in VS Code's Run & Debug and press F5
+
+(The old `tools/debug-edge.bat` still starts Python `dev_server.py` — for the Vite era we'll update it next. Until then, manual sequence above works.)
 
 ## Editing the site
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes.
-**TL;DR:**
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes. **TL;DR (Vite era):**
 
-| If you want to…                       | Edit this                      | Then run                              |
-|---------------------------------------|--------------------------------|---------------------------------------|
-| Change nav links / footer text / SEO meta | `partials/<file>.html` + `partials/pages.json` | `python tools/inject_partials.py`  |
-| Tweak a design token (color, font…)   | `styles/variables.css`         | `python tools/build_css.py`           |
-| Edit per-page styling                 | `styles/pages/<page>.css`      | (just save)                           |
-| Add an image                          | drop in `assets/`              | `python tools/convert_images.py && python tools/upgrade_images.py` |
-| Add a video                           | drop in `assets/`              | `python tools/convert_videos.py && python tools/upgrade_videos.py` |
-| Add a new page                        | new `<page>.html` + entry in `partials/pages.json` | `python tools/inject_partials.py`     |
+| If you want to… | Edit this | Then |
+|---|---|---|
+| Change nav / footer / SEO across pages | `partials/<file>.html` + `partials/pages.json` | save → HMR re-injects automatically |
+| Tweak a design token (color, font…) | `styles/variables.css` **and** `tailwind.config.ts` (mirror) | save (`bundle.min.css` is committed; only edit it if you want — Vite will rebuild on next `npm run build`) |
+| Edit per-page styling | `styles/pages/<page>.css` | save |
+| Add an image | drop in `assets/` | `npm run convert:images` (alias for `python tools/convert_images.py`) |
+| Add a video | drop in `assets/` | `npm run convert:videos` |
+| Add a new marketing page | new `<page>.html` + entry in `partials/pages.json` + add to `build.rollupOptions.input` in `vite.config.ts` | save; first run also needs `npm run inject:partials-legacy` to wrap the new page with `<!-- partial:NAME -->` markers (Vite plugin only handles "replace between markers") |
+| Edit Console SPA | `console/src/**` | HMR |
 
 ## Naming conventions (strict)
 
