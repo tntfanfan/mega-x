@@ -227,7 +227,7 @@
 
     /* ─── CTA ─── */
     .px-cta-section { background: var(--px-black); color: var(--px-white); padding: 128px 64px; text-align: center; position: relative; overflow: hidden; border-bottom: none; }
-    .px-cta-bg { position: absolute; inset: 0; background-image: url('assets/phyntom-x8/stage-design.jpeg'); background-size: cover; background-position: center 30%; opacity: 0.13; }
+    .px-cta-bg { position: absolute; inset: 0; background-image: url('../../assets/phyntom-x8/stage-design.jpeg'); background-size: cover; background-position: center 30%; opacity: 0.13; }
     .px-cta-content { position: relative; z-index: 1; }
     .px-cta-title { font-size: clamp(52px, 7vw, 108px); font-weight: 700; text-transform: uppercase; line-height: 0.93; letter-spacing: -0.025em; color: var(--px-white); margin-bottom: 40px; font-family: var(--px-font); }
     .px-cta-yellow { color: var(--px-yellow); }
