@@ -31,24 +31,22 @@ export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 function resolveInitialLocale(): Locale {
   if (typeof window === "undefined") return DEFAULT_LOCALE;
-  // 1) ?lang= URL param
+  // 1) ?lang= URL param — explicit, shareable; persists for subsequent visits
   const params = new URLSearchParams(window.location.search);
   const fromUrl = params.get("lang");
   if (fromUrl && (ENABLED_LOCALES as readonly string[]).includes(fromUrl)) {
     window.localStorage.setItem(STORAGE_KEY, fromUrl);
     return fromUrl as Locale;
   }
-  // 2) localStorage
+  // 2) localStorage — set ONLY when user explicitly picked a locale (URL param
+  //    or LanguageSwitcher click). We do NOT auto-detect from navigator.language
+  //    because the product requirement is "default = English regardless of
+  //    browser locale"; Chinese requires explicit opt-in.
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored && (ENABLED_LOCALES as readonly string[]).includes(stored)) {
     return stored as Locale;
   }
-  // 3) navigator.language prefix match (e.g. "zh-CN" → "zh")
-  const nav = window.navigator.language?.slice(0, 2).toLowerCase();
-  if (nav && (ENABLED_LOCALES as readonly string[]).includes(nav)) {
-    return nav as Locale;
-  }
-  // 4) default
+  // 3) default = English (no browser-language auto-detect)
   return DEFAULT_LOCALE;
 }
 
