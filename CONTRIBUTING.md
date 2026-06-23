@@ -65,13 +65,13 @@ This is a **strict** project — keep it consistent or future grep / refactors b
 ### Files and folders → **kebab-case** (lowercase, hyphen separator)
 
 ```
-✅ assets/phyntom-x8/hero-x8.mp4
-✅ styles/pages/wifi-iot-chips.css
+✅ public/assets/phyntom-x8/hero-x8.mp4
+✅ styles/pages/chipnexus.css
 ✅ partials/mobile-menu.html
 
-❌ assets/PhyntomX8/hero_x8.mp4         (PascalCase folder, snake_case file)
-❌ styles/pages/wifi_iot_chips.css      (snake_case)
-❌ partials/MobileMenu.html             (PascalCase)
+❌ public/assets/PhyntomX8/hero_x8.mp4   (PascalCase folder, snake_case file)
+❌ styles/pages/chip_nexus.css           (snake_case)
+❌ partials/MobileMenu.html              (PascalCase)
 ```
 
 ### Exceptions (intentional)
@@ -80,9 +80,8 @@ This is a **strict** project — keep it consistent or future grep / refactors b
 |------------------------------------|-----------------|------|
 | `tools/*.py`                       | snake_case      | PEP 8 — Python module names |
 | `tools/vite-plugin-*.ts`           | kebab-case      | (no exception — already conforms) |
-| `products/_layout.css`             | leading `_`     | SCSS-style "partial / not a public entry" hint |
-| `assets/phyntom-x8/cropped/a_01.png` | `<letter>_<digit>` | Compact sequence ID; treated as one token |
-| `assets/image-set/{uuid}.{ext}`    | UUID            | CMS-generated; opaque IDs treated as one token |
+| `public/assets/phyntom-x8/cropped/a_01.png` | `<letter>_<digit>` | Compact sequence ID; treated as one token |
+| `public/assets/image-set/{uuid}.{ext}` | UUID        | CMS-generated; opaque IDs treated as one token |
 | `console/src/**/*.tsx`             | PascalCase      | React component files — near-universal ecosystem convention |
 | `README.md`, `LICENSE`, `DEPLOY.md`, `CONTRIBUTING.md` | UPPERCASE | Conventional repo metadata |
 | `package.json`, `vite.config.ts`, `tailwind.config.ts`, `tsconfig*.json`, `postcss.config.js`, `amplify.yml` | tool-defined | Vite / npm / Amplify expect these exact names |
@@ -109,11 +108,12 @@ Every page that has `<nav>`, `<footer>`, or share-card metadata uses
 ```
 
 You **do not edit** the rendered region in HTML. Instead:
-1. Edit `partials/<name>.html` (template, with `{{placeholder}}` syntax).
+1. Edit `partials/<name>.html` (template, with `{{placeholder}}` and `{{t:KEY}}` i18n tokens).
 2. Edit `partials/pages.json` to set per-page values (active link, tagline, SEO meta…).
-3. Run `python tools/inject_partials.py` to re-render every affected page.
+3. Edit `i18n/en.json` and `i18n/zh.json` for any new `{{t:KEY}}` you introduced.
+4. Save — the Vite partials plugin re-renders every affected page on the fly (dev) or at `closeBundle` (build).
 
-Available partial slots: `nav`, `mobile-menu`, `footer`, `seo`.
+Available partial slots: `nav`, `mobile-menu`, `footer`, `seo`. The legacy `tools/inject_partials.py` is kept only for bootstrapping a brand-new page with the `<!-- partial:NAME -->` marker wrappers — once the markers are in place, the Vite plugin owns the substitution.
 
 ### Inline `<style>` is forbidden in `<head>`
 
@@ -127,7 +127,7 @@ to relocate it.
 
 ### Section-scoped `<style>` inside `<body>` is OK
 
-Example: `wifi-iot-chips.html` keeps a small `<style>` inside its `<section
+Example: `chipnexus/index.html` keeps a small `<style>` inside its `<section
 id="portfolio">` because the rules are local. Don't try to lift those out.
 
 ### Google Fonts loading
@@ -209,22 +209,23 @@ which only works under `defer`'s "execute after DOM parsed" semantics.
 
 ## Adding a new page
 
-1. Copy an existing page (`about.html` is a good template).
-2. Rename it to `your-new-page.html` (kebab-case).
+1. Copy an existing page directory (e.g. `company/` is a good template) to `your-new-page/`.
+2. Inside it, keep the filename `index.html` (lowercase). The directory slug is what becomes the URL — `/your-new-page/`.
 3. Add an entry to [`partials/pages.json`](partials/pages.json):
    ```json
-   "your-new-page.html": {
+   "your-new-page/index.html": {
      "active": "your-new-page",
      "renderFooter": true,
      "title": "Your New Page — Mega X Holding Ltd.",
      "description": "…",
      "ogTitle": "…",
      "ogDescription": "…",
-     "canonical": "/your-new-page.html"
+     "canonical": "/your-new-page/"
    }
    ```
-4. Run the build chain (see "Building" below).
-5. Smoke-test: `python -m http.server 8000`, hit the URL.
+4. Add the page to `build.rollupOptions.input` in [`vite.config.ts`](vite.config.ts).
+5. Add i18n strings to [`i18n/en.json`](i18n/en.json) and [`i18n/zh.json`](i18n/zh.json) (the partials plugin will surface `MISSING:<key>` in the build output if anything is left untranslated).
+6. Smoke-test: `npm run dev` and hit `http://localhost:5173/your-new-page/`.
 
 ## Adding a new image
 

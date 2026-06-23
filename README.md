@@ -1,22 +1,27 @@
 # Mega X Holding Ltd. — Corporate Website
 
-A static marketing site for Mega X Holding Ltd. — vanilla HTML/CSS/JS, no
-framework, no Node, no `npm install`. Build steps are a handful of small
-Python scripts; production deploys are a `cp -r` away (see [DEPLOY.md](DEPLOY.md)).
+The Mega X Holding Ltd. marketing site **plus** the Phyntom X8 Console SPA,
+served as a single Vite multi-page app. Marketing pages stay almost-vanilla
+HTML/CSS/JS (one global `js/main.js`, a generated `bundle.min.css`, no
+per-page bundler magic); the Console is a small React app mounted at
+`/console/`. One `npm install`, one `npm run dev`, one `npm run build`.
+See [DEPLOY.md](DEPLOY.md) for the AWS Amplify / static-host recipes.
 
 ## Pages
 
 | URL                              | Purpose |
 |----------------------------------|---------|
-| `index.html`                     | Home / hero / portfolio overview |
-| `about.html`                     | Company / leadership / careers |
-| `contact.html`                   | Contact form + offices |
-| `phyntom-x8.html`                | Product: Phyntom X8 (managed AI department) |
-| `fann-gaming-ai.html`            | Product: FannX Gaming AI |
-| `wifi-iot-chips.html`            | Product: ChipNexus Hub (Wi-Fi/IoT silicon) |
-| `nuclear-fusion-energy.html`     | Initiative: nuclear fusion |
-| `products/{freya,glink,flexv}.html` | ChipNexus deep-dive sub-pages |
-| `404.html`                       | Custom error page |
+| `/`                              | Home / hero / portfolio overview |
+| `/company/`                      | Company / leadership / careers |
+| `/contact/`                      | Contact form + offices |
+| `/phyntom-x8/`                   | Product: Phyntom X8 (managed AI department) |
+| `/fann-gaming-ai/`               | Product: FannX Gaming AI |
+| `/chipnexus/`                    | Product: ChipNexus Hub (Wi-Fi/IoT silicon) |
+| `/nuclear-fusion-energy/`        | Initiative: nuclear fusion |
+| `/chipnexus/products/{freya,glink,flexv}/` | ChipNexus deep-dive sub-pages |
+| `/console/`                      | Phyntom X8 Console (React SPA) |
+| `/zh/...`                        | Chinese mirror of every page above |
+| `/404.html`                      | Custom error page |
 
 ## Tech stack
 
@@ -92,9 +97,10 @@ mega-x/
 
 **Routing model:**
 - `/` → `index.html` (marketing home)
-- `/about.html`, `/phyntom-x8.html`, … → respective marketing pages
+- `/company/`, `/phyntom-x8/`, `/chipnexus/`, … → per-page directories, each with its own `index.html` (clean extensionless URLs)
+- `/zh/<page>/` → Chinese mirror, emitted by the partials plugin's `closeBundle` hook
 - `/console/` → `console/index.html` (React SPA shell)
-- `/console/business/dashboard` and other client-side routes → also `console/index.html` (handled by the `consoleSpaFallback` plugin in dev, by nginx `try_files` in prod). React Router with `basename="/console"` matches the rest.
+- `/console/business/dashboard` and other client-side routes → static SPA shells emitted by `vite-plugin-console-spa-paths` (so deep refresh works without a server rewrite). React Router with `basename="/console"` matches the rest.
 
 ## Quick start
 
@@ -130,7 +136,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes. **TL;DR (Vite era
 | Edit per-page styling | `styles/pages/<page>.css` | save |
 | Add an image | drop in `assets/` | `npm run convert:images` (alias for `python tools/convert_images.py`) |
 | Add a video | drop in `assets/` | `npm run convert:videos` |
-| Add a new marketing page | new `<page>.html` + entry in `partials/pages.json` + add to `build.rollupOptions.input` in `vite.config.ts` | save; first run also needs `npm run inject:partials-legacy` to wrap the new page with `<!-- partial:NAME -->` markers (Vite plugin only handles "replace between markers") |
+| Add a new marketing page | new `<slug>/index.html` directory + entry in `partials/pages.json` + add to `build.rollupOptions.input` in `vite.config.ts` | save; wrap with `<!-- partial:NAME -->` markers so the Vite plugin can fill them in |
 | Edit Console SPA | `console/src/**` | HMR |
 
 ## Naming conventions (strict)
@@ -138,9 +144,9 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before making changes. **TL;DR (Vite era
 * **All file and folder names are kebab-case** (`hero-bg.png`, not `Gamehero.png`
   or `hero_bg.png`).
 * No spaces, no Unicode whitespace, no `?`/`&`/`#` in any path.
-* Documented exceptions: `tools/*.py` (PEP 8 snake_case), `products/_layout.css`
-  (SCSS-style underscore-prefix), `assets/phyntom-x8/cropped/a_01.png` (compact
-  letter+digit IDs), `README.md` / `LICENSE` / `DEPLOY.md` (conventional
+* Documented exceptions: `tools/*.py` (PEP 8 snake_case),
+  `public/assets/phyntom-x8/cropped/a_01.png` (compact letter+digit IDs),
+  `README.md` / `LICENSE` / `DEPLOY.md` / `CONTRIBUTING.md` (conventional
   uppercase).
 * See [CONTRIBUTING.md → Naming conventions](CONTRIBUTING.md#naming-conventions)
   for the full rule + remediation script.
@@ -163,10 +169,13 @@ This site is heavily optimized for cold-load speed:
 ## Build dependencies
 
 ```bash
-pip install --user Pillow pillow-avif-plugin rcssmin imageio-ffmpeg
+npm install                                                    # Vite + plugins + React
+pip install --user Pillow pillow-avif-plugin imageio-ffmpeg    # asset pipeline (images / video)
 ```
 
-(That's it — no Node, no `npm`, no Webpack.)
+The Python deps are only used by the helper scripts under [tools/](tools/)
+(`convert_images.py`, `convert_videos.py`, etc.). The site itself builds with
+Vite — no webpack.
 
 ## License
 
