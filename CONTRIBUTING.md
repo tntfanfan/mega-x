@@ -72,9 +72,13 @@ This is a **strict** project — keep it consistent or future grep / refactors b
 | Path                               | Convention      | Why |
 |------------------------------------|-----------------|------|
 | `tools/*.py`                       | snake_case      | PEP 8 — Python module names |
+| `tools/vite-plugin-*.ts`           | kebab-case      | (no exception — already conforms) |
 | `products/_layout.css`             | leading `_`     | SCSS-style "partial / not a public entry" hint |
 | `assets/phyntom-x8/cropped/a_01.png` | `<letter>_<digit>` | Compact sequence ID; treated as one token |
-| `README.md`, `LICENSE`, `DEPLOY.md` | UPPERCASE       | Conventional repo metadata |
+| `assets/image-set/{uuid}.{ext}`    | UUID            | CMS-generated; opaque IDs treated as one token |
+| `console/src/**/*.tsx`             | PascalCase      | React component files — near-universal ecosystem convention |
+| `README.md`, `LICENSE`, `DEPLOY.md`, `CONTRIBUTING.md` | UPPERCASE | Conventional repo metadata |
+| `package.json`, `vite.config.ts`, `tailwind.config.ts`, `tsconfig*.json`, `postcss.config.js`, `amplify.yml` | tool-defined | Vite / npm / Amplify expect these exact names |
 
 ### Anything user-facing (URL-visible)
 
