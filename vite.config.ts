@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 import { megaxPartials } from "./tools/vite-plugin-partials";
 import { consoleSpaFallback } from "./tools/vite-plugin-console-fallback";
+import { consoleSpaPaths } from "./tools/vite-plugin-console-spa-paths";
 
 /**
  * Unified Vite config for the whole Mega X site.
@@ -35,7 +36,8 @@ export default defineConfig({
   plugins: [
     react({ include: ["console/**/*.{ts,tsx,jsx}"] }),
     megaxPartials({ root: __dirname }),
-    consoleSpaFallback(),
+    consoleSpaFallback(),   // dev-only: rewrites /console/* to console/index.html
+    consoleSpaPaths(),      // build-only: emits dist/console/<route>/index.html for static hosting
   ],
 
   server: {
