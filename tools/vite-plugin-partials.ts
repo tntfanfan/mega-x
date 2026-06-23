@@ -127,11 +127,13 @@ export function megaxPartials(opts: MegaxPartialsOptions): Plugin {
       .replace("{{robots}}", robots);
   };
 
+  // NB: the marker patterns use `\r?\n` so they match both CRLF (Windows) and
+  // LF line endings — mega-x marketing HTML files are CRLF on Windows checkouts.
   const replaceBetweenMarkers = (text: string, name: string, body: string): string => {
     const open = `<!-- partial:${name} -->`;
     const close = `<!-- /partial:${name} -->`;
     const re = new RegExp(
-      `([ \\t]*)${escapeRe(open)}\\n[\\s\\S]*?\\n[ \\t]*${escapeRe(close)}`,
+      `([ \\t]*)${escapeRe(open)}\\r?\\n[\\s\\S]*?\\r?\\n[ \\t]*${escapeRe(close)}`,
       "g",
     );
     return text.replace(re, (_m, lead) => `${lead}${open}\n${body}\n${lead}${close}`);
@@ -141,7 +143,7 @@ export function megaxPartials(opts: MegaxPartialsOptions): Plugin {
     const open = `<!-- partial:${name} -->`;
     const close = `<!-- /partial:${name} -->`;
     const re = new RegExp(
-      `[ \\t]*${escapeRe(open)}\\n[\\s\\S]*?\\n[ \\t]*${escapeRe(close)}\\n?`,
+      `[ \\t]*${escapeRe(open)}\\r?\\n[\\s\\S]*?\\r?\\n[ \\t]*${escapeRe(close)}\\r?\\n?`,
       "g",
     );
     return text.replace(re, "");
@@ -176,10 +178,15 @@ export function megaxPartials(opts: MegaxPartialsOptions): Plugin {
     transformIndexHtml: {
       order: "pre",
       handler(html, ctx) {
-        // ctx.path is like "/index.html" or "/products/freya.html" in dev,
-        // and the build-time virtual path in prod. Strip leading slash to
-        // match pages.json keys.
-        const rel = (ctx.path ?? "").replace(/^\//, "");
+        // Dev:   ctx.path = "/index.html", "/products/freya.html", etc.
+        // Build: ctx.path is undefined; ctx.filename is the absolute disk path.
+        // Convert both into the pages.json key form ("about.html" / "products/freya.html").
+        let rel = "";
+        if (ctx.path) {
+          rel = ctx.path.replace(/^\//, "");
+        } else if (ctx.filename) {
+          rel = path.relative(root, ctx.filename).replace(/\\/g, "/");
+        }
         return renderPage(html, rel);
       },
     },
