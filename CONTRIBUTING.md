@@ -11,8 +11,13 @@ mega-x/
 ├── README.md                  ← project overview
 ├── CONTRIBUTING.md            ← this file
 ├── DEPLOY.md                  ← deployment recipes (Netlify / Vercel / GitHub Pages…)
-├── *.html                     ← top-level pages (kebab-case)
-├── products/*.html            ← product detail pages
+├── index.html                 ← homepage at root
+├── 404.html                   ← error page at root
+├── <slug>/index.html          ← every other page is its own directory:
+│                                  company/  contact/  phyntom-x8/  fann-gaming-ai/
+│                                  chipnexus/  nuclear-fusion-energy/
+├── chipnexus/products/<slug>/ ← ChipNexus product detail pages
+│                                  freya/  glink/  flexv/
 │
 ├── partials/                  ← reusable HTML fragments
 │   ├── nav.html

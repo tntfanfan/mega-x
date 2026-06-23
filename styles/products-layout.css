@@ -1,5 +1,5 @@
 /* Product pages layout — extends main design system */
-@import url("../styles/bundle.min.css");
+@import url("./bundle.min.css");
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }

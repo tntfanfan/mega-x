@@ -66,16 +66,24 @@ const ENABLED_LOCALES = ["en", "zh"] as const;
 const DEFAULT_LOCALE = "en";
 
 /**
- * Map a pages.json key like "about.html" or "products/freya.html" to the
- * SEO i18n page-id segment: "about", "products.freya", etc. Used to build
- * `seo.<page-id>.title` token keys.
+ * Map a pages.json key like "company/index.html" or
+ * "chipnexus/products/freya/index.html" to the SEO i18n page-id segment:
+ * "company", "products.freya", etc. Used to build `seo.<page-id>.title`
+ * token keys.
+ *
+ * Per-page-directory layout (since 2026-06-24) means most pages live at
+ * "<slug>/index.html" — strip the "/index.html" suffix and dotify slashes.
  */
 function pageIdFromRel(rel: string): string {
-  // index.html → "home" (more natural i18n key than "index")
+  // Root index.html → "home" (more natural i18n key than "index")
   if (rel === "index.html") return "home";
-  return rel
-    .replace(/\.html$/, "")
-    .replace(/[\\/]/g, ".");
+  if (rel === "404.html") return "404";
+  // <slug>/index.html → <slug>
+  let trimmed = rel.replace(/\/index\.html$/, "").replace(/\.html$/, "");
+  // ChipNexus product subpages: "chipnexus/products/<slug>" → "products.<slug>"
+  // (matches the existing i18n key namespace seo.products.freya.* etc.)
+  trimmed = trimmed.replace(/^chipnexus\/products\//, "products/");
+  return trimmed.replace(/[\\/]/g, ".");
 }
 
 export function megaxPartials(opts: MegaxPartialsOptions): Plugin {
@@ -247,11 +255,17 @@ export function megaxPartials(opts: MegaxPartialsOptions): Plugin {
     });
   }
 
-  /** Inject hreflang alternate links right before </head>. */
+  /** Inject hreflang alternate links right before </head>. Clean URLs only —
+   *  "chipnexus/index.html" → "/chipnexus/" so hreflang matches canonical. */
   function injectHreflang(html: string, baseUrl: string, relPath: string): string {
-    // relPath has no leading slash; in URL form: `${baseUrl}/<relPath>` for en,
-    // `${baseUrl}/<locale>/<relPath>` for others. index.html collapses to "/".
-    const enPath = relPath === "index.html" ? "/" : "/" + relPath;
+    let enPath: string;
+    if (relPath === "index.html") {
+      enPath = "/";
+    } else if (relPath.endsWith("/index.html")) {
+      enPath = "/" + relPath.replace(/\/index\.html$/, "/");
+    } else {
+      enPath = "/" + relPath;
+    }
     const tags = [
       `<link rel="alternate" hreflang="en" href="${baseUrl}${enPath}">`,
       `<link rel="alternate" hreflang="zh" href="${baseUrl}/zh${enPath}">`,

@@ -50,18 +50,19 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        // Marketing pages — kebab-case keys mirror the file names.
+        // Marketing pages — each is one dir + index.html (per-page directory
+        // layout since 2026-06-24). Slug keys mirror the URL path.
         index: resolve(__dirname, "index.html"),
         "404": resolve(__dirname, "404.html"),
-        about: resolve(__dirname, "about.html"),
-        contact: resolve(__dirname, "contact.html"),
-        "phyntom-x8": resolve(__dirname, "phyntom-x8.html"),
-        "fann-gaming-ai": resolve(__dirname, "fann-gaming-ai.html"),
-        "wifi-iot-chips": resolve(__dirname, "wifi-iot-chips.html"),
-        "nuclear-fusion-energy": resolve(__dirname, "nuclear-fusion-energy.html"),
-        "products-freya": resolve(__dirname, "products/freya.html"),
-        "products-glink": resolve(__dirname, "products/glink.html"),
-        "products-flexv": resolve(__dirname, "products/flexv.html"),
+        company: resolve(__dirname, "company/index.html"),
+        contact: resolve(__dirname, "contact/index.html"),
+        "phyntom-x8": resolve(__dirname, "phyntom-x8/index.html"),
+        "fann-gaming-ai": resolve(__dirname, "fann-gaming-ai/index.html"),
+        chipnexus: resolve(__dirname, "chipnexus/index.html"),
+        "nuclear-fusion-energy": resolve(__dirname, "nuclear-fusion-energy/index.html"),
+        "chipnexus-freya": resolve(__dirname, "chipnexus/products/freya/index.html"),
+        "chipnexus-glink": resolve(__dirname, "chipnexus/products/glink/index.html"),
+        "chipnexus-flexv": resolve(__dirname, "chipnexus/products/flexv/index.html"),
         // Console SPA shell
         console: resolve(__dirname, "console/index.html"),
       },

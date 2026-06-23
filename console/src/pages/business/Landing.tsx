@@ -18,7 +18,7 @@ export default function BusinessLanding() {
           {t("business.landing.cta.enter")}
         </Link>
         <a
-          href="https://mega-x.ai/phyntom-x8.html"
+          href="https://mega-x.ai/phyntom-x8/"
           target="_blank"
           rel="noreferrer"
           className="rounded-md border border-border-solid px-5 py-2 text-sm text-body hover:text-primary hover:border-primary transition"

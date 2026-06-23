@@ -10,8 +10,8 @@
   "nav.home": "首页",
   "nav.phyntom-x8": "Phyntom X8",
   "nav.fann-gaming-ai": "FannX Gaming AI",
-  "nav.wifi-iot-chips": "ChipNexus Hub",
-  "nav.about": "关于公司",
+  "nav.chipnexus": "ChipNexus Hub",
+  "nav.company": "关于公司",
   "nav.console": "Console",
   "nav.contact": "联系我们",
 
@@ -39,10 +39,10 @@
   "seo.home.og-title": "Mega X Holding Ltd.",
   "seo.home.og-description": "知一切、见一切、决一切。",
 
-  "seo.about.title": "关于 — Mega X Holding Ltd.",
-  "seo.about.description": "Mega X Holding Ltd. —— 构建 AI 时代的生产革命。自主、智能、基础设施。",
-  "seo.about.og-title": "关于 Mega X Holding",
-  "seo.about.og-description": "构建 AI 时代的生产革命。",
+  "seo.company.title": "关于 — Mega X Holding Ltd.",
+  "seo.company.description": "Mega X Holding Ltd. —— 构建 AI 时代的生产革命。自主、智能、基础设施。",
+  "seo.company.og-title": "关于 Mega X Holding",
+  "seo.company.og-description": "构建 AI 时代的生产革命。",
 
   "seo.contact.title": "联系我们 — Mega X Holding Ltd.",
   "seo.contact.description": "联系 Mega X Holding Ltd. —— 投资者关系、合作洽谈、招聘。",
@@ -59,10 +59,10 @@
   "seo.fann-gaming-ai.og-title": "FannX Gaming AI",
   "seo.fann-gaming-ai.og-description": "实时游戏智能与自主同伴系统。",
 
-  "seo.wifi-iot-chips.title": "ChipNexus Hub —— Wi-Fi 与 IoT 连接 | Mega X Holding Ltd.",
-  "seo.wifi-iot-chips.description": "ChipNexus Hub —— Mega X 全频段无线连接芯片组与边缘 AI 芯片。",
-  "seo.wifi-iot-chips.og-title": "ChipNexus Hub —— 连接芯片",
-  "seo.wifi-iot-chips.og-description": "全频段无线连接与边缘 AI 芯片。",
+  "seo.chipnexus.title": "ChipNexus Hub —— Wi-Fi 与 IoT 连接 | Mega X Holding Ltd.",
+  "seo.chipnexus.description": "ChipNexus Hub —— Mega X 全频段无线连接芯片组与边缘 AI 芯片。",
+  "seo.chipnexus.og-title": "ChipNexus Hub —— 连接芯片",
+  "seo.chipnexus.og-description": "全频段无线连接与边缘 AI 芯片。",
 
   "seo.nuclear-fusion-energy.title": "Nuclear Fusion Energy — Mega X Holding Ltd.",
   "seo.nuclear-fusion-energy.description": "Mega X Holding Ltd. 的核聚变能源计划。",

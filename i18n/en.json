@@ -10,8 +10,8 @@
   "nav.home": "Home",
   "nav.phyntom-x8": "Phyntom X8",
   "nav.fann-gaming-ai": "FannX Gaming AI",
-  "nav.wifi-iot-chips": "ChipNexus Hub",
-  "nav.about": "Company",
+  "nav.chipnexus": "ChipNexus Hub",
+  "nav.company": "Company",
   "nav.console": "Console",
   "nav.contact": "Contact",
 
@@ -39,10 +39,10 @@
   "seo.home.og-title": "Mega X Holding Ltd.",
   "seo.home.og-description": "Know it all. See it all. Decide it all.",
 
-  "seo.about.title": "About — Mega X Holding Ltd.",
-  "seo.about.description": "Mega X Holding Ltd. — Architecting the production revolution of the AI era. Autonomy. Intelligence. Infrastructure.",
-  "seo.about.og-title": "About Mega X Holding",
-  "seo.about.og-description": "Architecting the production revolution of the AI era.",
+  "seo.company.title": "About — Mega X Holding Ltd.",
+  "seo.company.description": "Mega X Holding Ltd. — Architecting the production revolution of the AI era. Autonomy. Intelligence. Infrastructure.",
+  "seo.company.og-title": "About Mega X Holding",
+  "seo.company.og-description": "Architecting the production revolution of the AI era.",
 
   "seo.contact.title": "Contact — Mega X Holding Ltd.",
   "seo.contact.description": "Get in touch with Mega X Holding Ltd. for investor relations, partnership inquiries, or career opportunities.",
@@ -59,10 +59,10 @@
   "seo.fann-gaming-ai.og-title": "FannX Gaming AI",
   "seo.fann-gaming-ai.og-description": "Real-time game intelligence and autonomous companions.",
 
-  "seo.wifi-iot-chips.title": "ChipNexus Hub — Wi-Fi & IoT Connectivity | Mega X Holding Ltd.",
-  "seo.wifi-iot-chips.description": "ChipNexus Hub — Full-band wireless connectivity chipsets and edge-AI silicon by Mega X.",
-  "seo.wifi-iot-chips.og-title": "ChipNexus Hub — Connectivity Silicon",
-  "seo.wifi-iot-chips.og-description": "Full-band wireless connectivity and edge-AI silicon.",
+  "seo.chipnexus.title": "ChipNexus Hub — Wi-Fi & IoT Connectivity | Mega X Holding Ltd.",
+  "seo.chipnexus.description": "ChipNexus Hub — Full-band wireless connectivity chipsets and edge-AI silicon by Mega X.",
+  "seo.chipnexus.og-title": "ChipNexus Hub — Connectivity Silicon",
+  "seo.chipnexus.og-description": "Full-band wireless connectivity and edge-AI silicon.",
 
   "seo.nuclear-fusion-energy.title": "Nuclear Fusion Energy — Mega X Holding Ltd.",
   "seo.nuclear-fusion-energy.description": "Nuclear fusion energy initiatives at Mega X Holding Ltd.",

@@ -13,81 +13,81 @@
     "ogDescription": "Know it all. See it all. Decide it all.",
     "canonical": "/"
   },
-  "about.html": {
-    "active": "about", "renderFooter": true,
+  "company/index.html": {
+    "active": "company", "renderFooter": true,
     "tagline": "Architecting the means of production for the AI era — autonomy, intelligence, infrastructure.",
     "title": "About — Mega X Holding Ltd.",
     "description": "Mega X Holding Ltd. — Architecting the production revolution of the AI era. Autonomy. Intelligence. Infrastructure.",
     "ogTitle": "About Mega X Holding",
     "ogDescription": "Architecting the production revolution of the AI era.",
-    "canonical": "/about.html"
+    "canonical": "/company/"
   },
-  "contact.html": {
+  "contact/index.html": {
     "active": "contact", "renderFooter": true,
     "title": "Contact — Mega X Holding Ltd.",
     "description": "Get in touch with Mega X Holding Ltd. for investor relations, partnership inquiries, or career opportunities.",
     "ogTitle": "Contact Mega X Holding",
     "ogDescription": "Investor relations, partnerships, careers — get in touch.",
-    "canonical": "/contact.html"
+    "canonical": "/contact/"
   },
-  "phyntom-x8.html": {
+  "phyntom-x8/index.html": {
     "active": "phyntom-x8", "renderFooter": true,
     "title": "Phyntom X8 — Certified AI Department | Mega X Holding Ltd.",
     "description": "Phyntom X8 — Certified AI Department by Mega X. We build agent workflows with non-technical businesses that are actually accountable.",
     "ogTitle": "Phyntom X8 — Certified AI Department",
     "ogDescription": "Your AI runs. Certified. Managed AI operations for businesses that demand results, not complexity.",
-    "canonical": "/phyntom-x8.html"
+    "canonical": "/phyntom-x8/"
   },
-  "fann-gaming-ai.html": {
+  "fann-gaming-ai/index.html": {
     "active": "fann-gaming-ai", "renderFooter": true,
     "title": "FannX Gaming AI — Mega X Holding Ltd.",
     "description": "FannX Gaming AI — Real-time game intelligence and autonomous companions. Built by Mega X.",
     "ogTitle": "FannX Gaming AI",
     "ogDescription": "Real-time game intelligence and autonomous companions.",
-    "canonical": "/fann-gaming-ai.html"
+    "canonical": "/fann-gaming-ai/"
   },
-  "wifi-iot-chips.html": {
-    "active": "wifi-iot-chips", "renderFooter": true,
+  "chipnexus/index.html": {
+    "active": "chipnexus", "renderFooter": true,
     "title": "ChipNexus Hub — Wi-Fi & IoT Connectivity | Mega X Holding Ltd.",
     "description": "ChipNexus Hub — Full-band wireless connectivity chipsets and edge-AI silicon by Mega X.",
     "ogTitle": "ChipNexus Hub — Connectivity Silicon",
     "ogDescription": "Full-band wireless connectivity and edge-AI silicon.",
-    "canonical": "/wifi-iot-chips.html"
+    "canonical": "/chipnexus/"
   },
-  "nuclear-fusion-energy.html": {
+  "nuclear-fusion-energy/index.html": {
     "active": null, "renderNav": false, "renderFooter": false,
     "title": "Nuclear Fusion Energy — Mega X Holding Ltd.",
     "description": "Nuclear fusion energy initiatives at Mega X Holding Ltd.",
     "ogTitle": "Nuclear Fusion Energy",
     "ogDescription": "Energy initiatives at Mega X Holding Ltd.",
-    "canonical": "/nuclear-fusion-energy.html"
+    "canonical": "/nuclear-fusion-energy/"
   },
   "404.html": {
     "active": null, "renderNav": false, "renderFooter": false,
     "noindex": true
   },
-  "products/freya.html": {
+  "chipnexus/products/freya/index.html": {
     "active": null, "renderNav": false, "renderFooter": false,
     "title": "Freya — High-Performance Programmable RF Transceiver | Mega X",
     "description": "Freya RF Transceiver — Multi-band wireless front-end by Mega X.",
     "ogTitle": "Freya RF Transceiver",
     "ogDescription": "Multi-band wireless front-end.",
-    "canonical": "/products/freya.html"
+    "canonical": "/chipnexus/products/freya/"
   },
-  "products/glink.html": {
+  "chipnexus/products/glink/index.html": {
     "active": null, "renderNav": false, "renderFooter": false,
     "title": "G-Link — Long-Range, Low-Power Wireless | Mega X",
     "description": "G-Link Wi-Fi HaLow chip for long-range, low-power IoT.",
     "ogTitle": "G-Link HaLow",
     "ogDescription": "Long-range, low-power IoT connectivity.",
-    "canonical": "/products/glink.html"
+    "canonical": "/chipnexus/products/glink/"
   },
-  "products/flexv.html": {
+  "chipnexus/products/flexv/index.html": {
     "active": null, "renderNav": false, "renderFooter": false,
     "title": "FlexV — Software-Defined Radio Platform | Mega X",
     "description": "FlexV — Software-defined radio platform by Mega X.",
     "ogTitle": "FlexV SDR Platform",
     "ogDescription": "Software-defined radio platform.",
-    "canonical": "/products/flexv.html"
+    "canonical": "/chipnexus/products/flexv/"
   }
 }

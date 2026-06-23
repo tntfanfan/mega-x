@@ -45,10 +45,24 @@ mega-x/
 ├── postcss.config.js
 ├── .env.development          ← VITE_USE_MOCK=true (console mock mode default)
 │
-├── *.html                    ← marketing pages, kebab-case (each is a Vite MPA entry)
+├── index.html                ← homepage (stays at root)
+├── 404.html                  ← error page (stays at root)
+│
+├── company/index.html        ← /company/   (was about.html)
+├── contact/index.html        ← /contact/
+├── phyntom-x8/index.html     ← /phyntom-x8/
+├── fann-gaming-ai/index.html ← /fann-gaming-ai/
+├── chipnexus/                ← /chipnexus/  (was wifi-iot-chips.html)
+│   ├── index.html
+│   └── products/
+│       ├── freya/index.html
+│       ├── glink/index.html
+│       └── flexv/index.html
+├── nuclear-fusion-energy/index.html
+│
 ├── partials/                 ← reusable HTML fragments
-│   ├── *.html                ← templates with {{placeholders}}
-│   └── pages.json            ← per-page values (now consumed by tools/vite-plugin-partials.ts)
+│   ├── *.html                ← templates with {{placeholders}} and {{t:KEY}} i18n tokens
+│   └── pages.json            ← per-page values (consumed by tools/vite-plugin-partials.ts)
 │
 ├── styles/
 │   ├── *.css                 ← split sources for marketing static site
