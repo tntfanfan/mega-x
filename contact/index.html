@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/styles/pages/contact.css">
 </head>
 <body>
-  <a href="#main" class="skip-link">Skip to content</a>
+  <a href="#main" class="skip-link">{{t:common.skip-link}}</a>
   <div class="loader-overlay" aria-hidden="true"><div class="loader-logo"><picture><source type="image/avif" srcset="/assets/logo-loader.avif"><source type="image/webp" srcset="/assets/logo-loader.webp"><img src="/assets/logo-loader.png" alt="" decoding="async" fetchpriority="high" loading="eager"></picture></div></div>
 
 <!-- partial:nav -->
@@ -74,10 +74,10 @@
       <div class="ambient-orb" style="width:600px;height:600px;background:radial-gradient(circle,rgba(212,168,78,0.08),transparent 65%);top:-250px;right:-100px;animation:orbDrift 20s ease-in-out infinite;"></div>
       <div class="ambient-orb" style="width:350px;height:350px;background:radial-gradient(circle,rgba(180,140,60,0.05),transparent 60%);bottom:-100px;left:-80px;animation:orbDrift2 16s ease-in-out infinite;"></div>
       <div class="container relative z-1">
-        <p class="overline reveal" style="margin-bottom:var(--space-lg);">Contact</p>
-        <h1 class="reveal" style="transition-delay:80ms;">Let's <em>Connect</em></h1>
+        <p class="overline reveal" style="margin-bottom:var(--space-lg);">{{t:contact.hero.overline}}</p>
+        <h1 class="reveal" style="transition-delay:80ms;">{{t:contact.hero.h1}}</h1>
         <p class="subtitle reveal" style="transition-delay:160ms;">
-          Investment inquiries, technology partnerships, or engineering careers — the next conversation starts here.
+          {{t:contact.hero.subtitle}}
         </p>
       </div>
     </section>
@@ -86,27 +86,27 @@
     <section class="section-block">
       <div class="container contact-layout">
         <div class="contact-info reveal-left">
-          <h3>Get in <em>Touch</em></h3>
+          <h3>{{t:contact.info.h3}}</h3>
           <div class="info-block">
-            <h5>General Inquiries</h5>
+            <h5>{{t:contact.info.general.title}}</h5>
             <p><a href="mailto:info@megaxholdings.com">info@megaxholdings.com</a></p>
           </div>
           <div class="info-block">
-            <h5>Investor Relations</h5>
+            <h5>{{t:contact.info.ir.title}}</h5>
             <p>
               <a href="mailto:ir@megaxholdings.com">ir@megaxholdings.com</a><br>
-              For funding, partnerships, and financial inquiries.
+              {{t:contact.info.ir.body}}
             </p>
           </div>
           <div class="info-block">
-            <h5>Careers</h5>
+            <h5>{{t:contact.info.careers.title}}</h5>
             <p>
               <a href="mailto:careers@megaxholdings.com">careers@megaxholdings.com</a><br>
-              We're hiring RF engineers, baseband designers, and SoC architects.
+              {{t:contact.info.careers.body}}
             </p>
           </div>
           <div class="info-block">
-            <h5>Press & Media</h5>
+            <h5>{{t:contact.info.press.title}}</h5>
             <p><a href="mailto:press@megaxholdings.com">press@megaxholdings.com</a></p>
           </div>
         </div>
@@ -114,38 +114,38 @@
         <div class="contact-form reveal-right">
           <div class="form-row">
             <div class="form-group">
-              <label for="name">Full Name</label>
-              <input type="text" id="name" name="name" placeholder="Your name" required>
+              <label for="name">{{t:contact.form.name-label}}</label>
+              <input type="text" id="name" name="name" placeholder="{{t:contact.form.name-placeholder}}" required>
             </div>
             <div class="form-group">
-              <label for="email">Email</label>
+              <label for="email">{{t:contact.form.email-label}}</label>
               <input type="email" id="email" name="email" placeholder="you@company.com" required>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="company">Company</label>
-              <input type="text" id="company" name="company" placeholder="Your organization">
+              <label for="company">{{t:contact.form.company-label}}</label>
+              <input type="text" id="company" name="company" placeholder="{{t:contact.form.company-placeholder}}">
             </div>
             <div class="form-group">
-              <label for="inquiry">Inquiry Type</label>
+              <label for="inquiry">{{t:contact.form.inquiry-label}}</label>
               <select id="inquiry" name="inquiry">
-                <option value="">Select one...</option>
-                <option value="investment">Investment / IR</option>
-                <option value="partnership">OEM Partnership</option>
-                <option value="enterprise">Enterprise Customer</option>
-                <option value="careers">Careers</option>
-                <option value="media">Press / Media</option>
-                <option value="other">Other</option>
+                <option value="">{{t:contact.form.inquiry-select}}</option>
+                <option value="investment">{{t:contact.form.inquiry.investment}}</option>
+                <option value="partnership">{{t:contact.form.inquiry.partnership}}</option>
+                <option value="enterprise">{{t:contact.form.inquiry.enterprise}}</option>
+                <option value="careers">{{t:contact.form.inquiry.careers}}</option>
+                <option value="media">{{t:contact.form.inquiry.media}}</option>
+                <option value="other">{{t:contact.form.inquiry.other}}</option>
               </select>
             </div>
           </div>
           <div class="form-group">
-            <label for="message">Message</label>
-            <textarea id="message" name="message" placeholder="Tell us how we can help..."></textarea>
+            <label for="message">{{t:contact.form.message-label}}</label>
+            <textarea id="message" name="message" placeholder="{{t:contact.form.message-placeholder}}"></textarea>
           </div>
           <div class="form-submit">
-            <button type="button" class="btn btn-primary" onclick="alert('Thank you for your message. Our team will be in touch shortly.');">Send Message →</button>
+            <button type="button" class="btn btn-primary" onclick="alert('{{t:contact.form.alert}}');">{{t:contact.form.submit}}</button>
           </div>
         </div>
       </div>
@@ -156,21 +156,21 @@
       <div class="ambient-orb" style="width:400px;height:400px;background:radial-gradient(circle,rgba(212,168,78,0.06),transparent 65%);bottom:-150px;left:-100px;animation:orbDrift 18s ease-in-out infinite;"></div>
       <div class="container relative z-1">
         <div class="section-header reveal">
-          <p class="overline">Global Presence</p>
-          <h2>Our <em>Offices</em></h2>
+          <p class="overline">{{t:contact.offices.overline}}</p>
+          <h2>{{t:contact.offices.h2}}</h2>
         </div>
         <div class="offices-grid reveal-scale">
           <div class="office-item">
-            <h4>Beijing — HQ</h4>
-            <p>Corporate headquarters and primary R&D center. Home to our core RF design and system architecture teams.</p>
+            <h4>{{t:contact.offices.beijing.title}}</h4>
+            <p>{{t:contact.offices.beijing.body}}</p>
           </div>
           <div class="office-item">
-            <h4>Shenzhen</h4>
-            <p>Manufacturing liaison, supply chain coordination, and OSAT partner management office.</p>
+            <h4>{{t:contact.offices.shenzhen.title}}</h4>
+            <p>{{t:contact.offices.shenzhen.body}}</p>
           </div>
           <div class="office-item">
-            <h4>International</h4>
-            <p>Business development and customer support presence across Southeast Asia, Middle East, and North America.</p>
+            <h4>{{t:contact.offices.international.title}}</h4>
+            <p>{{t:contact.offices.international.body}}</p>
           </div>
         </div>
       </div>

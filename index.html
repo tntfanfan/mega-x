@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/styles/pages/index.css">
 </head>
 <body class="home-page">
-  <a href="#main" class="skip-link">Skip to content</a>
+  <a href="#main" class="skip-link">{{t:common.skip-link}}</a>
   <div class="loader-overlay" aria-hidden="true"><div class="loader-logo"><picture><source type="image/avif" srcset="/assets/logo-loader.avif"><source type="image/webp" srcset="/assets/logo-loader.webp"><img src="/assets/logo-loader.png" alt="" decoding="async" fetchpriority="high" loading="eager"></picture></div></div>
 
 <!-- partial:nav -->
@@ -88,13 +88,13 @@
 
       <!-- Big title + pill CTA — positioned at bottom -->
       <div class="hg-inner">
-        <div class="hg-title">Sparking Intelligence</div>
+        <div class="hg-title">{{t:home.hg.title}}</div>
         <div class="hg-sub">M E G A &ensp; X &ensp; H O L D I N G S</div>
         <a href="#main-pillars" class="hg-pill liquid-glass-dark liquid-glass-pill">
           <span class="hg-pill-plus">+</span>
-          <span class="hg-pill-text">Explore</span>
+          <span class="hg-pill-text">{{t:home.hg.pill.primary}}</span>
           <span class="hg-pill-div"></span>
-          <span class="hg-pill-sec">Our Vision</span>
+          <span class="hg-pill-sec">{{t:home.hg.pill.secondary}}</span>
         </a>
       </div>
 
@@ -114,7 +114,7 @@
         <p class="hero-epigraph">{{t:home.hero.epigraph}}</p>
         <a href="#main-pillars" class="hero-cta"><span class="cta-dot"></span>{{t:home.hero.cta}}</a>
         <div class="hero-scroll-hint">
-          <span>Scroll</span>
+          <span>{{t:common.scroll-hint}}</span>
           <div class="scroll-line"></div>
         </div>
       </div>
@@ -128,10 +128,10 @@
       </div>
       <div class="container philosophy-split" style="position:relative;z-index:1;">
         <div class="philosophy-text philosophy-glass reveal">
-          <div class="section-label">I · Autonomy</div>
-          <h2>Departments are <br>the new <em>software</em>.</h2>
-          <p>When an agent replaces a department, the unit of enterprise shifts from headcount to capability.</p>
-          <span class="accent-line">Deploy a department — not a person.</span>
+          <div class="section-label">{{t:home.philosophy.1.label}}</div>
+          <h2>{{t:home.philosophy.1.h2}}</h2>
+          <p>{{t:home.philosophy.1.body}}</p>
+          <span class="accent-line">{{t:home.philosophy.1.accent}}</span>
         </div>
         <div class="philosophy-illus reveal-right">
           <div class="illus-frame illus-frame-video glass-card">
@@ -157,10 +157,10 @@
           </div>
         </div>
         <div class="philosophy-text philosophy-glass reveal" style="text-align:right;">
-          <div class="section-label" style="text-align:right;">II · Intelligence</div>
-          <h2 style="margin-left:auto;">When intelligence <br>gains <em>agency</em>, <br>it creates wealth.</h2>
-          <p style="margin-left:auto;">Trillion-dollar industries emerge from architectures that run autonomously and export value at machine speed.</p>
-          <span class="accent-line" style="text-align:right;">The machine is the margin.</span>
+          <div class="section-label" style="text-align:right;">{{t:home.philosophy.2.label}}</div>
+          <h2 style="margin-left:auto;">{{t:home.philosophy.2.h2}}</h2>
+          <p style="margin-left:auto;">{{t:home.philosophy.2.body}}</p>
+          <span class="accent-line" style="text-align:right;">{{t:home.philosophy.2.accent}}</span>
         </div>
       </div>
     </section>
@@ -173,10 +173,10 @@
       </div>
       <div class="container philosophy-split" style="position:relative;z-index:1;">
         <div class="philosophy-text philosophy-glass reveal">
-          <div class="section-label">III · Connectivity</div>
-          <h2>Every revolution <br>needs <em>infrastructure</em>.</h2>
-          <p>Silicon. Spectrum. Connectivity. The nervous system beneath every AI agent and autonomous economy.</p>
-          <span class="accent-line">We design it from first principles.</span>
+          <div class="section-label">{{t:home.philosophy.3.label}}</div>
+          <h2>{{t:home.philosophy.3.h2}}</h2>
+          <p>{{t:home.philosophy.3.body}}</p>
+          <span class="accent-line">{{t:home.philosophy.3.accent}}</span>
         </div>
         <div class="philosophy-illus reveal-right">
           <div class="illus-frame illus-frame-video glass-card">
@@ -193,22 +193,22 @@
       <div class="container" style="max-width:100%;padding:0;">
         <div class="pillars">
           <a href="/phyntom-x8/" class="pillar pillar-glass reveal" style="text-decoration:none;">
-            <div class="pillar-num">Autonomy</div>
+            <div class="pillar-num">{{t:home.pillar.phyntom-x8.tag}}</div>
             <h3>Phyntom X8</h3>
-            <p>Certified AI Departments for non-technical businesses. We encode your expertise into accountable, ongoing AI operations.</p>
-            <span class="pillar-link">Explore →</span>
+            <p>{{t:home.pillar.phyntom-x8.body}}</p>
+            <span class="pillar-link">{{t:home.pillar.explore-cta}}</span>
           </a>
           <a href="/fann-gaming-ai/" class="pillar pillar-glass reveal" style="text-decoration:none;">
-            <div class="pillar-num">Intelligence</div>
+            <div class="pillar-num">{{t:home.pillar.fann.tag}}</div>
             <h3>FannX <br>Gaming AI</h3>
-            <p>Reality-output gaming. AI-native 4A metaverse where play becomes measurable wealth.</p>
-            <span class="pillar-link">Explore →</span>
+            <p>{{t:home.pillar.fann.body}}</p>
+            <span class="pillar-link">{{t:home.pillar.explore-cta}}</span>
           </a>
           <a href="/chipnexus/" class="pillar pillar-glass reveal" style="text-decoration:none;">
-            <div class="pillar-num">Connectivity</div>
-            <h3>IoT Chip & <br>Robotics</h3>
-            <p>Full-band wireless silicon. Sub-1 GHz to Wi-Fi 7. The fabric that connects all things.</p>
-            <span class="pillar-link">Explore →</span>
+            <div class="pillar-num">{{t:home.pillar.chipnexus.tag}}</div>
+            <h3>{{t:home.pillar.chipnexus.h3}}</h3>
+            <p>{{t:home.pillar.chipnexus.body}}</p>
+            <span class="pillar-link">{{t:home.pillar.explore-cta}}</span>
           </a>
         </div>
       </div>
@@ -217,8 +217,8 @@
     <!-- ===== CLOSING ===== -->
     <section class="closing">
       <div class="container reveal">
-        <h2>In the age of AI, the architecture of <br>productivity begins with the decision to rebuild it.</h2>
-        <a href="/contact/" class="closing-cta-glass">Get in Touch →</a>
+        <h2>{{t:home.closing.h2}}</h2>
+        <a href="/contact/" class="closing-cta-glass">{{t:home.closing.cta}}</a>
       </div>
     </section>
 

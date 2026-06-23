@@ -34,7 +34,7 @@
 </head>
 <body>
 
-  <a href="#main" class="skip-link">Skip to content</a>
+  <a href="#main" class="skip-link">{{t:common.skip-link}}</a>
   <div class="loader-overlay" aria-hidden="true"><div class="loader-logo"><picture><source type="image/avif" srcset="/assets/logo-loader.avif"><source type="image/webp" srcset="/assets/logo-loader.webp"><img src="/assets/logo-loader.png" alt="" decoding="async" fetchpriority="high" loading="eager"></picture></div></div>
 
   <!-- ===== MEGA X NAV ===== -->
@@ -77,20 +77,16 @@
       <div class="px-hero-video-bg"><video autoplay muted loop playsinline><source src="/assets/phyntom-x8/hero-x8.webm" type="video/webm">
             <source src="/assets/phyntom-x8/hero-x8.mp4" type="video/mp4"></video></div>
       <div class="px-hero-left">
-        <p class="px-hero-eyebrow">Phyntom X8 · Certified AI Department</p>
-        <h1 class="px-hero-headline">
-          YOUR<br>
-          <span class="hl">AI DEPT</span><br>
-          IS HERE.
-        </h1>
+        <p class="px-hero-eyebrow">{{t:phyntom.hero.eyebrow}}</p>
+        <h1 class="px-hero-headline">{{t:phyntom.hero.h1}}</h1>
         <div class="px-hero-bottom">
           <div class="px-hero-stat">
             <div class="px-stat-n"><span id="hero-stat-mult">1</span>×</div>
-            <div class="px-stat-l">Avg. Productivity Gain</div>
+            <div class="px-stat-l">{{t:phyntom.hero.stat1.label}}</div>
           </div>
           <div class="px-hero-stat">
-            <div class="px-stat-n"><span id="hero-stat-days">30</span> days</div>
-            <div class="px-stat-l">To Full Deployment</div>
+            <div class="px-stat-n"><span id="hero-stat-days">30</span> {{t:phyntom.hero.stat2.unit}}</div>
+            <div class="px-stat-l">{{t:phyntom.hero.stat2.label}}</div>
           </div>
         </div>
       </div>
@@ -98,24 +94,18 @@
       <div class="px-hero-right">
     
         <div class="px-hero-right-inner">
-          <div class="px-hero-badge">◆ Phyntom X8</div>
-          <h2 class="px-hero-right-heading">
-            We run AI so your business runs better — without you becoming a tech person.
-          </h2>
-          <p class="px-hero-right-body">
-            Certified AI Department is a fully managed AI operations service. We audit your
-            workflows, work with you to deploy the agent flow, and maintain everything. You get the results.
-            We handle the complexity.
-          </p>
+          <div class="px-hero-badge">{{t:phyntom.hero.badge}}</div>
+          <h2 class="px-hero-right-heading">{{t:phyntom.hero.right.h2}}</h2>
+          <p class="px-hero-right-body">{{t:phyntom.hero.right.body}}</p>
           <div class="px-hero-right-actions">
-            <a href="/console/business/" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.4);">Open Console →</a>
-            <a href="/contact/" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.25);">Start With a Free Assessment</a>
-            <a href="#how-it-works" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.18);">See How It Works</a>
+            <a href="/console/business/" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.4);">{{t:phyntom.hero.cta.console}}</a>
+            <a href="/contact/" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.25);">{{t:phyntom.hero.cta.assessment}}</a>
+            <a href="#how-it-works" class="px-btn px-btn-outline-white" style="border-color:rgba(255,255,255,0.18);">{{t:phyntom.hero.cta.how}}</a>
           </div>
           <div style="margin-top:18px;display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:rgba(255,255,255,0.65);">
-            <a href="/console/business/" style="color:rgba(255,255,255,0.85);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:1px;">For Business →</a>
-            <a href="/console/solo/" style="color:rgba(255,255,255,0.85);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:1px;">For Solo →</a>
-            <a href="/console/dev/" style="color:rgba(255,255,255,0.85);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:1px;">For Builders →</a>
+            <a href="/console/business/" style="color:rgba(255,255,255,0.85);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:1px;">{{t:phyntom.hero.persona.business}}</a>
+            <a href="/console/solo/" style="color:rgba(255,255,255,0.85);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:1px;">{{t:phyntom.hero.persona.solo}}</a>
+            <a href="/console/dev/" style="color:rgba(255,255,255,0.85);text-decoration:none;border-bottom:1px solid rgba(255,255,255,0.3);padding-bottom:1px;">{{t:phyntom.hero.persona.builders}}</a>
           </div>
         </div>
       </div>
@@ -124,75 +114,75 @@
     <!-- TICKER -->
     <div class="px-ticker">
       <div class="px-ticker-track">
-        <span class="px-ticker-item">Workflow Automation</span>
-        <span class="px-ticker-item">Custom AI Agents</span>
-        <span class="px-ticker-item">Team Training</span>
-        <span class="px-ticker-item">Ongoing Operations</span>
-        <span class="px-ticker-item">ROI Measurement</span>
-        <span class="px-ticker-item">Integration Management</span>
-        <span class="px-ticker-item">Quality Certification</span>
-        <span class="px-ticker-item">Expert Oversight</span>
-        <span class="px-ticker-item">Workflow Automation</span>
-        <span class="px-ticker-item">Custom AI Agents</span>
-        <span class="px-ticker-item">Team Training</span>
-        <span class="px-ticker-item">Ongoing Operations</span>
-        <span class="px-ticker-item">ROI Measurement</span>
-        <span class="px-ticker-item">Integration Management</span>
-        <span class="px-ticker-item">Quality Certification</span>
-        <span class="px-ticker-item">Expert Oversight</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.a}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.b}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.c}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.d}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.e}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.f}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.g}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.h}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.a}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.b}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.c}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.d}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.e}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.f}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.g}}</span>
+        <span class="px-ticker-item">{{t:phyntom.ticker.h}}</span>
       </div>
     </div>
 
     <!-- SERVICES -->
     <section class="px-section" id="how-it-works">
-      <p class="px-section-label">01 / What We Run</p>
-      <h2 class="px-section-title">We Handle<br>The Work.</h2>
+      <p class="px-section-label">{{t:phyntom.services.label}}</p>
+      <h2 class="px-section-title">{{t:phyntom.services.title}}</h2>
       <div class="px-services-grid">
         <div class="px-service-item">
           <p class="px-service-num">01</p>
-          <h3 class="px-service-name">Financial Operations</h3>
-          <p class="px-service-desc">Monthly investor updates, cash flow projections, financial summaries, and pitch materials — generated automatically, reviewed by a domain expert before you see them.</p>
+          <h3 class="px-service-name">{{t:phyntom.services.financial.name}}</h3>
+          <p class="px-service-desc">{{t:phyntom.services.financial.desc}}</p>
         </div>
         <div class="px-service-item">
           <p class="px-service-num">02</p>
-          <h3 class="px-service-name">Creative Production</h3>
-          <p class="px-service-desc">Story briefs, character arcs, content calendars, campaign copy, brand narratives — your creative output scaled without scaling your team. Your voice, produced at volume.</p>
+          <h3 class="px-service-name">{{t:phyntom.services.creative.name}}</h3>
+          <p class="px-service-desc">{{t:phyntom.services.creative.desc}}</p>
         </div>
         <div class="px-service-item">
           <p class="px-service-num">03</p>
-          <h3 class="px-service-name">Operations Intelligence</h3>
-          <p class="px-service-desc">Weekly performance reports, pipeline summaries, project updates, team briefings — the operational knowledge your business generates, organized and delivered on schedule.</p>
+          <h3 class="px-service-name">{{t:phyntom.services.ops.name}}</h3>
+          <p class="px-service-desc">{{t:phyntom.services.ops.desc}}</p>
         </div>
       </div>
     </section>
 
     <!-- INDUSTRIES -->
     <section class="px-section" id="industries">
-      <p class="px-section-label">02 / Industries</p>
-      <h2 class="px-section-title">Built For<br>Your World.</h2>
+      <p class="px-section-label">{{t:phyntom.industries.label}}</p>
+      <h2 class="px-section-title">{{t:phyntom.industries.title}}</h2>
       <div class="px-industries-grid">
         <div class="px-industry-card">
           <picture><source type="image/avif" srcset="/assets/phyntom-x8/game-studio.avif"><source type="image/webp" srcset="/assets/phyntom-x8/game-studio.webp"><img src="/assets/phyntom-x8/game-studio.png" alt="Game production studio" class="px-industry-photo" decoding="async" loading="lazy"></picture>
           <div class="px-industry-caption">
-            <span class="px-industry-tag">Creative</span>
-            <h3 class="px-industry-name">Game & Entertainment Studios</h3>
-            <p class="px-industry-desc">Story generation, character development, world-building briefs, and narrative production — automated from your creative direction.</p>
+            <span class="px-industry-tag">{{t:phyntom.industries.studio.tag}}</span>
+            <h3 class="px-industry-name">{{t:phyntom.industries.studio.name}}</h3>
+            <p class="px-industry-desc">{{t:phyntom.industries.studio.desc}}</p>
           </div>
         </div>
         <div class="px-industry-card">
           <picture><source type="image/avif" srcset="/assets/phyntom-x8/design-studio.avif"><source type="image/webp" srcset="/assets/phyntom-x8/design-studio.webp"><img src="/assets/phyntom-x8/design-studio.png" alt="Design studio" class="px-industry-photo" decoding="async" loading="lazy"></picture>
           <div class="px-industry-caption">
-            <span class="px-industry-tag">Agencies</span>
-            <h3 class="px-industry-name">Marketing & Design Agencies</h3>
-            <p class="px-industry-desc">Pitch decks, campaign briefs, client reports, and content pipelines — your team's expertise running at a pace no hire could match.</p>
+            <span class="px-industry-tag">{{t:phyntom.industries.agency.tag}}</span>
+            <h3 class="px-industry-name">{{t:phyntom.industries.agency.name}}</h3>
+            <p class="px-industry-desc">{{t:phyntom.industries.agency.desc}}</p>
           </div>
         </div>
         <div class="px-industry-card">
           <picture><source type="image/avif" srcset="/assets/phyntom-x8/stage-design.avif"><source type="image/webp" srcset="/assets/phyntom-x8/stage-design.webp"><img src="/assets/phyntom-x8/stage-design.jpeg" alt="Live events" class="px-industry-photo" decoding="async" loading="lazy"></picture>
           <div class="px-industry-caption">
-            <span class="px-industry-tag">Events</span>
-            <h3 class="px-industry-name">Events & Experience Companies</h3>
-            <p class="px-industry-desc">Sponsorship decks, vendor communications, post-event reports, and season planning — produced while you're focused on the event itself.</p>
+            <span class="px-industry-tag">{{t:phyntom.industries.event.tag}}</span>
+            <h3 class="px-industry-name">{{t:phyntom.industries.event.name}}</h3>
+            <p class="px-industry-desc">{{t:phyntom.industries.event.desc}}</p>
           </div>
         </div>
       </div>
@@ -200,69 +190,69 @@
 
     <!-- CERTIFICATION -->
     <section class="px-section px-cert-section" id="certification">
-      <p class="px-section-label">03 / The Standard</p>
-      <h2 class="px-section-title">What "Certified"<br>Actually Means.</h2>
+      <p class="px-section-label">{{t:phyntom.cert.label}}</p>
+      <h2 class="px-section-title">{{t:phyntom.cert.title}}</h2>
       <div class="px-cert-grid">
         <div class="px-cert-item">
           <div class="px-cert-num">1</div>
-          <h3 class="px-cert-title">It Runs Without You</h3>
-          <p class="px-cert-desc">Your AI Department handles work automatically, on schedule. You don't log in, press buttons, or check if it worked. If anything stops working, we tell you first.</p>
+          <h3 class="px-cert-title">{{t:phyntom.cert.1.title}}</h3>
+          <p class="px-cert-desc">{{t:phyntom.cert.1.desc}}</p>
         </div>
         <div class="px-cert-item">
           <div class="px-cert-num">2</div>
-          <h3 class="px-cert-title">You Only See Work That's Ready</h3>
-          <p class="px-cert-desc">Before anything reaches you, we check it. If the output isn't good enough, it doesn't leave our hands. You see finished work, not drafts that need cleaning up.</p>
+          <h3 class="px-cert-title">{{t:phyntom.cert.2.title}}</h3>
+          <p class="px-cert-desc">{{t:phyntom.cert.2.desc}}</p>
         </div>
         <div class="px-cert-item">
           <div class="px-cert-num">3</div>
-          <h3 class="px-cert-title">If You're Not Happy, We Fix It Fast</h3>
-          <p class="px-cert-desc">Tell us something's wrong. We respond the same day and have it resolved within 48 hours. No runaround, no blame, no explanation needed.</p>
+          <h3 class="px-cert-title">{{t:phyntom.cert.3.title}}</h3>
+          <p class="px-cert-desc">{{t:phyntom.cert.3.desc}}</p>
         </div>
         <div class="px-cert-item">
           <div class="px-cert-num">4</div>
-          <h3 class="px-cert-title">You Always Know What You're Paying For</h3>
-          <p class="px-cert-desc">We keep a plain-English record of exactly what your AI Department does. You can ask to see it anytime. If we change how something works, we tell you before we do it.</p>
+          <h3 class="px-cert-title">{{t:phyntom.cert.4.title}}</h3>
+          <p class="px-cert-desc">{{t:phyntom.cert.4.desc}}</p>
         </div>
         <div class="px-cert-item">
           <div class="px-cert-num">5</div>
-          <h3 class="px-cert-title">A Real Person Is Responsible</h3>
-          <p class="px-cert-desc">There's an actual expert — not just software — who is accountable for the quality of your AI Department's output. You know who they are. You can reach them.</p>
+          <h3 class="px-cert-title">{{t:phyntom.cert.5.title}}</h3>
+          <p class="px-cert-desc">{{t:phyntom.cert.5.desc}}</p>
         </div>
         <div class="px-cert-item">
           <div class="px-cert-num">6</div>
-          <h3 class="px-cert-title">Your Work Is Always Yours</h3>
-          <p class="px-cert-desc">If you ever want to leave, we hand you everything — a complete record of how your AI Department works — within one week. No lock-in. No hostage data.</p>
+          <h3 class="px-cert-title">{{t:phyntom.cert.6.title}}</h3>
+          <p class="px-cert-desc">{{t:phyntom.cert.6.desc}}</p>
         </div>
       </div>
     </section>
 
     <!-- PROCESS -->
     <section class="px-section" id="process">
-      <p class="px-section-label">04 / How It Works</p>
-      <h2 class="px-section-title">Up and Running<br>In <span id="countdown-num">30</span> Days.</h2>
+      <p class="px-section-label">{{t:phyntom.process.label}}</p>
+      <h2 class="px-section-title">{{t:phyntom.process.title.before}} <span id="countdown-num">30</span> {{t:phyntom.process.title.after}}</h2>
       <div class="px-process-grid">
         <div class="px-process-step">
           <div class="px-process-arrow">→</div>
           <div class="px-process-n">01</div>
-          <h3 class="px-process-title">Free Assessment</h3>
-          <p class="px-process-desc">One 60-minute call. We map the specialist work your business currently pays people to do — and identify the highest-value things to automate first.</p>
+          <h3 class="px-process-title">{{t:phyntom.process.1.title}}</h3>
+          <p class="px-process-desc">{{t:phyntom.process.1.desc}}</p>
         </div>
         <div class="px-process-step">
           <div class="px-process-arrow">→</div>
           <div class="px-process-n">02</div>
-          <h3 class="px-process-title">We Build It Together</h3>
-          <p class="px-process-desc">Two to three sessions. We work directly with you to encode your expertise into the workflows. You review every output before anything goes live.</p>
+          <h3 class="px-process-title">{{t:phyntom.process.2.title}}</h3>
+          <p class="px-process-desc">{{t:phyntom.process.2.desc}}</p>
         </div>
         <div class="px-process-step">
           <div class="px-process-arrow">→</div>
           <div class="px-process-n">03</div>
-          <h3 class="px-process-title">Certified & Live</h3>
-          <p class="px-process-desc">Your AI Department launches. Runs on schedule, produces certified-quality output, sends you a weekly summary of everything it did.</p>
+          <h3 class="px-process-title">{{t:phyntom.process.3.title}}</h3>
+          <p class="px-process-desc">{{t:phyntom.process.3.desc}}</p>
         </div>
         <div class="px-process-step">
           <div class="px-process-n">04</div>
-          <h3 class="px-process-title">We Keep It Running</h3>
-          <p class="px-process-desc">Your retainer covers ongoing management, quality monitoring, improvements, and a named expert always responsible for what comes out.</p>
+          <h3 class="px-process-title">{{t:phyntom.process.4.title}}</h3>
+          <p class="px-process-desc">{{t:phyntom.process.4.desc}}</p>
         </div>
       </div>
     </section>
@@ -271,11 +261,11 @@
     <section class="px-cta-section" id="contact-cta">
       <div class="px-cta-bg"></div>
       <div class="px-cta-content">
-        <h2 class="px-cta-title">Your AI<br><span class="px-cta-yellow">Department</span><br>Starts Here.</h2>
-        <p class="px-cta-sub">A free 60-minute assessment. No pitch, no pressure. We'll tell you exactly what's worth automating in your business and what isn't.</p>
+        <h2 class="px-cta-title">{{t:phyntom.cta.title}}</h2>
+        <p class="px-cta-sub">{{t:phyntom.cta.sub}}</p>
         <div class="px-cta-buttons">
-          <a href="/contact/" class="px-btn px-btn-yellow">Book a Free Assessment →</a>
-          <a href="mailto:info@megaxholdings.com" class="px-btn px-btn-outline-white">Write To Us</a>
+          <a href="/contact/" class="px-btn px-btn-yellow">{{t:phyntom.cta.book}}</a>
+          <a href="mailto:info@megaxholdings.com" class="px-btn px-btn-outline-white">{{t:phyntom.cta.write}}</a>
         </div>
       </div>
     </section>

@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/styles/pages/wifi-iot-chips.css">
 </head>
 <body>
-  <a href="#main" class="skip-link">Skip to content</a>
+  <a href="#main" class="skip-link">{{t:common.skip-link}}</a>
   <div class="loader-overlay" aria-hidden="true"><div class="loader-logo"><picture><source type="image/avif" srcset="/assets/logo-loader.avif"><source type="image/webp" srcset="/assets/logo-loader.webp"><img src="/assets/logo-loader.png" alt="" decoding="async" fetchpriority="high" loading="eager"></picture></div></div>
 
 <!-- partial:nav -->
@@ -77,8 +77,8 @@
       </video>
       <div class="chip-hero-gradient"></div>
       <div class="container chip-hero-content">
-        <p class="overline reveal" style="margin-bottom:var(--space-sm);letter-spacing:0.18em;font-size:0.7rem;color:var(--color-primary);">Mega X · ChipNexus Hub</p>
-        <h1 class="reveal" style="transition-delay:100ms;">Top 3 Global<br>Wi-Fi 7 & Wi-Fi HaLow<br><em>Supplier</em></h1>
+        <p class="overline reveal" style="margin-bottom:var(--space-sm);letter-spacing:0.18em;font-size:0.7rem;color:var(--color-primary);">{{t:chipnexus.hero.overline}}</p>
+        <h1 class="reveal" style="transition-delay:100ms;">{{t:chipnexus.hero.h1}}</h1>
       </div>
     </section>
 
@@ -87,10 +87,10 @@
       <div class="ambient-orb" style="width:500px;height:500px;top:-10%;right:-8%;background:radial-gradient(circle,rgba(212,168,78,0.06),transparent 65%);animation:orbDrift 20s ease-in-out infinite;"></div>
       <div class="container split-section" style="position:relative;z-index:1;">
         <div class="reveal-left">
-          <p class="overline" style="margin-bottom:var(--space-lg);">Overview</p>
-          <h2>Full-Band <em>IoT</em> <br>Chipsets</h2>
-          <p class="body-text">The only company with a complete portfolio covering sub-1 GHz HaLow, 2.4/5/6 GHz Wi-Fi 6/7, and 5G-NR RF — all under one design team.</p>
-          <p class="body-text">Software-Defined Radio with PUF hardware security and on-chip edge-AI inference — integrated at silicon level.</p>
+          <p class="overline" style="margin-bottom:var(--space-lg);">{{t:chipnexus.overview.overline}}</p>
+          <h2>{{t:chipnexus.overview.h2}}</h2>
+          <p class="body-text">{{t:chipnexus.overview.body1}}</p>
+          <p class="body-text">{{t:chipnexus.overview.body2}}</p>
         </div>
         <a href="https://vimeo.com/1184351115?share=copy&fl=sv&fe=ci" target="_blank" rel="noopener noreferrer" class="illus-float reveal-right" style="aspect-ratio:16/10;display:block;cursor:pointer;">
           <video class="lazy-video" loop muted playsinline preload="none" poster="/assets/chipfactory-poster.jpg" style="width:100%;height:100%;object-fit:cover;pointer-events:none;">
@@ -152,8 +152,8 @@
       </style>
       <div class="container">
         <div class="section-header reveal">
-          <p class="overline">Core Products</p>
-          <h2>Three <em>Chips</em>. One Connectivity Thesis.</h2>
+          <p class="overline">{{t:chipnexus.products.overline}}</p>
+          <h2>{{t:chipnexus.products.h2}}</h2>
         </div>
         <div class="pcard-grid stagger">
 
@@ -163,12 +163,12 @@
               <img src="/assets/chipnexus-content/05-product-freya/freya-visual.webp" alt="Freya" loading="lazy">
             </div>
             <div class="pcard-body">
-              <div class="tag">Programmable RF Transceiver</div>
+              <div class="tag">{{t:chipnexus.product.freya.tag}}</div>
               <h3><em>Freya</em></h3>
-              <p>One software-defined silicon spanning sub-1 GHz to Wi-Fi 7. Routers, smart cities, V2X, defense — retuned in firmware, not respun in fab.</p>
+              <p>{{t:chipnexus.product.freya.body}}</p>
               <div class="pcard-meta">
-                <span class="domains">07 Domains · 28 Apps</span>
-                <span class="arrow">Explore →</span>
+                <span class="domains">{{t:chipnexus.product.freya.meta}}</span>
+                <span class="arrow">{{t:chipnexus.product.cta-explore}}</span>
               </div>
             </div>
           </a>
@@ -179,12 +179,12 @@
               <img src="/assets/chipnexus-content/06-product-glink/glink-intro.webp" alt="G-Link" loading="lazy">
             </div>
             <div class="pcard-body">
-              <div class="tag">Wi-Fi HaLow · Long-Range IoT</div>
+              <div class="tag">{{t:chipnexus.product.glink.tag}}</div>
               <h3><em>G-Link</em></h3>
-              <p>Kilometre-scale connectivity at coin-cell power. The fabric beneath smart cities, grids, agriculture, and the long tail of connected infrastructure.</p>
+              <p>{{t:chipnexus.product.glink.body}}</p>
               <div class="pcard-meta">
-                <span class="domains">06 Domains · 20 Apps</span>
-                <span class="arrow">Explore →</span>
+                <span class="domains">{{t:chipnexus.product.glink.meta}}</span>
+                <span class="arrow">{{t:chipnexus.product.cta-explore}}</span>
               </div>
             </div>
           </a>
@@ -195,12 +195,12 @@
               <img src="/assets/chipnexus-content/07-product-flexv/flexv-intro.webp" alt="FlexV" loading="lazy">
             </div>
             <div class="pcard-body">
-              <div class="tag">Software-Defined Radio</div>
+              <div class="tag">{{t:chipnexus.product.flexv.tag}}</div>
               <h3><em>FlexV</em></h3>
-              <p>A defense-grade SDR platform that turns silicon into a moving target — adapting waveforms faster than any adversary can characterize them.</p>
+              <p>{{t:chipnexus.product.flexv.body}}</p>
               <div class="pcard-meta">
-                <span class="domains">04 Domains · 15 Apps</span>
-                <span class="arrow">Explore →</span>
+                <span class="domains">{{t:chipnexus.product.flexv.meta}}</span>
+                <span class="arrow">{{t:chipnexus.product.cta-explore}}</span>
               </div>
             </div>
           </a>
@@ -215,26 +215,26 @@
       <div class="container" style="position:relative;z-index:1;">
         <div class="split-section" style="margin-bottom:clamp(3rem,6vw,5rem);">
           <div class="reveal-left">
-            <p class="overline" style="margin-bottom:var(--space-lg);">Market Opportunity</p>
-            <h2>Riding the <em>$80B+</em> <br>Wireless Chip Wave</h2>
-            <p class="body-text">The global RF chip market was valued at $46.5B in 2024. Wi-Fi 6/6E/7 chipsets alone are projected to reach $80.9B by 2030, with Wi-Fi 7 comprising $22.9B of that total.</p>
+            <p class="overline" style="margin-bottom:var(--space-lg);">{{t:chipnexus.market.overline}}</p>
+            <h2>{{t:chipnexus.market.h2}}</h2>
+            <p class="body-text">{{t:chipnexus.market.body}}</p>
           </div>
           <div class="market-bars reveal-scale" style="max-width:420px;margin:0 auto;">
-            <div class="market-bar-col"><div class="market-bar-value">$46.5B</div><div class="market-bar" style="height:55%;background:linear-gradient(180deg,var(--color-primary),var(--color-primary-dim));border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">RF 2024</div></div>
-            <div class="market-bar-col"><div class="market-bar-value">$80.9B</div><div class="market-bar" style="height:95%;background:linear-gradient(180deg,var(--color-ai),var(--color-ai-dim));border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">Wi-Fi 2030</div></div>
-            <div class="market-bar-col"><div class="market-bar-value">$22.9B</div><div class="market-bar" style="height:28%;background:linear-gradient(180deg,#8878A8,#3A2858);border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">Wi-Fi 7</div></div>
-            <div class="market-bar-col"><div class="market-bar-value">$1.5B</div><div class="market-bar" style="height:5%;min-height:16px;background:linear-gradient(180deg,var(--color-spark-flare),rgba(240,176,80,0.6));border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">MEGAX</div></div>
+            <div class="market-bar-col"><div class="market-bar-value">{{t:chipnexus.market.bar1.value}}</div><div class="market-bar" style="height:55%;background:linear-gradient(180deg,var(--color-primary),var(--color-primary-dim));border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">{{t:chipnexus.market.bar1.label}}</div></div>
+            <div class="market-bar-col"><div class="market-bar-value">{{t:chipnexus.market.bar2.value}}</div><div class="market-bar" style="height:95%;background:linear-gradient(180deg,var(--color-ai),var(--color-ai-dim));border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">{{t:chipnexus.market.bar2.label}}</div></div>
+            <div class="market-bar-col"><div class="market-bar-value">{{t:chipnexus.market.bar3.value}}</div><div class="market-bar" style="height:28%;background:linear-gradient(180deg,#8878A8,#3A2858);border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">{{t:chipnexus.market.bar3.label}}</div></div>
+            <div class="market-bar-col"><div class="market-bar-value">{{t:chipnexus.market.bar4.value}}</div><div class="market-bar" style="height:5%;min-height:16px;background:linear-gradient(180deg,var(--color-spark-flare),rgba(240,176,80,0.6));border-radius:var(--radius-glass) var(--radius-glass) 0 0;"></div><div class="market-bar-label">{{t:chipnexus.market.bar4.label}}</div></div>
           </div>
         </div>
 
         <div class="section-header reveal">
-          <p class="overline">Go-To-Market Channels</p>
+          <p class="overline">{{t:chipnexus.channels.overline}}</p>
         </div>
         <div class="channel-strip reveal-scale">
-          <div class="channel-item"><h4>Telecom Operators</h4><p>Smart city & 5G IoT deployments via operator partnerships</p></div>
-          <div class="channel-item"><h4>Consumer OEMs</h4><p>Smart home, TV, tablet & wearable device integration</p></div>
-          <div class="channel-item"><h4>Enterprise Networks</h4><p>High-performance routers & private 5G infrastructure</p></div>
-          <div class="channel-item"><h4>Industrial Leaders</h4><p>Manufacturing automation, robotics & industrial IoT</p></div>
+          <div class="channel-item"><h4>{{t:chipnexus.channel.1.h4}}</h4><p>{{t:chipnexus.channel.1.body}}</p></div>
+          <div class="channel-item"><h4>{{t:chipnexus.channel.2.h4}}</h4><p>{{t:chipnexus.channel.2.body}}</p></div>
+          <div class="channel-item"><h4>{{t:chipnexus.channel.3.h4}}</h4><p>{{t:chipnexus.channel.3.body}}</p></div>
+          <div class="channel-item"><h4>{{t:chipnexus.channel.4.h4}}</h4><p>{{t:chipnexus.channel.4.body}}</p></div>
         </div>
       </div>
     </section>
@@ -245,15 +245,15 @@
       <div class="container split-section" style="position:relative;z-index:1;">
         <div>
           <div class="section-header reveal">
-            <p class="overline">Execution Roadmap</p>
-            <h2>From Silicon <br>to <em>Scale</em></h2>
+            <p class="overline">{{t:chipnexus.roadmap.overline}}</p>
+            <h2>{{t:chipnexus.roadmap.h2}}</h2>
           </div>
           <div class="timeline stagger">
-            <div class="timeline-item reveal"><div class="timeline-year">Q1–Q2 2026</div><h4>Production Ignition</h4><p>Wi-Fi 6 SoC mass production. HaLow G-Link and Freya design optimization. Wi-Fi 7 teams onboarded.</p></div>
-            <div class="timeline-item reveal"><div class="timeline-year">Q3–Q4 2026</div><h4>First Revenue</h4><p>HaLow & Freya mass production on TSMC. First commercial revenue. FCC/CE/SRRC certifications filed.</p></div>
-            <div class="timeline-item reveal"><div class="timeline-year">2027</div><h4>Wi-Fi 7 Arrives</h4><p>Wi-Fi 7 AP Baseband and SoC reach mass production. Neural Network module sales begin.</p></div>
-            <div class="timeline-item reveal"><div class="timeline-year">2028</div><h4>Break-Even</h4><p>Full portfolio generating revenue at scale. Base-case projection: ~$85M.</p></div>
-            <div class="timeline-item reveal"><div class="timeline-year">2029–2031</div><h4>Global Scale</h4><p>Revenue toward $1.5B target. Top-tier wireless chipset company globally.</p></div>
+            <div class="timeline-item reveal"><div class="timeline-year">{{t:chipnexus.timeline.1.year}}</div><h4>{{t:chipnexus.timeline.1.h4}}</h4><p>{{t:chipnexus.timeline.1.body}}</p></div>
+            <div class="timeline-item reveal"><div class="timeline-year">{{t:chipnexus.timeline.2.year}}</div><h4>{{t:chipnexus.timeline.2.h4}}</h4><p>{{t:chipnexus.timeline.2.body}}</p></div>
+            <div class="timeline-item reveal"><div class="timeline-year">{{t:chipnexus.timeline.3.year}}</div><h4>{{t:chipnexus.timeline.3.h4}}</h4><p>{{t:chipnexus.timeline.3.body}}</p></div>
+            <div class="timeline-item reveal"><div class="timeline-year">{{t:chipnexus.timeline.4.year}}</div><h4>{{t:chipnexus.timeline.4.h4}}</h4><p>{{t:chipnexus.timeline.4.body}}</p></div>
+            <div class="timeline-item reveal"><div class="timeline-year">{{t:chipnexus.timeline.5.year}}</div><h4>{{t:chipnexus.timeline.5.h4}}</h4><p>{{t:chipnexus.timeline.5.body}}</p></div>
           </div>
         </div>
         <div class="illus-float reveal-right" style="aspect-ratio:3/4;max-height:600px;align-self:center;">
@@ -266,24 +266,24 @@
     <section class="section-block" style="background:var(--color-surface);">
       <div class="container">
         <div class="section-header center reveal">
-          <p class="overline">Competitive Advantages</p>
-          <h2>Why Mega X <em>Wins</em></h2>
+          <p class="overline">{{t:chipnexus.adv.overline}}</p>
+          <h2>{{t:chipnexus.adv.h2}}</h2>
         </div>
         <div class="advantage-grid stagger">
           <div class="advantage-card reveal">
             <div class="advantage-num">01</div>
-            <h4>Full-Spectrum Portfolio</h4>
-            <p>The only provider offering HaLow, Wi-Fi 6/7, and 5G-NR RF transceivers from a single design team.</p>
+            <h4>{{t:chipnexus.adv.1.h4}}</h4>
+            <p>{{t:chipnexus.adv.1.body}}</p>
           </div>
           <div class="advantage-card reveal">
             <div class="advantage-num">02</div>
-            <h4>Dual-Foundry Strategy</h4>
-            <p>TSMC and GlobalFoundries at 22–40nm nodes eliminate single-supplier risk and ensure capacity resilience.</p>
+            <h4>{{t:chipnexus.adv.2.h4}}</h4>
+            <p>{{t:chipnexus.adv.2.body}}</p>
           </div>
           <div class="advantage-card reveal">
             <div class="advantage-num">03</div>
-            <h4>IP Licensing Upside</h4>
-            <p>Wi-Fi 6 SoC generates chip revenue plus recurring royalty — $4M licensing fee + $0.12 per-chip royalty.</p>
+            <h4>{{t:chipnexus.adv.3.h4}}</h4>
+            <p>{{t:chipnexus.adv.3.body}}</p>
           </div>
         </div>
       </div>
@@ -293,11 +293,11 @@
     <section class="cta-section">
       <div class="ambient-orb" style="width:400px;height:400px;top:-20%;left:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(212,168,78,0.06),transparent 65%);animation:orbDrift 18s ease-in-out infinite;"></div>
       <div class="container reveal" style="position:relative;z-index:1;">
-        <h2>Ready to Build the <em>Future</em> <br>of Connectivity?</h2>
-        <p>Whether you're an investor, OEM partner, or enterprise customer — we'd like to hear from you.</p>
+        <h2>{{t:chipnexus.cta.h2}}</h2>
+        <p>{{t:chipnexus.cta.body}}</p>
         <div style="display:flex;gap:var(--space-md);justify-content:center;flex-wrap:wrap;">
-          <a href="/contact/" class="btn btn-primary">Contact Our Team →</a>
-          <a href="/company/" class="btn btn-outline">Learn More About Us</a>
+          <a href="/contact/" class="btn btn-primary">{{t:chipnexus.cta.contact}}</a>
+          <a href="/company/" class="btn btn-outline">{{t:chipnexus.cta.learn}}</a>
         </div>
       </div>
     </section>

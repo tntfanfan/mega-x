@@ -281,6 +281,33 @@ export function megaxPartials(opts: MegaxPartialsOptions): Plugin {
     );
   }
 
+  /** Rewrite `href="/foo/..."` → `href="/<locale>/foo/..."` for non-default
+   *  locales, so a user clicking around inside the ZH mirror stays in ZH.
+   *  Skips assets, the SPA mount, API endpoints, anchors, externals, and
+   *  paths that are already locale-prefixed. */
+  const NON_LOCALE_PATH_PREFIXES = new Set<string>([
+    "assets",
+    "js",
+    "styles",
+    "console",
+    "api",
+    "v1",
+    "health",
+    ...ENABLED_LOCALES.filter((l) => l !== DEFAULT_LOCALE),
+  ]);
+
+  function rewriteHrefsForLocale(html: string, locale: string): string {
+    if (locale === DEFAULT_LOCALE) return html;
+    return html.replace(/(\shref=")(\/[^"]*)/g, (m, attr: string, url: string) => {
+      // url is the path starting with /. Skip protocol-relative //...
+      if (url.startsWith("//")) return m;
+      const firstSeg = url.slice(1).split(/[/?#]/, 1)[0];
+      if (firstSeg && NON_LOCALE_PATH_PREFIXES.has(firstSeg)) return m;
+      // url === "/" → "/<locale>/"; url === "/company/foo" → "/<locale>/company/foo"
+      return `${attr}/${locale}${url === "/" ? "/" : url}`;
+    });
+  }
+
   /** Recursively list .html files under dir (relative to dir). */
   function walkHtml(dir: string, base = dir, acc: string[] = []): string[] {
     for (const entry of readdirSync(dir)) {
@@ -352,6 +379,7 @@ export function megaxPartials(opts: MegaxPartialsOptions): Plugin {
           const trans = localeTrans[locale] ?? {};
           let out = substituteTokens(rawHtml, locale, trans, enTrans);
           out = setHtmlLang(out, locale);
+          out = rewriteHrefsForLocale(out, locale);
           out = injectHreflang(out, siteUrl, rel);
 
           const targetPath =
