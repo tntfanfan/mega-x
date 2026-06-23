@@ -31,7 +31,7 @@ mega-x/
 │   └── pages/<page>.css       ← per-page CSS (extracted from inline <style>)
 │
 ├── js/main.js                 ← single global script (loader, nav, scroll, lazy video)
-├── chipnexus-content/         ← imagery for ChipNexus products (PPT-derived)
+├── assets/chipnexus-content/  ← imagery for ChipNexus products (PPT-derived; moved under assets/ 2026-06-24)
 ├── assets/                    ← images, video, logos
 │   ├── phyntom-x8/            ← per-product imagery
 │   ├── team/

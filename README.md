@@ -57,7 +57,7 @@ mega-x/
 │
 ├── js/main.js                ← single global script (still vanilla; Vite serves as-is)
 ├── assets/                   ← images, video, logos (kebab-case)
-├── chipnexus-content/        ← imagery for ChipNexus product pages
+├── assets/chipnexus-content/ ← imagery for ChipNexus product pages
 │
 ├── tools/
 │   ├── vite-plugin-partials.ts          ← TS port of inject_partials.py (dev + build)
