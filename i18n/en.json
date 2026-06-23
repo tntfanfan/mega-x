@@ -1,0 +1,91 @@
+{
+  "_comment": "Marketing MPA translations — English (default). Brand names like 'Phyntom X8', 'Mega X', 'Mega X Holding Ltd.', product names (FannX Gaming AI, ChipNexus Hub, Freya, G-Link, FlexV) are not translated.",
+
+  "lang.label": "Language",
+  "lang.en": "English",
+  "lang.zh": "中文",
+  "lang.ar": "العربية (coming soon)",
+  "lang.ar-disabled-tooltip": "Arabic translation in progress — coming soon.",
+
+  "nav.home": "Home",
+  "nav.phyntom-x8": "Phyntom X8",
+  "nav.fann-gaming-ai": "FannX Gaming AI",
+  "nav.wifi-iot-chips": "ChipNexus Hub",
+  "nav.about": "Company",
+  "nav.console": "Console",
+  "nav.contact": "Contact",
+
+  "footer.tagline.default": "The core hub for AI-native enterprise, gaming intelligence, and integrated computing infrastructure.",
+  "footer.tagline.about": "Architecting the means of production for the AI era — autonomy, intelligence, infrastructure.",
+  "footer.company": "Company",
+  "footer.divisions": "Divisions",
+  "footer.connect": "Connect",
+  "footer.about-link": "About",
+  "footer.leadership": "Leadership",
+  "footer.careers": "Careers",
+  "footer.contact": "Contact",
+  "footer.investor-relations": "Investor Relations",
+  "footer.press": "Press",
+  "footer.copyright": "© 2026 Mega X Holding Ltd. All rights reserved.",
+
+  "home.hero.headline": "MEGA X",
+  "home.hero.epigraph": "Join Us on Our Journey.",
+  "home.hero.cta": "Explore Our Divisions",
+
+  "common.scroll-to-top": "Scroll to top",
+
+  "seo.home.title": "Mega X Holding Ltd.",
+  "seo.home.description": "Mega X Holding Ltd. — Sovereign-grade AI decision-making and value circulation systems. Connectivity. Intelligence. Power.",
+  "seo.home.og-title": "Mega X Holding Ltd.",
+  "seo.home.og-description": "Know it all. See it all. Decide it all.",
+
+  "seo.about.title": "About — Mega X Holding Ltd.",
+  "seo.about.description": "Mega X Holding Ltd. — Architecting the production revolution of the AI era. Autonomy. Intelligence. Infrastructure.",
+  "seo.about.og-title": "About Mega X Holding",
+  "seo.about.og-description": "Architecting the production revolution of the AI era.",
+
+  "seo.contact.title": "Contact — Mega X Holding Ltd.",
+  "seo.contact.description": "Get in touch with Mega X Holding Ltd. for investor relations, partnership inquiries, or career opportunities.",
+  "seo.contact.og-title": "Contact Mega X Holding",
+  "seo.contact.og-description": "Investor relations, partnerships, careers — get in touch.",
+
+  "seo.phyntom-x8.title": "Phyntom X8 — Certified AI Department | Mega X Holding Ltd.",
+  "seo.phyntom-x8.description": "Phyntom X8 — Certified AI Department by Mega X. We build agent workflows with non-technical businesses that are actually accountable.",
+  "seo.phyntom-x8.og-title": "Phyntom X8 — Certified AI Department",
+  "seo.phyntom-x8.og-description": "Your AI runs. Certified. Managed AI operations for businesses that demand results, not complexity.",
+
+  "seo.fann-gaming-ai.title": "FannX Gaming AI — Mega X Holding Ltd.",
+  "seo.fann-gaming-ai.description": "FannX Gaming AI — Real-time game intelligence and autonomous companions. Built by Mega X.",
+  "seo.fann-gaming-ai.og-title": "FannX Gaming AI",
+  "seo.fann-gaming-ai.og-description": "Real-time game intelligence and autonomous companions.",
+
+  "seo.wifi-iot-chips.title": "ChipNexus Hub — Wi-Fi & IoT Connectivity | Mega X Holding Ltd.",
+  "seo.wifi-iot-chips.description": "ChipNexus Hub — Full-band wireless connectivity chipsets and edge-AI silicon by Mega X.",
+  "seo.wifi-iot-chips.og-title": "ChipNexus Hub — Connectivity Silicon",
+  "seo.wifi-iot-chips.og-description": "Full-band wireless connectivity and edge-AI silicon.",
+
+  "seo.nuclear-fusion-energy.title": "Nuclear Fusion Energy — Mega X Holding Ltd.",
+  "seo.nuclear-fusion-energy.description": "Nuclear fusion energy initiatives at Mega X Holding Ltd.",
+  "seo.nuclear-fusion-energy.og-title": "Nuclear Fusion Energy",
+  "seo.nuclear-fusion-energy.og-description": "Energy initiatives at Mega X Holding Ltd.",
+
+  "seo.products.freya.title": "Freya — High-Performance Programmable RF Transceiver | Mega X",
+  "seo.products.freya.description": "Freya RF Transceiver — Multi-band wireless front-end by Mega X.",
+  "seo.products.freya.og-title": "Freya RF Transceiver",
+  "seo.products.freya.og-description": "Multi-band wireless front-end.",
+
+  "seo.products.glink.title": "G-Link — Long-Range, Low-Power Wireless | Mega X",
+  "seo.products.glink.description": "G-Link Wi-Fi HaLow chip for long-range, low-power IoT.",
+  "seo.products.glink.og-title": "G-Link HaLow",
+  "seo.products.glink.og-description": "Long-range, low-power IoT connectivity.",
+
+  "seo.products.flexv.title": "FlexV — Software-Defined Radio Platform | Mega X",
+  "seo.products.flexv.description": "FlexV — Software-defined radio platform by Mega X.",
+  "seo.products.flexv.og-title": "FlexV SDR Platform",
+  "seo.products.flexv.og-description": "Software-defined radio platform.",
+
+  "seo.404.title": "404 — Page Not Found | Mega X Holding Ltd.",
+  "seo.404.description": "The page you are looking for could not be found.",
+  "seo.404.og-title": "404 — Page Not Found",
+  "seo.404.og-description": "Page not found."
+}

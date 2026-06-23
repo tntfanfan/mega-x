@@ -1,6 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+
+// Side-effect import: configures i18next with EN + ZH and sets <html lang>.
+import "./i18n";
+
 import App from "./App";
 import { AuthProvider } from "./lib/auth";
 import "./styles/globals.css";

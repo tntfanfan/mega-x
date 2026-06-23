@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api, type DeptCard, type Me } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 
 export default function BusinessDashboard() {
+  const { t } = useTranslation();
   const { me, loading: meLoading } = useAuth();
   const [depts, setDepts] = useState<DeptCard[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -17,8 +19,8 @@ export default function BusinessDashboard() {
   return (
     <section className="container py-10 space-y-8">
       <header className="space-y-1">
-        <p className="text-xs tracking-[0.3em] text-primary uppercase">Business</p>
-        <h1 className="font-display text-3xl text-heading">Dashboard</h1>
+        <p className="text-xs tracking-[0.3em] text-primary uppercase">{t("business.dashboard.eyebrow")}</p>
+        <h1 className="font-display text-3xl text-heading">{t("business.dashboard.title")}</h1>
       </header>
 
       <MeBlock me={me} loading={meLoading} />
@@ -28,34 +30,39 @@ export default function BusinessDashboard() {
 }
 
 function MeBlock({ me, loading }: { me: Me | null; loading: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-md border border-border-solid bg-surface p-5">
-      <h2 className="text-muted text-xs uppercase tracking-widest mb-3">/v1/me (mock)</h2>
+      <h2 className="text-muted text-xs uppercase tracking-widest mb-3">
+        {t("business.dashboard.me-block.title")}
+      </h2>
       {loading ? (
-        <p className="text-body text-sm">Loading…</p>
+        <p className="text-body text-sm">{t("business.dashboard.loading")}</p>
       ) : me ? (
         <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-          <dt className="text-muted">User</dt>
+          <dt className="text-muted">{t("business.dashboard.user")}</dt>
           <dd className="text-body">
             {me.user.display_name} <span className="text-muted">({me.user.email})</span>
           </dd>
-          <dt className="text-muted">Roles</dt>
+          <dt className="text-muted">{t("business.dashboard.roles")}</dt>
           <dd className="text-body">{me.roles.join(", ")}</dd>
-          <dt className="text-muted">Tenants</dt>
-          <dd className="text-body">{me.tenants.map((t) => t.name).join(", ")}</dd>
+          <dt className="text-muted">{t("business.dashboard.tenants")}</dt>
+          <dd className="text-body">{me.tenants.map((tn) => tn.name).join(", ")}</dd>
         </dl>
       ) : (
-        <p className="text-fusion text-sm">未登录或后端不可达</p>
+        <p className="text-fusion text-sm">{t("business.dashboard.not-logged-in")}</p>
       )}
     </div>
   );
 }
 
 function DeptsBlock({ depts, error }: { depts: DeptCard[] | null; error: string | null }) {
+  const { t } = useTranslation();
   return (
     <div>
       <h2 className="text-muted text-xs uppercase tracking-widest mb-3">
-        /v1/depts (mock, from roster.json) — {depts?.length ?? "…"}
+        {t("business.dashboard.depts-title.prefix")}
+        {depts?.length ?? t("business.dashboard.depts-loading-suffix")}
       </h2>
       {error && <p className="text-fusion text-sm">{error}</p>}
       {depts && (
@@ -80,11 +87,11 @@ function DeptsBlock({ depts, error }: { depts: DeptCard[] | null; error: string 
               </div>
               <p className="text-body text-sm mt-1">{d.name}</p>
               <div className="mt-3 flex items-center gap-3 text-xs text-muted">
-                <span>{d.role_count} agents</span>
+                <span>{t("business.dashboard.dept.agents", { count: d.role_count })}</span>
                 <span className="text-heading">·</span>
-                <Tier label="HIGH" n={d.tier_breakdown.HIGH} />
-                <Tier label="MED" n={d.tier_breakdown.MEDIUM} />
-                <Tier label="LOW" n={d.tier_breakdown.LOW} />
+                <Tier label={t("business.dashboard.tier.high")} n={d.tier_breakdown.HIGH} />
+                <Tier label={t("business.dashboard.tier.medium")} n={d.tier_breakdown.MEDIUM} />
+                <Tier label={t("business.dashboard.tier.low")} n={d.tier_breakdown.LOW} />
               </div>
             </li>
           ))}

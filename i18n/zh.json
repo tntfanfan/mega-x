@@ -1,0 +1,91 @@
+{
+  "_comment": "营销 MPA 翻译 — 中文。品牌名（Phyntom X8 / Mega X / Mega X Holding Ltd. / FannX Gaming AI / ChipNexus Hub / Freya / G-Link / FlexV）不翻译。",
+
+  "lang.label": "语言",
+  "lang.en": "English",
+  "lang.zh": "中文",
+  "lang.ar": "العربية（即将上线）",
+  "lang.ar-disabled-tooltip": "阿拉伯语翻译进行中，即将上线。",
+
+  "nav.home": "首页",
+  "nav.phyntom-x8": "Phyntom X8",
+  "nav.fann-gaming-ai": "FannX Gaming AI",
+  "nav.wifi-iot-chips": "ChipNexus Hub",
+  "nav.about": "关于公司",
+  "nav.console": "Console",
+  "nav.contact": "联系我们",
+
+  "footer.tagline.default": "AI 原生企业、游戏智能与一体化算力基础设施的核心枢纽。",
+  "footer.tagline.about": "为 AI 时代构建生产资料 —— 自主、智能、基础设施。",
+  "footer.company": "公司",
+  "footer.divisions": "事业部",
+  "footer.connect": "联系",
+  "footer.about-link": "关于我们",
+  "footer.leadership": "领导团队",
+  "footer.careers": "招聘",
+  "footer.contact": "联系我们",
+  "footer.investor-relations": "投资者关系",
+  "footer.press": "新闻媒体",
+  "footer.copyright": "© 2026 Mega X Holding Ltd. 版权所有。",
+
+  "home.hero.headline": "MEGA X",
+  "home.hero.epigraph": "与我们一同启程。",
+  "home.hero.cta": "了解我们的业务板块",
+
+  "common.scroll-to-top": "回到顶部",
+
+  "seo.home.title": "Mega X Holding Ltd.",
+  "seo.home.description": "Mega X Holding Ltd. —— 主权级 AI 决策与价值流通系统。Connectivity. Intelligence. Power.",
+  "seo.home.og-title": "Mega X Holding Ltd.",
+  "seo.home.og-description": "知一切、见一切、决一切。",
+
+  "seo.about.title": "关于 — Mega X Holding Ltd.",
+  "seo.about.description": "Mega X Holding Ltd. —— 构建 AI 时代的生产革命。自主、智能、基础设施。",
+  "seo.about.og-title": "关于 Mega X Holding",
+  "seo.about.og-description": "构建 AI 时代的生产革命。",
+
+  "seo.contact.title": "联系我们 — Mega X Holding Ltd.",
+  "seo.contact.description": "联系 Mega X Holding Ltd. —— 投资者关系、合作洽谈、招聘。",
+  "seo.contact.og-title": "联系 Mega X Holding",
+  "seo.contact.og-description": "投资者关系、合作、招聘 —— 欢迎沟通。",
+
+  "seo.phyntom-x8.title": "Phyntom X8 —— Certified AI Department | Mega X Holding Ltd.",
+  "seo.phyntom-x8.description": "Phyntom X8 —— Mega X 旗下 Certified AI Department。我们与非技术业务方共建可问责的 agent 工作流。",
+  "seo.phyntom-x8.og-title": "Phyntom X8 —— Certified AI Department",
+  "seo.phyntom-x8.og-description": "你的 AI 在运转。已认证。为追求结果而非复杂度的企业提供托管式 AI 运营。",
+
+  "seo.fann-gaming-ai.title": "FannX Gaming AI — Mega X Holding Ltd.",
+  "seo.fann-gaming-ai.description": "FannX Gaming AI —— 实时游戏智能与自主同伴系统。Mega X 出品。",
+  "seo.fann-gaming-ai.og-title": "FannX Gaming AI",
+  "seo.fann-gaming-ai.og-description": "实时游戏智能与自主同伴系统。",
+
+  "seo.wifi-iot-chips.title": "ChipNexus Hub —— Wi-Fi 与 IoT 连接 | Mega X Holding Ltd.",
+  "seo.wifi-iot-chips.description": "ChipNexus Hub —— Mega X 全频段无线连接芯片组与边缘 AI 芯片。",
+  "seo.wifi-iot-chips.og-title": "ChipNexus Hub —— 连接芯片",
+  "seo.wifi-iot-chips.og-description": "全频段无线连接与边缘 AI 芯片。",
+
+  "seo.nuclear-fusion-energy.title": "Nuclear Fusion Energy — Mega X Holding Ltd.",
+  "seo.nuclear-fusion-energy.description": "Mega X Holding Ltd. 的核聚变能源计划。",
+  "seo.nuclear-fusion-energy.og-title": "Nuclear Fusion Energy",
+  "seo.nuclear-fusion-energy.og-description": "Mega X Holding Ltd. 的能源计划。",
+
+  "seo.products.freya.title": "Freya —— 高性能可编程射频收发器 | Mega X",
+  "seo.products.freya.description": "Freya RF Transceiver —— Mega X 出品的多频段无线前端。",
+  "seo.products.freya.og-title": "Freya RF Transceiver",
+  "seo.products.freya.og-description": "多频段无线前端。",
+
+  "seo.products.glink.title": "G-Link —— 远距离低功耗无线 | Mega X",
+  "seo.products.glink.description": "G-Link Wi-Fi HaLow 芯片，面向远距离、低功耗 IoT。",
+  "seo.products.glink.og-title": "G-Link HaLow",
+  "seo.products.glink.og-description": "远距离、低功耗 IoT 连接。",
+
+  "seo.products.flexv.title": "FlexV —— 软件定义无线电平台 | Mega X",
+  "seo.products.flexv.description": "FlexV —— Mega X 出品的软件定义无线电平台。",
+  "seo.products.flexv.og-title": "FlexV SDR Platform",
+  "seo.products.flexv.og-description": "软件定义无线电平台。",
+
+  "seo.404.title": "404 —— 页面未找到 | Mega X Holding Ltd.",
+  "seo.404.description": "找不到您要访问的页面。",
+  "seo.404.og-title": "404 —— 页面未找到",
+  "seo.404.og-description": "页面未找到。"
+}

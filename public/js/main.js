@@ -1,6 +1,64 @@
 (() => {
 'use strict';
 
+// ========== LANGUAGE SWITCHER (marketing nav) ==========
+// Detect current locale from URL prefix (/zh/, /ar/) — default is English.
+// Switching changes the URL prefix and reloads; chosen locale is persisted
+// to localStorage for future visits, and the dropdown label reflects state.
+const SUPPORTED_LANGS = ['en', 'zh', 'ar'];
+const ENABLED_LANGS = ['en', 'zh'];  // Arabic disabled until ar.json is filled
+
+function currentLang() {
+  const m = window.location.pathname.match(/^\/(zh|ar)(\/|$)/);
+  return m ? m[1] : 'en';
+}
+
+function buildLangUrl(targetLang) {
+  const path = window.location.pathname;
+  // Strip any existing locale prefix
+  const stripped = path.replace(/^\/(zh|ar)(?=\/|$)/, '') || '/';
+  if (targetLang === 'en') return stripped + window.location.search + window.location.hash;
+  return '/' + targetLang + (stripped === '/' ? '/' : stripped) + window.location.search + window.location.hash;
+}
+
+(function initLangSwitcher() {
+  const toggle = document.querySelector('[data-mx-lang-toggle]');
+  const menu = document.querySelector('[data-mx-lang-menu]');
+  const currentLabel = document.querySelector('[data-mx-lang-current]');
+  if (!toggle || !menu) return;
+
+  // Set current label
+  if (currentLabel) currentLabel.textContent = currentLang().toUpperCase();
+
+  // Persist current choice
+  try { localStorage.setItem('mx.locale', currentLang()); } catch (_) {}
+
+  // Toggle dropdown
+  toggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    menu.hidden = !menu.hidden;
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!menu.hidden && !toggle.contains(e.target) && !menu.contains(e.target)) {
+      menu.hidden = true;
+    }
+  });
+
+  // Handle locale clicks
+  menu.querySelectorAll('[data-mx-lang]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const lang = link.getAttribute('data-mx-lang');
+      if (!ENABLED_LANGS.includes(lang)) return;     // disabled (e.g. ar)
+      if (lang === currentLang()) { menu.hidden = true; return; }
+      try { localStorage.setItem('mx.locale', lang); } catch (_) {}
+      window.location.href = buildLangUrl(lang);
+    });
+  });
+})();
+
 // ========== LOADER ==========
 window.addEventListener('load', () => {
   const loader = document.querySelector('.loader-overlay');
