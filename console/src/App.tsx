@@ -78,8 +78,8 @@ export default function App() {
         <Route index element={<LandingChoose />} />
 
         <Route path="business">
-          <Route index element={<BusinessOverview />} />          {/* /business/ → 全局总览 */}
-          <Route path="landing" element={<BusinessLanding />} />  {/* /business/landing → 营销 Landing */}
+          <Route index element={<BusinessLanding />} />            {/* /business/ → Landing（与 solo/dev/admin 对称）*/}
+          <Route path="overview" element={<BusinessOverview />} /> {/* /business/overview → 全局总览（主工作页）*/}
 
           <Route path="companies">
             <Route index element={<CompaniesList />} />

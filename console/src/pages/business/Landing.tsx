@@ -16,7 +16,7 @@ export default function BusinessLanding() {
         <p className="text-body max-w-2xl">{t("business.landing.body")}</p>
         <div className="pt-4 flex gap-3">
           <Link
-            to="/business/dashboard"
+            to="/business/overview"
             className="rounded-md bg-primary text-bg px-5 py-2 text-sm font-medium hover:bg-accent transition"
           >
             {t("business.landing.cta.enter")}

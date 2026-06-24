@@ -90,7 +90,7 @@ export default function NewWizard() {
       )}
 
       <div className="flex gap-3 pt-4 border-t border-border-solid">
-        <button onClick={() => navigate("/business/")} className="rounded-md border border-border-solid px-4 py-2 text-sm text-body hover:border-primary hover:text-primary">{t("common.cancel")}</button>
+        <button onClick={() => navigate("/business/overview")} className="rounded-md border border-border-solid px-4 py-2 text-sm text-body hover:border-primary hover:text-primary">{t("common.cancel")}</button>
         <button onClick={submit} disabled={!name.trim() || submitting} className="rounded-md bg-primary text-bg px-5 py-2 text-sm font-medium hover:bg-accent transition disabled:opacity-50">
           {submitting ? t("business.companies.new.submitting") : t("business.companies.new.submit")}
         </button>

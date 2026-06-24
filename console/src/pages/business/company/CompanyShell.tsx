@@ -55,7 +55,7 @@ export default function CompanyShell() {
     return <div className="container py-10"><p className="text-body text-sm">Loading…</p></div>;
   }
   if (state.kind === "not-found") {
-    return <Navigate to="/business/" replace />;
+    return <Navigate to="/business/overview" replace />;
   }
   if (state.kind === "error") {
     return <div className="container py-10"><p className="text-fusion text-sm">{state.error}</p></div>;
@@ -89,7 +89,7 @@ function CompanyHeader({ company, companies }: { company: Company; companies: Co
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <Link
-            to="/business/"
+            to="/business/overview"
             className="inline-block text-xs text-muted hover:text-primary shrink-0 rtl:-scale-x-100"
             title={t("shell.switcher.go-overview")}
           >
