@@ -24,6 +24,15 @@ Console 用 [HashRouter](console/src/main.tsx)，所有 SPA 路由都在 URL `#`
 
 代价：URL 形如 `mega-x.ai/console/#/business/c/c-saas/`（中间多个 `#/`）。对内部 SaaS Console 完全可接受。
 
+## 不用 customHttp.yml
+
+Amplify Gen 1 的 customHttp.yml 在 monorepo `appRoot: .` 配置下解析有 bug（无论 flat / applications 形式都会报 `Monorepo spec provided without "applications" key`，且无法保存 headers）。
+
+但**没必要纠结**：
+- vite build 产物（CSS/JS）已自带 content hash 文件名（如 `console-CqND220k.js`），文件名一变 CDN/浏览器自动重拉，无需手动 cache-control
+- HTML 文件 Amplify CDN 默认 5 min TTL，足够日常迭代
+- 想精细控制 cache，可后期切到 CloudFront 自管 distribution
+
 ## 每次部署
 
 ```bash
