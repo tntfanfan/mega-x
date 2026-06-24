@@ -1,17 +1,22 @@
-"""Start the mega-x debug stack: dev_server + Edge with CDP, wait until both
+"""Start the mega-x debug stack: Vite dev + Edge with CDP, wait until both
 are healthy, then keep this process alive until VSCode terminates the task.
 
 Designed to be a VSCode background task. The 'ready' line we print when both
 endpoints are reachable is what the task's problemMatcher.endsPattern matches,
 unblocking the dependent debug-attach configuration.
 
-If a dev_server or Edge-with-CDP is already running, this script reuses it
-instead of spawning a duplicate.
+If Vite or Edge-with-CDP is already running, this script reuses it instead
+of spawning a duplicate.
+
+v3 (unified Vite): we run Vite directly via `node node_modules/vite/bin/vite.js`
+to avoid the npm/pnpm/yarn shim ambiguity and Windows .cmd quoting issues.
+This serves both the marketing MPA (with partial/i18n placeholder resolution)
+and the Phyntom X8 Console SPA (with TSX bundling + HMR) on a single port.
 
 On Windows we attach all spawned children to a Job Object with
 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE so that even when VSCode hard-kills this
 script (which is the normal way it terminates background tasks), the OS
-guarantees Edge + dev_server die too. No graceful signal needed.
+guarantees Edge + Vite die too. No graceful signal needed.
 
 Run: python tools/start_debug_stack.py
 """
@@ -21,9 +26,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 USER_DIR = ROOT / ".vscode" / ".edge-profile"
-DEV_PORT = 8000
+DEV_PORT = 5173       # Vite default; matches vite.config.ts server.port
 CDP_PORT = 9223
 URL = f"http://localhost:{DEV_PORT}/"
+VITE_BIN = ROOT / "node_modules" / "vite" / "bin" / "vite.js"
 
 procs: list[subprocess.Popen] = []
 
@@ -159,10 +165,17 @@ def main():
     _create_job()
 
     if is_dev_up():
-        print(f"[debug-stack] dev_server already up on :{DEV_PORT}", flush=True)
+        print(f"[debug-stack] vite dev already up on :{DEV_PORT}", flush=True)
     else:
-        print(f"[debug-stack] starting dev_server on :{DEV_PORT}", flush=True)
-        spawn([sys.executable, str(ROOT / "tools" / "dev_server.py"), str(DEV_PORT)],
+        if not VITE_BIN.is_file():
+            print(
+                f"[debug-stack] FAIL: vite not installed — run `corepack pnpm install` first",
+                flush=True,
+            )
+            shutdown()
+            return
+        print(f"[debug-stack] starting vite dev on :{DEV_PORT}", flush=True)
+        spawn(["node", str(VITE_BIN), "--port", str(DEV_PORT), "--strictPort"],
               cwd=str(ROOT))
 
     if is_cdp_up():

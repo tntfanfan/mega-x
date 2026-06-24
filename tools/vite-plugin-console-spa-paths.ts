@@ -21,9 +21,14 @@ import type { Plugin } from "vite";
 
 // Mirror of console/src/App.tsx route table (keep in sync).
 // Each entry is the URL path relative to the site root.
+//
+// 注意：动态路径段如 /business/c/:companyId/* 无法在 build 时静态展开，
+// 这些路径需要在托管层用 SPA rewrite 规则覆盖（见 amplify.yml 注释）。
 const CONSOLE_ROUTES = [
+  // Static landings
   "console/business",
-  "console/business/dashboard",
+  "console/business/companies",
+  "console/business/companies/new",
   "console/solo",
   "console/solo/dashboard",
   "console/dev",

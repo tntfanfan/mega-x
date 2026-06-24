@@ -1,6 +1,9 @@
 .claude
 .DS_Store
 
+# pycache
+__pycache__/
+
 # Vite / Node artifacts
 node_modules/
 dist/
