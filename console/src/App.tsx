@@ -29,6 +29,7 @@ import SoloDashboard from "./pages/solo/Dashboard";
 // Dev / Admin (S11 才发力)
 import DevLanding from "./pages/dev/Landing";
 import DevHome from "./pages/dev/Home";
+import DevStudio from "./pages/dev/Studio";
 import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
 
@@ -107,6 +108,7 @@ export default function App() {
         <Route path="dev">
           <Route index element={<DevLanding />} />
           <Route path="home" element={<DevHome />} />
+          <Route path="depts/:deptId/studio" element={<DevStudio />} />
         </Route>
 
         <Route path="admin">

@@ -20,6 +20,7 @@ import {
   COMPANIES, DEPT_CATALOG, AGENTS, TASKS, ARTIFACTS, ACTIVITY, ME,
   type Company, type Task,
 } from "./fixtures";
+import { BUILDER_DRAFTS, NEW_DRAFT, draftToCard } from "./builderFixtures";
 
 const SIMULATED_LATENCY_MS = 80;
 
@@ -273,6 +274,21 @@ const HANDLERS: Handler[] = [
       const d = DEPT_CATALOG.find((x) => x.id === m[1]);
       if (!d) return { status: 404, body: { error: "dept not found" } };
       return { body: d };
+    },
+  },
+
+  // ── builder / dev (For Builders Studio v0) ──
+  {
+    match: exact("/v1/dev/depts", "GET"),
+    handle: () => ({ body: { items: BUILDER_DRAFTS.map(draftToCard), _mock: true } }),
+  },
+  {
+    match: rx(/^\/v1\/dev\/depts\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      // Unknown id (incl. "new") starts a blank draft template.
+      const draft = BUILDER_DRAFTS.find((d) => d.id === id) ?? { ...NEW_DRAFT, id };
+      return { body: draft };
     },
   },
 ];
