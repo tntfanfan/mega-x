@@ -15,3 +15,7 @@ dist/
 # Vite env locals (not committed)
 .env.local
 .env.*.local
+
+# 项目用 pnpm（amplify.yml 也走 corepack pnpm）；package-lock.json 是 npm 自动
+# 生成的，不应该 commit —— 与 pnpm-lock.yaml 双轨会漂移导致 CI 崩
+package-lock.json
