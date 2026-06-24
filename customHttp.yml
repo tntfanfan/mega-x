@@ -1,10 +1,9 @@
 # AWS Amplify Hosting — custom HTTP headers.
 #
-# 这个文件管 HEADERS。**Rewrites/Redirects 不在这里**，需要在 AWS Amplify
-# Console UI 配（见仓库根的 DEPLOY.md 或本文件底部注释）。
+# 仅管 HEADERS。Console 用 HashRouter，所以**不需要任何 SPA rewrite 规则**。
 
 customHeaders:
-  # console SPA 的 HTML shell 不缓存（路由可能动态变化）
+  # console SPA 的 HTML shell 不缓存（每次访问拉最新版本）
   - pattern: '/console/**/*.html'
     headers:
       - key: Cache-Control
@@ -15,20 +14,3 @@ customHeaders:
     headers:
       - key: Cache-Control
         value: 'public, max-age=31536000, immutable'
-
-# ─────────────────────────────────────────────────────────────────────
-# SPA Rewrites（必须在 Amplify Console UI 配，customHttp.yml 不支持）
-#
-# Amplify Console → App settings → Rewrites and redirects → Edit →
-# 添加 1 条规则：
-#
-#   Source address:  </^\/console\/.*$/>
-#   Target address:  /console/index.html
-#   Type:            200 (Rewrite)
-#
-# 这条规则确保任何 /console/* 路径（包括 /console/business/c/c-saas/
-# 这种动态 ID）都返回 console/index.html，让 React Router 在客户端接管。
-#
-# 静态营销页面不需要这条规则（每个 /about/index.html / /chipnexus/index.html
-# 都是 build 时实体文件）。
-# ─────────────────────────────────────────────────────────────────────

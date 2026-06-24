@@ -4,12 +4,13 @@
 # configured in monorepo mode in the console. Even though this repo is a
 # single app, the spec uses the monorepo shape so Amplify validates it.
 #
-# v3 (2026-06-24): switched npm → pnpm via corepack. Reason: the project
-# uses pnpm locally (one lockfile, no double-lockfile drift). Amplify's
-# default `npm ci` strictly enforces package-lock.json which fell out of
-# sync the moment any dep was added through `corepack pnpm add`.
+# v4 (2026-06-24): switched corepack → `npm install -g pnpm` to install pnpm.
+# Reason: Amplify's build environment with Node 22.18 + corepack 0.34 hangs
+# at `corepack prepare pnpm@x.y.z --activate` because of strict signature
+# verification timing out against the Vercel-hosted signature endpoint.
+# `npm install -g pnpm@9.0.0` reaches the public npm registry directly and
+# completes in ~5 seconds.
 #
-# Vite build emits everything to dist/ — that's what Amplify uploads to its CDN.
 # Mock mode is on in production via .env.production (VITE_USE_MOCK=true), so
 # the deployed site runs without any backend.
 
@@ -21,8 +22,8 @@ applications:
         preBuild:
           commands:
             - node --version
-            - corepack enable
-            - corepack prepare pnpm@9.0.0 --activate
+            - npm --version
+            - npm install -g pnpm@9.0.0
             - pnpm --version
             - pnpm install --frozen-lockfile
         build:
