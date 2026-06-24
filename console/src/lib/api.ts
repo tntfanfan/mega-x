@@ -109,7 +109,25 @@ export type DeptCard = {
   id: string;
   name: string;
   source_type: string;
-  port: number | null;
+  port?: number | null;
   role_count: number;
   tier_breakdown: { HIGH: number; MEDIUM: number; LOW: number };
 };
+
+// Re-export multi-company shapes from fixtures so consumers import from one
+// place. When the real backend lands, these types may need slight tweaks but
+// the API consumer call sites won't change.
+export type {
+  Company,
+  CompanyState,
+  DeptCatalogItem,
+  Agent,
+  AgentTeamRole,
+  AgentTier,
+  AgentStatus,
+  Task,
+  TaskState,
+  Artifact,
+  ArtifactType,
+  ActivityEvent,
+} from "./fixtures";

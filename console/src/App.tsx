@@ -6,15 +6,29 @@ import LanguageSwitcher from "./components/LanguageSwitcher";
 
 import LandingChoose from "./pages/Landing";
 
+// Business
 import BusinessLanding from "./pages/business/Landing";
-import BusinessDashboard from "./pages/business/Dashboard";
+import BusinessOverview from "./pages/business/Overview";
+import CompaniesList from "./pages/business/companies/List";
+import NewWizard from "./pages/business/companies/NewWizard";
+import CompanyShell from "./pages/business/company/CompanyShell";
+import CanvasView from "./pages/business/company/CanvasView";
+import DeptsView from "./pages/business/company/DeptsView";
+import TasksList from "./pages/business/company/TasksList";
+import TaskDetail from "./pages/business/company/TaskDetail";
+import TaskNew from "./pages/business/company/TaskNew";
+import Outputs from "./pages/business/company/Outputs";
+import Conversations from "./pages/business/company/Conversations";
+import CompanyMarketplace from "./pages/business/company/Marketplace";
+import Settings from "./pages/business/company/Settings";
 
+// Solo (镜像 Business，仅 Landing 不同)
 import SoloLanding from "./pages/solo/Landing";
 import SoloDashboard from "./pages/solo/Dashboard";
 
+// Dev / Admin (S11 才发力)
 import DevLanding from "./pages/dev/Landing";
 import DevHome from "./pages/dev/Home";
-
 import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
 
@@ -63,8 +77,26 @@ export default function App() {
         <Route index element={<LandingChoose />} />
 
         <Route path="business">
-          <Route index element={<BusinessLanding />} />
-          <Route path="dashboard" element={<BusinessDashboard />} />
+          <Route index element={<BusinessOverview />} />          {/* /business/ → 全局总览 */}
+          <Route path="landing" element={<BusinessLanding />} />  {/* /business/landing → 营销 Landing */}
+
+          <Route path="companies">
+            <Route index element={<CompaniesList />} />
+            <Route path="new" element={<NewWizard />} />
+          </Route>
+
+          {/* 单公司沉浸视图 */}
+          <Route path="c/:companyId" element={<CompanyShell />}>
+            <Route index element={<CanvasView />} />              {/* /business/c/:id/ → Canvas */}
+            <Route path="depts" element={<DeptsView />} />
+            <Route path="tasks" element={<TasksList />} />
+            <Route path="tasks/new" element={<TaskNew />} />
+            <Route path="tasks/:taskId" element={<TaskDetail />} />
+            <Route path="outputs" element={<Outputs />} />
+            <Route path="conversations" element={<Conversations />} />
+            <Route path="marketplace" element={<CompanyMarketplace />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
         </Route>
 
         <Route path="solo">

@@ -4,94 +4,275 @@
  * When `import.meta.env.VITE_USE_MOCK` is truthy, `lib/api.ts` consults
  * `mockHandle()` before making any real fetch. If a handler matches the
  * (path, method) tuple, its return value is used as the response — no
- * network call leaves the browser. This is how you can run the Console
- * UI without the FastAPI backend at all.
+ * network call leaves the browser. This is how you can develop and verify
+ * the full Console UI (multi-company / canvas / tasks / artifacts) without
+ * the FastAPI backend running.
  *
- * Disable: set `VITE_USE_MOCK=false` in `.env.development` (or any env
- * file), then restart `pnpm dev`. The same code path makes real /v1/*
- * calls and goes through the mega-x dev_server reverse proxy.
+ * Disable: set `VITE_USE_MOCK=false` in `.env.development`, then restart
+ * `npm run dev`. Same code path will make real /v1/* calls instead.
  *
- * Add a new mock: append a row to MOCKS below. Keep the shape close to
- * what the real FastAPI router will eventually return so swapping is
- * a one-line config change, not a refactor.
+ * Add a new mock: append a row to HANDLERS below. Keep the response shape
+ * close to what the real FastAPI router will eventually return so swapping
+ * is a one-line config change, not a refactor.
  */
 
-const SIMULATED_LATENCY_MS = 80; // feels like a real network without being annoying
+import {
+  COMPANIES, DEPT_CATALOG, AGENTS, TASKS, ARTIFACTS, ACTIVITY, ME,
+  type Company, type Task,
+} from "./fixtures";
 
-type MockResponse = {
-  status?: number; // default 200
-  body: unknown;
-};
+const SIMULATED_LATENCY_MS = 80;
 
+type MockResponse = { status?: number; body: unknown };
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
 
-type MockHandler = (
+type HandlerMatch = (path: string, method: Method) => boolean | RegExpMatchArray | null;
+type HandlerFn = (
   path: string,
-  init: { method: Method; body?: unknown },
-) => MockResponse | undefined;
+  method: Method,
+  body: unknown,
+  match: RegExpMatchArray | boolean,
+) => MockResponse;
 
-// ─── fixtures ────────────────────────────────────────────────────────────
+interface Handler {
+  match: HandlerMatch;
+  handle: HandlerFn;
+}
 
-const ME = {
-  user: {
-    id: "user-dev-0001",
-    email: "dev@mega-x.ai",
-    display_name: "Dev User",
-  },
-  roles: ["tenant_owner", "developer"],
-  tenants: [
-    { id: "tenant-dev-0001", name: "Dev Tenant", role: "owner" },
-  ],
-  _mock: true,
-};
+// ─── helpers ────────────────────────────────────────────────────────────
 
-// 21 官方部门，对齐 tools/ai_native/roster.json (mirror minimal subset
-// so swapping to real backend doesn't break the UI).
-const DEPTS = [
-  { id: "dept-ad", name: "广告投放", source_type: "builtin", port: 18804, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 } },
-  { id: "dept-ceo", name: "CEO / 总控", source_type: "builtin", port: 18800, role_count: 1, tier_breakdown: { HIGH: 1, MEDIUM: 0, LOW: 0 } },
-  { id: "dept-cinematic", name: "影视化 CG", source_type: "builtin", port: 18820, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 } },
-  { id: "dept-cpo", name: "产品策略 CPO", source_type: "builtin", port: 18818, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 0 } },
-  { id: "dept-dev", name: "研发与代码评审", source_type: "builtin", port: 18801, role_count: 6, tier_breakdown: { HIGH: 1, MEDIUM: 4, LOW: 1 } },
-  { id: "dept-drama", name: "剧本与短剧", source_type: "builtin", port: 18805, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 } },
-  { id: "dept-finance", name: "财务", source_type: "builtin", port: 18813, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 } },
-  { id: "dept-game", name: "像素沙盒游戏", source_type: "builtin", port: 18819, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 } },
-  { id: "dept-growth", name: "增长与变现", source_type: "builtin", port: 18822, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 } },
-  { id: "dept-hr", name: "招聘与组织管理", source_type: "builtin", port: 18808, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 } },
-  { id: "dept-ir", name: "投资者关系", source_type: "builtin", port: 18815, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 0 } },
-  { id: "dept-legal", name: "法务与合规", source_type: "builtin", port: 18811, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 0 } },
-  { id: "dept-ops", name: "运维与可靠性", source_type: "builtin", port: 18802, role_count: 4, tier_breakdown: { HIGH: 0, MEDIUM: 2, LOW: 2 } },
-  { id: "dept-organic", name: "有机账号运营", source_type: "builtin", port: 18823, role_count: 4, tier_breakdown: { HIGH: 0, MEDIUM: 3, LOW: 1 } },
-  { id: "dept-panel", name: "专家面板", source_type: "builtin", port: 18821, role_count: 7, tier_breakdown: { HIGH: 7, MEDIUM: 0, LOW: 0 } },
-  { id: "dept-production", name: "项目出品", source_type: "builtin", port: 18814, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 } },
-  { id: "dept-pub", name: "官方渠道发行", source_type: "builtin", port: 18803, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 } },
-  { id: "dept-quant", name: "多策略量化", source_type: "builtin", port: 18824, role_count: 6, tier_breakdown: { HIGH: 2, MEDIUM: 3, LOW: 1 } },
-  { id: "dept-research", name: "研究与情报", source_type: "builtin", port: 18812, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 } },
-  { id: "dept-security", name: "安全", source_type: "builtin", port: 18816, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 1, LOW: 1 } },
-  { id: "dept-template", name: "HR 自检模板", source_type: "builtin", port: 18825, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 1, LOW: 1 } },
-];
+function rx(re: RegExp): HandlerMatch {
+  return (p, _m) => p.match(re);
+}
+
+function exact(p: string, m: Method): HandlerMatch {
+  return (path, method) => path === p && method === m;
+}
+
+function companyDeptItems(companyId: string) {
+  const c = COMPANIES.find((x) => x.id === companyId);
+  if (!c) return [];
+  return c.dept_ids
+    .map((id) => DEPT_CATALOG.find((d) => d.id === id))
+    .filter(Boolean)
+    .map((d) => ({
+      ...d!,
+      agent_count: AGENTS.filter((a) => a.company_id === companyId && a.dept_id === d!.id).length,
+      active_tasks: TASKS.filter((t) => t.company_id === companyId && t.dept_id === d!.id && (t.state === "in_progress" || t.state === "review")).length,
+    }));
+}
 
 // ─── dispatch table ──────────────────────────────────────────────────────
 
-const HANDLERS: { match: (p: string, m: Method) => boolean; handle: MockHandler }[] = [
+const HANDLERS: Handler[] = [
+  // ── meta ──
+  { match: exact("/health", "GET"), handle: () => ({ body: { status: "ok", _mock: true } }) },
+  { match: exact("/v1/me", "GET"),  handle: () => ({ body: ME }) },
+
+  // ── catalog (legacy single-tenant view, kept for back-compat) ──
   {
-    match: (p, m) => m === "GET" && p === "/v1/me",
-    handle: () => ({ body: ME }),
+    match: exact("/v1/depts", "GET"),
+    handle: () => ({
+      body: {
+        items: DEPT_CATALOG.filter((d) => d.source_type === "builtin").map((d) => ({
+          id: d.id, name: d.name, source_type: d.source_type,
+          role_count: d.role_count, tier_breakdown: d.tier_breakdown,
+        })),
+        total: DEPT_CATALOG.filter((d) => d.source_type === "builtin").length,
+        _mock: true,
+      },
+    }),
+  },
+
+  // ── companies (multi-company) ──
+  {
+    match: exact("/v1/companies", "GET"),
+    handle: () => ({ body: { items: COMPANIES, total: COMPANIES.length, _mock: true } }),
   },
   {
-    match: (p, m) => m === "GET" && p === "/v1/depts",
-    handle: () => ({ body: { items: DEPTS, total: DEPTS.length, _mock: true } }),
+    match: exact("/v1/companies", "POST"),
+    handle: (_p, _m, body) => {
+      const b = (body ?? {}) as Partial<Company>;
+      const newCo: Company = {
+        id: `c-${Date.now().toString(36)}`,
+        name: b.name ?? "新公司",
+        description: b.description,
+        template_slug: b.template_slug ?? "mega-x-default",
+        state: "provisioning",
+        gateway_port: 18800 + Math.floor(Math.random() * 100),
+        dept_ids: b.dept_ids ?? ["dept-ceo", "dept-dev", "dept-pub"],
+        token_usage_30d: 0,
+        active_tasks: 0,
+        created_at: new Date(0).toISOString(),
+        emoji: b.emoji ?? "🏢",
+        last_activity_at: new Date(0).toISOString(),
+        last_activity_text: "实例化中…",
+      };
+      return { status: 201, body: newCo };
+    },
   },
   {
-    match: (p, m) => m === "GET" && p === "/health",
-    handle: () => ({ body: { status: "ok", service: "phyntom-x8-api", _mock: true } }),
+    match: rx(/^\/v1\/companies\/([^/]+)$/),
+    handle: (_p, method, body, match) => {
+      const m = match as RegExpMatchArray;
+      const id = m[1];
+      const co = COMPANIES.find((c) => c.id === id);
+      if (!co) return { status: 404, body: { error: "company not found" } };
+      if (method === "GET") return { body: co };
+      if (method === "PATCH") {
+        // mock: just merge
+        Object.assign(co, body);
+        return { body: co };
+      }
+      if (method === "DELETE") return { body: { deleted: true } };
+      return { status: 405, body: { error: "method not allowed" } };
+    },
+  },
+
+  // ── company depts ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/depts$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      return { body: { items: companyDeptItems(cid), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/depts\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, did] = m;
+      const d = DEPT_CATALOG.find((x) => x.id === did);
+      if (!d) return { status: 404, body: { error: "dept not found" } };
+      return {
+        body: {
+          ...d,
+          company_id: cid,
+          agents: AGENTS.filter((a) => a.company_id === cid && a.dept_id === did),
+          tasks: TASKS.filter((t) => t.company_id === cid && t.dept_id === did),
+        },
+      };
+    },
+  },
+
+  // ── company agents ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/depts\/([^/]+)\/agents$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, did] = m;
+      return { body: { items: AGENTS.filter((a) => a.company_id === cid && a.dept_id === did), _mock: true } };
+    },
+  },
+
+  // ── company tasks ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/tasks$/),
+    handle: (_p, method, body, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      if (method === "GET") {
+        return { body: { items: TASKS.filter((t) => t.company_id === cid), _mock: true } };
+      }
+      if (method === "POST") {
+        const b = (body ?? {}) as Partial<Task>;
+        const newTask: Task = {
+          id: `t-${Date.now().toString(36)}`,
+          company_id: cid,
+          dept_id: b.dept_id ?? "dept-pub",
+          title: b.title ?? "未命名任务",
+          brief: b.brief ?? "",
+          state: "pending",
+          progress: 0,
+          created_at: new Date(0).toISOString(),
+          deadline: b.deadline,
+          expected_artifacts: b.expected_artifacts ?? ["markdown"],
+          token_used: 0,
+          cost_yuan: 0,
+          artifact_ids: [],
+        };
+        return { status: 201, body: newTask };
+      }
+      return { status: 405, body: { error: "method not allowed" } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/tasks\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, tid] = m;
+      const task = TASKS.find((t) => t.company_id === cid && t.id === tid);
+      if (!task) return { status: 404, body: { error: "task not found" } };
+      const artifacts = ARTIFACTS.filter((a) => task.artifact_ids.includes(a.id));
+      return { body: { ...task, artifacts } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/tasks\/([^/]+)\/timeline$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, tid] = m;
+      return { body: { items: ACTIVITY.filter((a) => a.company_id === cid && a.task_id === tid), _mock: true } };
+    },
+  },
+
+  // ── company artifacts ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/artifacts$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      return { body: { items: ARTIFACTS.filter((a) => a.company_id === cid), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/artifacts\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, aid] = m;
+      const art = ARTIFACTS.find((a) => a.company_id === cid && a.id === aid);
+      if (!art) return { status: 404, body: { error: "artifact not found" } };
+      return { body: art };
+    },
+  },
+
+  // ── activity stream (cross-company) ──
+  {
+    match: exact("/v1/activity", "GET"),
+    handle: () => ({ body: { items: ACTIVITY, _mock: true } }),
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/activity$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      return { body: { items: ACTIVITY.filter((a) => a.company_id === cid), _mock: true } };
+    },
+  },
+
+  // ── marketplace ──
+  {
+    match: exact("/v1/marketplace", "GET"),
+    handle: () => ({ body: { items: DEPT_CATALOG, total: DEPT_CATALOG.length, _mock: true } }),
+  },
+  {
+    match: rx(/^\/v1\/marketplace\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const d = DEPT_CATALOG.find((x) => x.id === m[1]);
+      if (!d) return { status: 404, body: { error: "dept not found" } };
+      return { body: d };
+    },
   },
 ];
+
+// ─── public API ──────────────────────────────────────────────────────────
 
 export function isMockMode(): boolean {
   const v = import.meta.env.VITE_USE_MOCK;
   if (v === undefined) return false;
-  return v === "true" || v === "1" || v === true || v === 1;
+  return v === "true" || v === "1";
 }
 
 export async function mockHandle(
@@ -100,17 +281,13 @@ export async function mockHandle(
   body?: unknown,
 ): Promise<MockResponse | undefined> {
   for (const h of HANDLERS) {
-    if (h.match(path, method)) {
-      // small delay so loading states render at least one frame
-      await new Promise((r) => setTimeout(r, SIMULATED_LATENCY_MS));
-      const res = h.handle(path, { method, body });
-      if (res) {
-        // log so devtools makes it obvious what's mocked
-        // eslint-disable-next-line no-console
-        console.debug("[mock]", method, path, "→", res.status ?? 200);
-        return res;
-      }
-    }
+    const m = h.match(path, method);
+    if (!m) continue;
+    await new Promise((r) => setTimeout(r, SIMULATED_LATENCY_MS));
+    const res = h.handle(path, method, body, m as RegExpMatchArray | boolean);
+    // eslint-disable-next-line no-console
+    console.debug("[mock]", method, path, "→", res.status ?? 200);
+    return res;
   }
   return undefined;
 }
