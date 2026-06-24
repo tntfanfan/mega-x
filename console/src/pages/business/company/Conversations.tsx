@@ -1,8 +1,21 @@
+import { useTranslation } from "react-i18next";
+
+import { ComingSoon } from "../../../components/ui/ComingSoon";
+
 export default function Conversations() {
+  const { t } = useTranslation();
   return (
     <section className="p-6">
-      <h1 className="font-display text-2xl text-heading">对话</h1>
-      <p className="text-sm text-muted mt-2">与部门 orchestrator 的对话历史按部门分组。S8 阶段实现。</p>
+      <ComingSoon
+        title={t("business.company.conversations.title")}
+        description={t("business.company.conversations.subtitle")}
+        stage="S8"
+        planned={[
+          t("business.company.conversations.plan.grouped"),
+          t("business.company.conversations.plan.history"),
+          t("business.company.conversations.plan.live"),
+        ]}
+      />
     </section>
   );
 }

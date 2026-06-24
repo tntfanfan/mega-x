@@ -18,4 +18,41 @@
   h3 {
     @apply font-display tracking-tight;
   }
+
+  /*
+   * Keyboard accessibility — a consistent, branded focus ring for keyboard
+   * users (mouse clicks don't trigger :focus-visible, so this stays invisible
+   * for pointer interaction). Lives in the `base` layer so Tailwind's
+   * `outline-none` utility (in the later `utilities` layer) still wins on
+   * inputs that intentionally render focus via a border color instead.
+   */
+  :focus-visible {
+    outline: 2px solid theme("colors.ring");
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Arabic typography. The Latin display/body fonts (Instrument Serif / Barlow)
+ * have no Arabic glyphs, so under [lang="ar"] route text — including headings
+ * that use .font-display — through a system Arabic UI stack for a coherent
+ * look. Monospace (IDs / ports / code) is intentionally left untouched.
+ * RTL flow itself is driven by <html dir="rtl"> (set in i18n/index.ts).
+ */
+[lang="ar"],
+[lang="ar"] .font-display,
+[lang="ar"] .font-body {
+  font-family: "Segoe UI", Tahoma, "Geeza Pro", "Noto Naskh Arabic",
+    "Noto Sans Arabic", sans-serif;
 }

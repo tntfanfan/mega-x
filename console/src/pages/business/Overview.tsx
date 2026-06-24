@@ -10,7 +10,17 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api } from "../../lib/api";
-import type { Company, ActivityEvent, Task } from "../../lib/api";
+import type { Company, ActivityEvent, Task, TaskState } from "../../lib/api";
+
+// Emoji + color stay in code; the wording comes from i18n (task.state.*).
+const TASK_STATE_META: Record<TaskState, { emoji: string; color: string }> = {
+  pending: { emoji: "🟡", color: "text-spark-flare" },
+  in_progress: { emoji: "🔵", color: "text-spark-blue" },
+  review: { emoji: "🟣", color: "text-ai" },
+  done: { emoji: "🟢", color: "text-spark-mint" },
+  cancelled: { emoji: "✕", color: "text-dim" },
+  failed: { emoji: "❌", color: "text-fusion" },
+};
 
 interface OverviewData {
   companies: Company[];
@@ -62,19 +72,24 @@ function fmtNumber(n: number): string {
   return String(n);
 }
 
-function fmtTimeAgo(iso: string): string {
+// Locale-aware relative time. Previously hardcoded Chinese ("刚刚 / N 分钟前")
+// which broke under en/ar even though the rest of this page is i18n'd. Uses the
+// platform Intl formatter so we get correct wording per locale with no keys.
+function fmtTimeAgo(iso: string, locale: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (minutes < 1) return rtf.format(0, "second"); // "now" / "现在"
+  if (minutes < 60) return rtf.format(-minutes, "minute");
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
+  if (hours < 24) return rtf.format(-hours, "hour");
   const days = Math.floor(hours / 24);
-  return `${days} 天前`;
+  return rtf.format(-days, "day");
 }
 
 export default function Overview() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const { companies, activity, tasks, loading, error } = useOverview();
 
   const kpis = useMemo(() => {
@@ -92,7 +107,7 @@ export default function Overview() {
   if (loading) {
     return (
       <section className="container py-10">
-        <p className="text-body text-sm">Loading…</p>
+        <p className="text-body text-sm">{t("common.loading")}…</p>
       </section>
     );
   }
@@ -127,7 +142,7 @@ export default function Overview() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {companies.map((c) => (
-            <CompanyCard key={c.id} company={c} activity={activity.filter((a) => a.company_id === c.id).slice(0, 3)} />
+            <CompanyCard key={c.id} company={c} locale={locale} activity={activity.filter((a) => a.company_id === c.id).slice(0, 3)} />
           ))}
           <CreateCard />
         </div>
@@ -138,7 +153,7 @@ export default function Overview() {
         <h2 className="font-display text-xl text-heading mb-3">{t("business.overview.cross-task-feed.title")}</h2>
         <div className="rounded-md border border-border-solid bg-surface divide-y divide-border-solid">
           {tasks.length === 0 ? (
-            <p className="p-4 text-muted text-sm">No tasks across companies.</p>
+            <p className="p-4 text-muted text-sm">{t("business.overview.cross-task-feed.empty")}</p>
           ) : (
             tasks
               .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
@@ -146,7 +161,7 @@ export default function Overview() {
               .map((task) => {
                 const co = companies.find((c) => c.id === task.company_id);
                 return (
-                  <TaskRow key={task.id} task={task} companyName={co?.name ?? task.company_id} companyEmoji={co?.emoji ?? "🏢"} />
+                  <TaskRow key={task.id} task={task} locale={locale} companyName={co?.name ?? task.company_id} companyEmoji={co?.emoji ?? "🏢"} />
                 );
               })
           )}
@@ -165,7 +180,7 @@ function Kpi({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CompanyCard({ company, activity }: { company: Company; activity: ActivityEvent[] }) {
+function CompanyCard({ company, activity, locale }: { company: Company; activity: ActivityEvent[]; locale: string }) {
   const { t } = useTranslation();
   const stateLabel = {
     running: t("business.overview.company.state.running"),
@@ -210,7 +225,7 @@ function CompanyCard({ company, activity }: { company: Company; activity: Activi
           <ul className="space-y-0.5">
             {activity.map((a) => (
               <li key={a.id} className="text-xs text-body truncate">
-                <span className="text-muted text-[10px]">{fmtTimeAgo(a.ts)} · </span>
+                <span className="text-muted text-[10px]">{fmtTimeAgo(a.ts, locale)} · </span>
                 {a.text}
               </li>
             ))}
@@ -254,29 +269,23 @@ function EmptyState() {
   );
 }
 
-function TaskRow({ task, companyName, companyEmoji }: { task: Task; companyName: string; companyEmoji: string }) {
-  const stateBadge = {
-    pending: { label: "🟡 待派发", color: "text-spark-flare" },
-    in_progress: { label: "🔵 进行中", color: "text-spark-blue" },
-    review: { label: "🟣 审稿中", color: "text-ai" },
-    done: { label: "🟢 完成", color: "text-spark-mint" },
-    cancelled: { label: "✕ 取消", color: "text-dim" },
-    failed: { label: "❌ 失败", color: "text-fusion" },
-  }[task.state];
+function TaskRow({ task, companyName, companyEmoji, locale }: { task: Task; companyName: string; companyEmoji: string; locale: string }) {
+  const { t } = useTranslation();
+  const meta = TASK_STATE_META[task.state];
 
   return (
     <Link
       to={`/business/c/${task.company_id}/tasks/${task.id}`}
       className="flex items-center gap-4 px-4 py-3 hover:bg-surface-2 transition-colors"
     >
-      <span className="text-[11px] text-muted shrink-0 w-16">{fmtTimeAgo(task.created_at)}</span>
+      <span className="text-[11px] text-muted shrink-0 w-16">{fmtTimeAgo(task.created_at, locale)}</span>
       <span className="text-base shrink-0">{companyEmoji}</span>
       <span className="text-xs text-muted shrink-0 w-28 truncate">{companyName}</span>
       <span className="text-xs text-muted shrink-0 w-24 truncate font-mono">{task.dept_id}</span>
       <span className="text-sm text-body flex-1 truncate">{task.title}</span>
-      <span className={`text-xs shrink-0 ${stateBadge.color}`}>{stateBadge.label}</span>
+      <span className={`text-xs shrink-0 ${meta.color}`}>{meta.emoji} {t(`task.state.${task.state}`)}</span>
       {task.state === "in_progress" && (
-        <span className="text-[10px] text-muted shrink-0 w-8 text-right">{Math.round(task.progress * 100)}%</span>
+        <span className="text-[10px] text-muted shrink-0 w-8 text-end">{Math.round(task.progress * 100)}%</span>
       )}
     </Link>
   );

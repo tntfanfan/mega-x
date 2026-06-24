@@ -59,7 +59,7 @@ export function CompanySwitcher({ current, companies }: Props) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-72 rounded-md border border-border-solid bg-surface-2 shadow-glass z-50 overflow-hidden">
+        <div className="absolute start-0 top-full mt-2 w-72 rounded-md border border-border-solid bg-surface-2 shadow-glass z-50 overflow-hidden">
           <div className="px-3 py-2 text-[10px] tracking-widest uppercase text-muted border-b border-border-solid">
             {t("shell.switcher.label")} · {companies.length}
           </div>
@@ -75,7 +75,7 @@ export function CompanySwitcher({ current, companies }: Props) {
                       setOpen(false);
                       if (c.id !== current?.id) navigate(`/business/c/${c.id}/`);
                     }}
-                    className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                    className={`w-full text-start flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                       c.id === current?.id
                         ? "bg-primary/10 text-primary"
                         : "text-body hover:bg-surface-3 hover:text-primary"
@@ -94,7 +94,7 @@ export function CompanySwitcher({ current, companies }: Props) {
           <button
             type="button"
             onClick={() => { setOpen(false); navigate("/business/companies/new"); }}
-            className="w-full px-3 py-2 text-left text-sm text-primary hover:bg-surface-3 border-t border-border-solid"
+            className="w-full px-3 py-2 text-start text-sm text-primary hover:bg-surface-3 border-t border-border-solid"
           >
             {t("shell.switcher.create")}
           </button>

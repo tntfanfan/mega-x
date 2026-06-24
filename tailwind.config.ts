@@ -44,6 +44,13 @@ const config: Config = {
         ai: { DEFAULT: "#B8B0C8", dim: "#4B4A5F" },
         fusion: { DEFAULT: "#E8884A", dim: "#4A2610" },
 
+        // Status/state accents. Mirror of styles/variables.css `--color-spark-*`.
+        // Used pervasively for task/agent/company state color-coding across the
+        // console (TasksList, Overview, CompanyShell, DeptNode, …). Without these
+        // here Tailwind never emits the `*-spark-*` utilities and every status
+        // indicator silently falls back to inherited text color.
+        spark: { mint: "#50E8C0", blue: "#70A0FF", flare: "#F0B050" },
+
         border: "rgba(212, 170, 76, 0.1)",
         "border-solid": "#2A2438",
 
@@ -66,6 +73,12 @@ const config: Config = {
         md: "6px",
         lg: "6px",
         glass: "20px",
+      },
+      boxShadow: {
+        // Soft elevation for floating glass surfaces (HQNode selected, toasts,
+        // dropdowns). Referenced as `shadow-glass`; previously undefined so the
+        // class emitted nothing.
+        glass: "0 8px 32px rgba(0, 0, 0, 0.45)",
       },
     },
   },

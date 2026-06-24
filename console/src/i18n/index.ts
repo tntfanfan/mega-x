@@ -21,13 +21,27 @@ import { initReactI18next } from "react-i18next";
 
 import en from "./en.json";
 import zh from "./zh.json";
+import ar from "./ar.json";
 
 export const SUPPORTED_LOCALES = ["en", "zh", "ar"] as const;
-export const ENABLED_LOCALES = ["en", "zh"] as const;        // Arabic disabled until ar.json is filled
+export const ENABLED_LOCALES = ["en", "zh", "ar"] as const;
 export const DEFAULT_LOCALE = "en" as const;
 export const STORAGE_KEY = "phyntom.locale";
+/** Locales that render right-to-left; drives <html dir="rtl">. */
+export const RTL_LOCALES = ["ar"] as const;
 
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
+
+function isRtl(locale: string): boolean {
+  return (RTL_LOCALES as readonly string[]).includes(locale);
+}
+
+/** Set <html lang> + <html dir> for the given locale. */
+function applyDocumentLocale(locale: string): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("lang", locale);
+  document.documentElement.setAttribute("dir", isRtl(locale) ? "rtl" : "ltr");
+}
 
 function resolveInitialLocale(): Locale {
   if (typeof window === "undefined") return DEFAULT_LOCALE;
@@ -59,6 +73,7 @@ i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
     zh: { translation: zh },
+    ar: { translation: ar },
   },
   interpolation: {
     escapeValue: false, // React already escapes
@@ -75,8 +90,9 @@ export function setLocale(locale: Locale): void {
   window.localStorage.setItem(STORAGE_KEY, locale);
   // eslint-disable-next-line @typescript-eslint/no-floating-promises
   i18n.changeLanguage(locale);
-  // Update <html lang> so CSS can target [lang=...] for fonts (and later RTL).
-  document.documentElement.setAttribute("lang", locale);
+  // Update <html lang> + <html dir> (RTL for Arabic) so CSS can target
+  // [lang=...]/[dir=rtl] for fonts and bidi layout.
+  applyDocumentLocale(locale);
 }
 
 /** Current active locale (synchronous). */
@@ -84,9 +100,7 @@ export function getLocale(): Locale {
   return (i18n.language as Locale) ?? DEFAULT_LOCALE;
 }
 
-// Apply lang attribute on boot.
-if (typeof document !== "undefined") {
-  document.documentElement.setAttribute("lang", initial);
-}
+// Apply lang + dir attributes on boot.
+applyDocumentLocale(initial);
 
 export default i18n;

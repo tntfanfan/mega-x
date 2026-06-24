@@ -7,6 +7,7 @@ import "./i18n";
 
 import App from "./App";
 import { AuthProvider } from "./lib/auth";
+import { ToastProvider } from "./components/ui/Toast";
 import "./styles/globals.css";
 
 /**
@@ -31,7 +32,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HashRouter>
       <AuthProvider>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </AuthProvider>
     </HashRouter>
   </StrictMode>,

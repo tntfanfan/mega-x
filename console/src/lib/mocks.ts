@@ -132,9 +132,19 @@ const HANDLERS: Handler[] = [
   // ── company depts ──
   {
     match: rx(/^\/v1\/companies\/([^/]+)\/depts$/),
-    handle: (_p, _m, _b, match) => {
+    handle: (_p, method, body, match) => {
       const m = match as RegExpMatchArray;
       const cid = m[1];
+      if (method === "POST") {
+        // Install a marketplace/builtin dept into this company.
+        const co = COMPANIES.find((c) => c.id === cid);
+        if (!co) return { status: 404, body: { error: "company not found" } };
+        const deptId = (body as { dept_id?: string } | undefined)?.dept_id;
+        const dept = DEPT_CATALOG.find((d) => d.id === deptId);
+        if (!deptId || !dept) return { status: 400, body: { error: "未知的部门 id" } };
+        if (!co.dept_ids.includes(deptId)) co.dept_ids.push(deptId);
+        return { status: 201, body: { dept_id: deptId, company_id: cid, dept_ids: co.dept_ids } };
+      }
       return { body: { items: companyDeptItems(cid), _mock: true } };
     },
   },

@@ -3,6 +3,7 @@
  */
 
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { useTranslation } from "react-i18next";
 import type { Company } from "../../lib/api";
 
 export interface HQNodeData extends Record<string, unknown> {
@@ -14,6 +15,7 @@ export interface HQNodeData extends Record<string, unknown> {
 export type HQNodeT = Node<HQNodeData, "hq">;
 
 export function HQNode({ data, selected }: NodeProps<HQNodeT>) {
+  const { t } = useTranslation();
   const { company, totalAgents, activeTasks } = data;
   return (
     <div
@@ -33,15 +35,15 @@ export function HQNode({ data, selected }: NodeProps<HQNodeT>) {
 
       <div className="mt-3 pt-3 border-t border-primary/20 grid grid-cols-3 gap-2 text-center">
         <div>
-          <div className="text-[9px] uppercase tracking-widest text-muted">部门</div>
+          <div className="text-[9px] uppercase tracking-widest text-muted">{t("business.company.canvas.hq.depts")}</div>
           <div className="text-sm text-heading">{company.dept_ids.length}</div>
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-widest text-muted">员工</div>
+          <div className="text-[9px] uppercase tracking-widest text-muted">{t("business.company.canvas.hq.agents")}</div>
           <div className="text-sm text-heading">{totalAgents}</div>
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-widest text-muted">任务</div>
+          <div className="text-[9px] uppercase tracking-widest text-muted">{t("business.company.canvas.hq.tasks")}</div>
           <div className="text-sm text-spark-blue">{activeTasks}</div>
         </div>
       </div>

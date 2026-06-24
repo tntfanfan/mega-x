@@ -90,7 +90,7 @@ function CompanyHeader({ company, companies }: { company: Company; companies: Co
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/business/"
-            className="text-xs text-muted hover:text-primary shrink-0"
+            className="inline-block text-xs text-muted hover:text-primary shrink-0 rtl:-scale-x-100"
             title={t("shell.switcher.go-overview")}
           >
             ←
@@ -122,7 +122,7 @@ function CompanySidebar({ companyId }: { companyId: string }) {
   ];
 
   return (
-    <aside className="w-48 shrink-0 border-r border-border-solid bg-surface/60 py-4">
+    <aside className="w-48 shrink-0 border-e border-border-solid bg-surface/60 py-4">
       <nav className="flex flex-col">
         {tabs.map((tab) => (
           <NavLink
@@ -130,7 +130,7 @@ function CompanySidebar({ companyId }: { companyId: string }) {
             end={tab.end}
             to={tab.to ? `/business/c/${companyId}/${tab.to}` : `/business/c/${companyId}/`}
             className={({ isActive }) =>
-              `px-4 py-2 text-sm transition-colors border-l-2 ${
+              `px-4 py-2 text-sm transition-colors border-s-2 ${
                 isActive
                   ? "border-primary text-primary bg-surface-2"
                   : "border-transparent text-body hover:text-primary hover:bg-surface-2"

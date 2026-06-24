@@ -90,6 +90,27 @@ function safeJsonParse(s: string): unknown {
   try { return JSON.parse(s); } catch { return s; }
 }
 
+/**
+ * Best-effort human-readable message for a caught error, for use in toasts.
+ * Prefers a server-supplied `{ error | detail | message }` field, then the
+ * HTTP status line, then the raw message. Never throws.
+ */
+export function apiErrorMessage(e: unknown, fallback = "请求失败，请稍后重试"): string {
+  if (e instanceof ApiError) {
+    const b = e.body;
+    if (b && typeof b === "object") {
+      const obj = b as Record<string, unknown>;
+      for (const k of ["error", "detail", "message"] as const) {
+        if (typeof obj[k] === "string" && obj[k]) return obj[k] as string;
+      }
+    }
+    if (typeof b === "string" && b) return b;
+    return e.message || fallback;
+  }
+  if (e instanceof Error && e.message) return e.message;
+  return fallback;
+}
+
 export const api = {
   get: <T = unknown>(path: string) => request<T>(path),
   post: <T = unknown>(path: string, body?: Json) =>

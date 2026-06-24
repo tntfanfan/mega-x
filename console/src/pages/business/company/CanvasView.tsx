@@ -33,12 +33,23 @@ interface DeptWithMeta extends DeptCatalogItem {
 const NODE_TYPES = { dept: DeptNode, hq: HQNode };
 const EDGE_TYPES = { message: MessageEdge };
 
+// Legend swatches mirror TEAM_ROLE_COLOR in DeptNode so the dots match the
+// actual agent-avatar colors on the canvas (previously the legend was text
+// only, leaving users no way to map a color to a role).
+const LEGEND = [
+  { key: "business.company.canvas.legend.orchestrator", swatch: "bg-spark-mint" },
+  { key: "business.company.canvas.legend.builder", swatch: "bg-spark-blue" },
+  { key: "business.company.canvas.legend.reviewer", swatch: "bg-spark-flare" },
+  { key: "business.company.canvas.legend.ops", swatch: "bg-dim" },
+] as const;
+
 // HQ at center, depts on a circle around it.
 function layoutNodes(
   company: Company,
   depts: DeptWithMeta[],
   agentsByDept: Record<string, Agent[]>,
   activity: ActivityEvent[],
+  t: (key: string) => string,
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -61,8 +72,12 @@ function layoutNodes(
     if (!latestByDept.has(evt.dept_id)) latestByDept.set(evt.dept_id, evt);
   }
 
-  // Depts on a circle
-  const radius = Math.max(380, 100 + depts.length * 22);
+  // Depts on a circle. Size the radius from required arc spacing so nodes
+  // (~224px wide) never overlap regardless of count: keep ≥ MIN_ARC px between
+  // adjacent node centers along the circumference. The old `100 + n*22` grew
+  // too slowly and let nodes collide past ~12 depts.
+  const MIN_ARC = 260;
+  const radius = Math.max(380, (depts.length * MIN_ARC) / (2 * Math.PI));
   const angleStart = -Math.PI / 2; // 第一个在顶部
   depts.forEach((d, i) => {
     const angle = angleStart + (i / depts.length) * Math.PI * 2;
@@ -70,7 +85,7 @@ function layoutNodes(
     const y = Math.sin(angle) * radius;
     const agents = agentsByDept[d.id] ?? [];
     const evt = latestByDept.get(d.id);
-    const bubble = evt?.text ?? (d.active_tasks > 0 ? "工作中…" : "待命中");
+    const bubble = evt?.text ?? (d.active_tasks > 0 ? t("business.company.canvas.bubble.working") : t("business.company.canvas.bubble.idle"));
     nodes.push({
       id: `dept:${d.id}`,
       type: "dept",
@@ -131,8 +146,8 @@ export default function CanvasView() {
   }, [company.id]);
 
   const { nodes, edges } = useMemo(
-    () => layoutNodes(company, depts, agentsByDept, activity),
-    [company, depts, agentsByDept, activity],
+    () => layoutNodes(company, depts, agentsByDept, activity, t),
+    [company, depts, agentsByDept, activity, t],
   );
 
   return (
@@ -144,17 +159,19 @@ export default function CanvasView() {
           <p className="text-xs text-muted">{t("business.company.canvas.subtitle")}</p>
         </div>
         <div className="flex gap-3 text-[11px] text-muted flex-wrap">
-          <span>{t("business.company.canvas.legend.orchestrator")}</span>
-          <span>{t("business.company.canvas.legend.builder")}</span>
-          <span>{t("business.company.canvas.legend.reviewer")}</span>
-          <span>{t("business.company.canvas.legend.ops")}</span>
+          {LEGEND.map((l) => (
+            <span key={l.key} className="flex items-center gap-1.5">
+              <span className={`inline-block h-2.5 w-2.5 rounded-full ${l.swatch}`} aria-hidden />
+              {t(l.key)}
+            </span>
+          ))}
         </div>
       </div>
 
       {/* Canvas */}
       <div className="flex-1 relative bg-bg">
         {loading ? (
-          <p className="p-6 text-sm text-body">Loading…</p>
+          <p className="p-6 text-sm text-body">{t("common.loading")}…</p>
         ) : (
           <ReactFlowProvider>
             <ReactFlow

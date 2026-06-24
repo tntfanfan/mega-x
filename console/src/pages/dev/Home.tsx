@@ -1,14 +1,16 @@
 import { useTranslation } from "react-i18next";
 
+import { ComingSoon } from "../../components/ui/ComingSoon";
+
 export default function DevHome() {
   const { t } = useTranslation();
   return (
-    <section className="container py-10 space-y-4">
-      <h1 className="font-display text-3xl text-heading">{t("dev.home.title")}</h1>
-      <p className="text-body text-sm">{t("dev.home.subtitle")}</p>
-      <div className="rounded-md border border-border-solid bg-surface p-5 text-sm text-muted">
-        {t("dev.home.placeholder")}
-      </div>
+    <section className="container py-10">
+      <ComingSoon
+        title={t("dev.home.title")}
+        stage="S4"
+        planned={["MyDepts", "CreateWizard", "WebIDE", "Submit", "Analytics", "Earnings", "Payouts"]}
+      />
     </section>
   );
 }

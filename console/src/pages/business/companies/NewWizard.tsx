@@ -1,78 +1,98 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-import { api } from "../../../lib/api";
+import { api, apiErrorMessage } from "../../../lib/api";
+import { useToast } from "../../../components/ui/Toast";
 
+// Template names/descriptions are looked up via i18n keys derived from `slug`
+// (business.companies.new.tpl.<slug>.name / .desc).
 const TEMPLATES = [
-  { slug: "mega-x-default", emoji: "🏢", name: "通用班底", depts: 21, desc: "最常用，21 个部门完整公司" },
-  { slug: "game-studio", emoji: "🎮", name: "游戏工作室", depts: 8, desc: "独立游戏开发团队" },
-  { slug: "mcn-content-machine", emoji: "🎬", name: "MCN 内容厂", depts: 6, desc: "AI 短剧 + 内容工业化" },
-  { slug: "fintech-research", emoji: "📊", name: "金融研究", depts: 10, desc: "量化策略 + 投研" },
-  { slug: "solo-assistant", emoji: "👤", name: "C 端轻量", depts: 3, desc: "个人助手套餐" },
-  { slug: "law-firm", emoji: "⚖️", name: "法律事务所", depts: 5, desc: "合同 + 合规 + 诉讼" },
+  { slug: "mega-x-default", emoji: "🏢", depts: 21 },
+  { slug: "game-studio", emoji: "🎮", depts: 8 },
+  { slug: "mcn-content-machine", emoji: "🎬", depts: 6 },
+  { slug: "fintech-research", emoji: "📊", depts: 10 },
+  { slug: "solo-assistant", emoji: "👤", depts: 3 },
+  { slug: "law-firm", emoji: "⚖️", depts: 5 },
 ];
 
 export default function NewWizard() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const toast = useToast();
   const [name, setName] = useState("");
   const [tplSlug, setTplSlug] = useState(TEMPLATES[0].slug);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
     setSubmitting(true);
+    setError(null);
     try {
       const c = await api.post<{ id: string }>("/v1/companies", { name, template_slug: tplSlug });
+      toast.success(t("business.companies.new.success", { name: name.trim() }));
       navigate(`/business/c/${c.id}/`);
-    } catch (e) { console.error(e); setSubmitting(false); }
+    } catch (e) {
+      const msg = apiErrorMessage(e, t("business.companies.new.error"));
+      setError(msg);
+      toast.error(msg);
+      setSubmitting(false);
+    }
   };
 
   return (
     <section className="container py-10 max-w-2xl space-y-6">
       <header>
-        <h1 className="font-display text-2xl text-heading">创建新公司</h1>
-        <p className="text-sm text-muted mt-1">选择模板后会自动 provision OpenClaw gateway，约 30 秒。</p>
+        <h1 className="font-display text-2xl text-heading">{t("business.companies.new.title")}</h1>
+        <p className="text-sm text-muted mt-1">{t("business.companies.new.subtitle")}</p>
       </header>
 
       <label className="block">
-        <div className="text-xs uppercase tracking-widest text-muted mb-1.5">公司名称</div>
+        <div className="text-xs uppercase tracking-widest text-muted mb-1.5">{t("business.companies.new.name-label")}</div>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="我的 SaaS 创业班底"
+          placeholder={t("business.companies.new.name-placeholder")}
           className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm text-body focus:border-primary outline-none"
         />
       </label>
 
       <div className="block">
-        <div className="text-xs uppercase tracking-widest text-muted mb-2">选择模板</div>
+        <div className="text-xs uppercase tracking-widest text-muted mb-2">{t("business.companies.new.template-label")}</div>
         <div className="grid sm:grid-cols-2 gap-3">
-          {TEMPLATES.map((t) => (
+          {TEMPLATES.map((tpl) => (
             <button
-              key={t.slug}
+              key={tpl.slug}
               type="button"
-              onClick={() => setTplSlug(t.slug)}
-              className={`text-left p-4 rounded border transition-colors ${
-                tplSlug === t.slug
+              onClick={() => setTplSlug(tpl.slug)}
+              className={`text-start p-4 rounded border transition-colors ${
+                tplSlug === tpl.slug
                   ? "bg-primary/10 border-primary"
                   : "bg-surface border-border-solid hover:border-primary"
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-xl">{t.emoji}</span>
-                <span className="text-sm text-heading">{t.name}</span>
-                <span className="text-[10px] text-muted ml-auto">{t.depts} 部门</span>
+                <span className="text-xl">{tpl.emoji}</span>
+                <span className="text-sm text-heading">{t(`business.companies.new.tpl.${tpl.slug}.name`)}</span>
+                <span className="text-[10px] text-muted ms-auto">{tpl.depts}{t("business.overview.company.depts-suffix")}</span>
               </div>
-              <p className="text-[11px] text-muted mt-1">{t.desc}</p>
+              <p className="text-[11px] text-muted mt-1">{t(`business.companies.new.tpl.${tpl.slug}.desc`)}</p>
             </button>
           ))}
         </div>
       </div>
 
+      {error && (
+        <p className="rounded-md border border-fusion/40 bg-fusion/10 px-3 py-2 text-xs text-fusion" role="alert">
+          {error}
+        </p>
+      )}
+
       <div className="flex gap-3 pt-4 border-t border-border-solid">
-        <button onClick={() => navigate("/business/")} className="rounded-md border border-border-solid px-4 py-2 text-sm text-body hover:border-primary hover:text-primary">取消</button>
+        <button onClick={() => navigate("/business/")} className="rounded-md border border-border-solid px-4 py-2 text-sm text-body hover:border-primary hover:text-primary">{t("common.cancel")}</button>
         <button onClick={submit} disabled={!name.trim() || submitting} className="rounded-md bg-primary text-bg px-5 py-2 text-sm font-medium hover:bg-accent transition disabled:opacity-50">
-          {submitting ? "实例化中..." : "创建公司 →"}
+          {submitting ? t("business.companies.new.submitting") : t("business.companies.new.submit")}
         </button>
       </div>
     </section>

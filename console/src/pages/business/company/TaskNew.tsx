@@ -1,51 +1,64 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
-import { api } from "../../../lib/api";
+import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, DeptCatalogItem, ArtifactType } from "../../../lib/api";
+import { useToast } from "../../../components/ui/Toast";
 
 type Ctx = { company: Company };
 
-const ARTIFACT_TYPES: { value: ArtifactType; label: string; emoji: string }[] = [
-  { value: "markdown", label: "Markdown 文档", emoji: "📄" },
-  { value: "code", label: "代码", emoji: "📑" },
-  { value: "image", label: "图片", emoji: "🖼" },
-  { value: "video", label: "视频", emoji: "🎬" },
-  { value: "audio", label: "音频", emoji: "🎵" },
-  { value: "table", label: "表格", emoji: "📊" },
-  { value: "json", label: "JSON 数据", emoji: "🔢" },
-  { value: "pdf", label: "PDF", emoji: "📕" },
+// Labels resolved via i18n (artifact.type.<value>); emoji stays in code.
+const ARTIFACT_TYPES: { value: ArtifactType; emoji: string }[] = [
+  { value: "markdown", emoji: "📄" },
+  { value: "code", emoji: "📑" },
+  { value: "image", emoji: "🖼" },
+  { value: "video", emoji: "🎬" },
+  { value: "audio", emoji: "🎵" },
+  { value: "table", emoji: "📊" },
+  { value: "json", emoji: "🔢" },
+  { value: "pdf", emoji: "📕" },
 ];
 
 export default function TaskNew() {
   const { company } = useOutletContext<Ctx>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const toast = useToast();
   const [depts, setDepts] = useState<DeptCatalogItem[]>([]);
   const [title, setTitle] = useState("");
   const [brief, setBrief] = useState("");
   const [deptId, setDeptId] = useState("");
   const [expected, setExpected] = useState<ArtifactType[]>(["markdown"]);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<{ items: DeptCatalogItem[] }>(`/v1/companies/${company.id}/depts`).then((r) => {
-      setDepts(r.items);
-      if (r.items.length > 0) setDeptId(r.items[0].id);
-    });
-  }, [company.id]);
+    api
+      .get<{ items: DeptCatalogItem[] }>(`/v1/companies/${company.id}/depts`)
+      .then((r) => {
+        setDepts(r.items);
+        if (r.items.length > 0) setDeptId(r.items[0].id);
+      })
+      .catch((e) => toast.error(apiErrorMessage(e, t("business.company.tasks.new.depts-error"))));
+  }, [company.id, toast, t]);
 
-  const toggleArtifact = (t: ArtifactType) =>
-    setExpected((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
+  const toggleArtifact = (a: ArtifactType) =>
+    setExpected((cur) => (cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]));
 
   const submit = async () => {
     setSubmitting(true);
+    setError(null);
     try {
       const newTask = await api.post<{ id: string }>(`/v1/companies/${company.id}/tasks`, {
         title, brief, dept_id: deptId, expected_artifacts: expected,
       });
+      toast.success(t("business.company.tasks.new.success"));
       navigate(`/business/c/${company.id}/tasks/${newTask.id}`);
     } catch (e) {
-      console.error(e);
+      const msg = apiErrorMessage(e, t("business.company.tasks.new.error"));
+      setError(msg);
+      toast.error(msg);
       setSubmitting(false);
     }
   };
@@ -53,32 +66,32 @@ export default function TaskNew() {
   return (
     <section className="p-6 max-w-2xl space-y-6">
       <header>
-        <h1 className="font-display text-2xl text-heading">派发新任务</h1>
-        <p className="text-sm text-muted mt-1">给「{company.name}」的某个部门下任务。</p>
+        <h1 className="font-display text-2xl text-heading">{t("business.company.tasks.new.title")}</h1>
+        <p className="text-sm text-muted mt-1">{t("business.company.tasks.new.subtitle", { company: company.name })}</p>
       </header>
 
       <div className="space-y-4">
-        <Field label="📝 任务标题">
+        <Field label={t("business.company.tasks.new.field.title")}>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="写一篇 Phyntom X8 发布博客"
+            placeholder={t("business.company.tasks.new.title-placeholder")}
             className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm text-body focus:border-primary outline-none"
           />
         </Field>
 
-        <Field label="📋 详细描述">
+        <Field label={t("business.company.tasks.new.field.brief")}>
           <textarea
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
             rows={4}
-            placeholder="目标读者、调性、长度、参考材料、引用要求..."
+            placeholder={t("business.company.tasks.new.brief-placeholder")}
             className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm text-body focus:border-primary outline-none"
           />
         </Field>
 
-        <Field label="🎯 派给部门">
+        <Field label={t("business.company.tasks.new.field.dept")}>
           <select
             value={deptId}
             onChange={(e) => setDeptId(e.target.value)}
@@ -90,7 +103,7 @@ export default function TaskNew() {
           </select>
         </Field>
 
-        <Field label="📦 期望产物">
+        <Field label={t("business.company.tasks.new.field.artifacts")}>
           <div className="flex flex-wrap gap-2">
             {ARTIFACT_TYPES.map((a) => (
               <button
@@ -103,12 +116,18 @@ export default function TaskNew() {
                     : "bg-surface text-body border-border-solid hover:border-primary"
                 }`}
               >
-                {a.emoji} {a.label}
+                {a.emoji} {t(`artifact.type.${a.value}`)}
               </button>
             ))}
           </div>
         </Field>
       </div>
+
+      {error && (
+        <p className="rounded-md border border-fusion/40 bg-fusion/10 px-3 py-2 text-xs text-fusion" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="flex gap-3 pt-4 border-t border-border-solid">
         <button
@@ -116,7 +135,7 @@ export default function TaskNew() {
           onClick={() => navigate(`/business/c/${company.id}/tasks`)}
           className="rounded-md border border-border-solid px-4 py-2 text-sm text-body hover:border-primary hover:text-primary"
         >
-          取消
+          {t("common.cancel")}
         </button>
         <button
           type="button"
@@ -124,7 +143,7 @@ export default function TaskNew() {
           disabled={!title.trim() || !deptId || submitting}
           className="rounded-md bg-primary text-bg px-5 py-2 text-sm font-medium hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {submitting ? "派发中..." : "派发 →"}
+          {submitting ? t("business.company.tasks.new.submitting") : t("business.company.tasks.new.submit")}
         </button>
       </div>
     </section>
