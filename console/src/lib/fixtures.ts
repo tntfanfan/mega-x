@@ -17,20 +17,31 @@
 
 export type CompanyState = "running" | "paused" | "provisioning" | "error";
 
+/** 受众：business（公司）/ solo（产线）。后端是同一张 tenant_instance 表，
+ *  这个字段只决定前端用哪套术语 / 哪套视图渲染。 */
+export type Audience = "business" | "solo";
+
 export interface Company {
   id: string;
   name: string;
   description?: string;
-  template_slug: string;            // e.g. "mega-x-default"
+  template_slug: string;            // e.g. "mega-x-default" / "content-newsletter"
   state: CompanyState;
   gateway_port: number;
   dept_ids: string[];               // 该公司启用的部门 id
   token_usage_30d: number;
   active_tasks: number;
   created_at: string;               // ISO8601
-  emoji: string;                    // 用户给公司起的"图标"
+  emoji: string;
   last_activity_at: string;
   last_activity_text: string;
+
+  // —— Solo 端字段（业务侧实例可不填） ——
+  audience?: Audience;              // 不填默认 business
+  revenue_30d?: number;             // 元
+  output_count_30d?: number;        // 30 天内产出物数量
+  hours_saved_30d?: number;         // 替代人工小时数
+  vs_last_month?: number;           // 0.35 = +35%
 }
 
 export const COMPANIES: Company[] = [
@@ -67,22 +78,209 @@ export const COMPANIES: Company[] = [
     last_activity_at: "2026-06-20T22:11:00Z",
     last_activity_text: "上次活跃 3 天前",
   },
+  // ── Solo lines（超级个体的产线，audience=solo）──
+  // 后端同样是 tenant_instance，但前端走 Solo 视图。
   {
-    id: "c-personal",
-    name: "个人助手",
-    description: "轻量 3 部门套餐，做我的日常研究 + 早报",
-    template_slug: "solo-assistant",
+    id: "l-newsletter",
+    name: "我的 newsletter",
+    description: "Substack 风格，每周一篇深度长文 + 周日 8 点定时发布",
+    template_slug: "content-newsletter",
     state: "running",
-    gateway_port: 18791,
-    dept_ids: ["dept-research", "dept-pub", "dept-ops"],
-    token_usage_30d: 8_120,
-    active_tasks: 1,
-    created_at: "2026-06-01T07:00:00Z",
-    emoji: "👤",
-    last_activity_at: "2026-06-23T15:42:00Z",
-    last_activity_text: "dept-research 完成本周市场早报",
+    gateway_port: 18792,
+    dept_ids: ["dept-pub", "dept-research", "dept-cpo"],
+    token_usage_30d: 32_400,
+    active_tasks: 3,
+    created_at: "2026-04-15T09:00:00Z",
+    emoji: "📝",
+    last_activity_at: "2026-06-23T16:32:00Z",
+    last_activity_text: "主笔起草中：Org-as-Code 专题",
+    audience: "solo",
+    revenue_30d: 4_200,
+    output_count_30d: 8,
+    hours_saved_30d: 36,
+    vs_last_month: 0.18,
+  },
+  {
+    id: "l-douyin",
+    name: "抖音副业",
+    description: "口播+剪辑流水线，每周 3 条短视频 + 月度合集",
+    template_slug: "short-video",
+    state: "running",
+    gateway_port: 18793,
+    dept_ids: ["dept-drama", "dept-cinematic", "dept-pub", "dept-ad"],
+    token_usage_30d: 58_100,
+    active_tasks: 2,
+    created_at: "2026-03-20T19:00:00Z",
+    emoji: "🎬",
+    last_activity_at: "2026-06-23T14:08:00Z",
+    last_activity_text: "剪辑师完成 #43 初剪",
+    audience: "solo",
+    revenue_30d: 9_800,
+    output_count_30d: 12,
+    hours_saved_30d: 64,
+    vs_last_month: 0.42,
+  },
+  {
+    id: "l-indie-saas",
+    name: "我的独立 SaaS",
+    description: "1 人 SaaS：产品/开发/客服/增长一条龙",
+    template_slug: "indie-saas",
+    state: "running",
+    gateway_port: 18794,
+    dept_ids: ["dept-dev", "dept-cpo", "dept-ops", "dept-growth", "dept-pub"],
+    token_usage_30d: 71_200,
+    active_tasks: 2,
+    created_at: "2026-02-10T08:00:00Z",
+    emoji: "💻",
+    last_activity_at: "2026-06-23T15:11:00Z",
+    last_activity_text: "全栈完成 marketplace API",
+    audience: "solo",
+    revenue_30d: 4_420,
+    output_count_30d: 2,
+    hours_saved_30d: 56,
+    vs_last_month: 0.08,
+  },
+  // Solo 仪表盘里"上次活跃 3 天前"的副业线（已暂停）
+  {
+    id: "l-knowledge",
+    name: "知识星球副业",
+    description: "课程内容 + 答疑助手",
+    template_slug: "knowledge-course",
+    state: "paused",
+    gateway_port: 18795,
+    dept_ids: ["dept-pub", "dept-research", "dept-cpo"],
+    token_usage_30d: 2_300,
+    active_tasks: 0,
+    created_at: "2026-05-05T08:00:00Z",
+    emoji: "📚",
+    last_activity_at: "2026-06-20T22:11:00Z",
+    last_activity_text: "上次活跃 3 天前",
+    audience: "solo",
+    revenue_30d: 0,
+    output_count_30d: 0,
+    hours_saved_30d: 0,
+    vs_last_month: -1,
   },
 ];
+
+// ─── Line templates（超级个体的产线模板，对应后端 ai_native_template 的子集）─
+// 每个模板预设了「该产线需要哪些部门」+「每个部门内 agent 的人话叫法」
+
+export interface LineTemplate {
+  slug: string;
+  emoji: string;
+  /** i18n key for the display name + description, e.g. "solo.line-tpl.content-newsletter.name" */
+  name_key: string;
+  desc_key: string;
+  /** ai-native 部门 id 列表 */
+  dept_ids: string[];
+  /** 默认预估每月帮你产出 / 节省多少（用于 wizard 展示） */
+  monthly_output_estimate: number;
+  hours_saved_estimate: number;
+}
+
+export const LINE_TEMPLATES: LineTemplate[] = [
+  {
+    slug: "content-newsletter", emoji: "📝",
+    name_key: "solo.line-tpl.content-newsletter.name",
+    desc_key: "solo.line-tpl.content-newsletter.desc",
+    dept_ids: ["dept-pub", "dept-research", "dept-cpo"],
+    monthly_output_estimate: 8, hours_saved_estimate: 32,
+  },
+  {
+    slug: "short-video", emoji: "🎬",
+    name_key: "solo.line-tpl.short-video.name",
+    desc_key: "solo.line-tpl.short-video.desc",
+    dept_ids: ["dept-drama", "dept-cinematic", "dept-pub", "dept-ad"],
+    monthly_output_estimate: 12, hours_saved_estimate: 64,
+  },
+  {
+    slug: "indie-saas", emoji: "💻",
+    name_key: "solo.line-tpl.indie-saas.name",
+    desc_key: "solo.line-tpl.indie-saas.desc",
+    dept_ids: ["dept-dev", "dept-cpo", "dept-ops", "dept-growth", "dept-pub"],
+    monthly_output_estimate: 4, hours_saved_estimate: 48,
+  },
+  {
+    slug: "dtc-store", emoji: "🛒",
+    name_key: "solo.line-tpl.dtc-store.name",
+    desc_key: "solo.line-tpl.dtc-store.desc",
+    dept_ids: ["dept-pub", "dept-ad", "dept-growth", "dept-finance", "dept-organic"],
+    monthly_output_estimate: 16, hours_saved_estimate: 52,
+  },
+  {
+    slug: "knowledge-course", emoji: "📚",
+    name_key: "solo.line-tpl.knowledge-course.name",
+    desc_key: "solo.line-tpl.knowledge-course.desc",
+    dept_ids: ["dept-pub", "dept-research", "dept-cpo", "dept-organic"],
+    monthly_output_estimate: 6, hours_saved_estimate: 28,
+  },
+  {
+    slug: "consultancy", emoji: "🎨",
+    name_key: "solo.line-tpl.consultancy.name",
+    desc_key: "solo.line-tpl.consultancy.desc",
+    dept_ids: ["dept-research", "dept-pub", "dept-legal", "dept-finance"],
+    monthly_output_estimate: 6, hours_saved_estimate: 40,
+  },
+];
+
+// ─── 部门 → "小组" 的人话翻译表（Solo 端用）──
+// 同一个 ai-native dept 在不同产线模板里可能叫不同名字。
+// e.g. dept-pub 在 newsletter 里叫"内容组"，在 short-video 里叫"文案组"。
+// 这是为了让 Solo 用户感受到"AI 团队是为我的业务量身定做的"，不是"通用模板"。
+
+export interface GroupLabel {
+  emoji: string;
+  label_key: string;          // i18n key, e.g. "solo.group.content-newsletter.dept-pub.label"
+  lead_title_key: string;     // 主理人叫什么，e.g. "主笔"
+  helper_title_key: string;   // 助手叫什么，e.g. "写手"
+  reviewer_title_key: string; // 审稿员，e.g. "审稿"
+  ops_title_key: string;      // 数据员
+}
+
+/** GROUP_LABELS[template_slug][dept_id] = GroupLabel */
+export const GROUP_LABELS: Record<string, Record<string, GroupLabel>> = {
+  "content-newsletter": {
+    "dept-pub":      { emoji: "📝", label_key: "solo.group.content.label",  lead_title_key: "solo.group.content.lead",  helper_title_key: "solo.group.content.helper",  reviewer_title_key: "solo.group.content.reviewer", ops_title_key: "solo.group.content.ops" },
+    "dept-research": { emoji: "🔍", label_key: "solo.group.research.label", lead_title_key: "solo.group.research.lead", helper_title_key: "solo.group.research.helper", reviewer_title_key: "solo.group.research.reviewer", ops_title_key: "solo.group.research.ops" },
+    "dept-cpo":      { emoji: "🎯", label_key: "solo.group.editor.label",   lead_title_key: "solo.group.editor.lead",   helper_title_key: "solo.group.editor.helper",   reviewer_title_key: "solo.group.editor.reviewer",   ops_title_key: "solo.group.editor.ops" },
+  },
+  "short-video": {
+    "dept-drama":     { emoji: "📝", label_key: "solo.group.script.label",   lead_title_key: "solo.group.script.lead",   helper_title_key: "solo.group.script.helper",   reviewer_title_key: "solo.group.script.reviewer",   ops_title_key: "solo.group.script.ops" },
+    "dept-cinematic": { emoji: "🎬", label_key: "solo.group.video.label",    lead_title_key: "solo.group.video.lead",    helper_title_key: "solo.group.video.helper",    reviewer_title_key: "solo.group.video.reviewer",    ops_title_key: "solo.group.video.ops" },
+    "dept-pub":       { emoji: "📢", label_key: "solo.group.distribution.label", lead_title_key: "solo.group.distribution.lead", helper_title_key: "solo.group.distribution.helper", reviewer_title_key: "solo.group.distribution.reviewer", ops_title_key: "solo.group.distribution.ops" },
+    "dept-ad":        { emoji: "💰", label_key: "solo.group.ads.label",      lead_title_key: "solo.group.ads.lead",      helper_title_key: "solo.group.ads.helper",      reviewer_title_key: "solo.group.ads.reviewer",      ops_title_key: "solo.group.ads.ops" },
+  },
+  "indie-saas": {
+    "dept-dev":     { emoji: "💻", label_key: "solo.group.engineering.label", lead_title_key: "solo.group.engineering.lead", helper_title_key: "solo.group.engineering.helper", reviewer_title_key: "solo.group.engineering.reviewer", ops_title_key: "solo.group.engineering.ops" },
+    "dept-cpo":     { emoji: "🎯", label_key: "solo.group.product.label",     lead_title_key: "solo.group.product.lead",     helper_title_key: "solo.group.product.helper",     reviewer_title_key: "solo.group.product.reviewer",     ops_title_key: "solo.group.product.ops" },
+    "dept-ops":     { emoji: "⚙️", label_key: "solo.group.devops.label",      lead_title_key: "solo.group.devops.lead",      helper_title_key: "solo.group.devops.helper",      reviewer_title_key: "solo.group.devops.reviewer",      ops_title_key: "solo.group.devops.ops" },
+    "dept-growth":  { emoji: "📈", label_key: "solo.group.growth.label",     lead_title_key: "solo.group.growth.lead",     helper_title_key: "solo.group.growth.helper",     reviewer_title_key: "solo.group.growth.reviewer",     ops_title_key: "solo.group.growth.ops" },
+    "dept-pub":     { emoji: "📢", label_key: "solo.group.marketing.label",  lead_title_key: "solo.group.marketing.lead",  helper_title_key: "solo.group.marketing.helper",  reviewer_title_key: "solo.group.marketing.reviewer",  ops_title_key: "solo.group.marketing.ops" },
+  },
+  "knowledge-course": {
+    "dept-pub":      { emoji: "📝", label_key: "solo.group.content.label",  lead_title_key: "solo.group.content.lead",  helper_title_key: "solo.group.content.helper",  reviewer_title_key: "solo.group.content.reviewer", ops_title_key: "solo.group.content.ops" },
+    "dept-research": { emoji: "🔍", label_key: "solo.group.research.label", lead_title_key: "solo.group.research.lead", helper_title_key: "solo.group.research.helper", reviewer_title_key: "solo.group.research.reviewer", ops_title_key: "solo.group.research.ops" },
+    "dept-cpo":      { emoji: "🎯", label_key: "solo.group.curriculum.label", lead_title_key: "solo.group.curriculum.lead", helper_title_key: "solo.group.curriculum.helper", reviewer_title_key: "solo.group.curriculum.reviewer", ops_title_key: "solo.group.curriculum.ops" },
+    "dept-organic":  { emoji: "🌱", label_key: "solo.group.community.label", lead_title_key: "solo.group.community.lead", helper_title_key: "solo.group.community.helper", reviewer_title_key: "solo.group.community.reviewer", ops_title_key: "solo.group.community.ops" },
+  },
+};
+
+/** 给定产线模板 + 部门 id，返回该组的人话叫法。缺省时回退到部门 catalog 默认名。 */
+export function lookupGroupLabel(template_slug: string, dept_id: string): GroupLabel | null {
+  return GROUP_LABELS[template_slug]?.[dept_id] ?? null;
+}
+
+// ─── Leverage KPI（杠杆指标，超级个体仪表盘头部） ────────────────────────
+
+export interface LeverageKpi {
+  output_count_30d: number;     // 跨产线月度产出
+  hours_saved_30d: number;      // 月度替代人工
+  revenue_30d: number;          // 月度收入
+  vs_last_month: number;        // 0.35 = +35%
+  active_lines: number;
+  total_teammates: number;
+}
 
 // ─── Department catalog (Phyntom X8 Departments) ──────────────────────────
 
@@ -280,7 +478,7 @@ export const TASKS: Task[] = [
     artifact_ids: ["art-006"],
   },
   {
-    id: "t-005", company_id: "c-personal", dept_id: "dept-research",
+    id: "t-005", company_id: "l-newsletter", dept_id: "dept-research",
     title: "本周 AI infra 行业早报",
     brief: "周一 8:00 推送，关注 OpenAI / Anthropic / Mistral 三家",
     state: "done", progress: 1,
@@ -290,7 +488,7 @@ export const TASKS: Task[] = [
     artifact_ids: ["art-007"],
   },
   {
-    id: "t-006", company_id: "c-personal", dept_id: "dept-pub",
+    id: "t-006", company_id: "l-newsletter", dept_id: "dept-pub",
     title: "整理本周 Twitter 草稿",
     brief: "8 条短推文，主题：Phyntom X8 产品形态",
     state: "in_progress", progress: 0.30,
@@ -324,7 +522,7 @@ export const ARTIFACTS: Artifact[] = [
   { id: "art-004", task_id: "t-002", company_id: "c-saas", dept_id: "dept-dev", name: "0001_init.py", type: "code",     size_bytes: 4220,  created_at: "2026-06-23T15:18:00Z", preview_text: "\"\"\"Alembic init migration — Phyntom X8 platform.\"\"\"\nfrom alembic import op\nimport sqlalchemy as sa\n\nrevision = '0001_init'\n...\n" },
   { id: "art-005", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design", name: "topbar-v2.png", type: "image", size_bytes: 218_400, created_at: "2026-06-23T12:01:00Z", thumbnail_url: "/console/assets/mock-thumb-topbar.svg" },
   { id: "art-006", task_id: "t-004", company_id: "c-saas", dept_id: "dept-finance", name: "june-2026.xlsx", type: "table", size_bytes: 12_800, created_at: "2026-06-22T22:00:00Z" },
-  { id: "art-007", task_id: "t-005", company_id: "c-personal", dept_id: "dept-research", name: "weekly-2026-w25.md", type: "markdown", size_bytes: 6240, created_at: "2026-06-23T08:42:00Z", preview_text: "# AI Infra 周报 · 2026-W25\n\n## 头条\n\n1. **OpenAI** 发布 GPT-5.5 ...\n2. **Anthropic** Claude 4.7 ...\n3. **Mistral** ...\n" },
+  { id: "art-007", task_id: "t-005", company_id: "l-newsletter", dept_id: "dept-research", name: "weekly-2026-w25.md", type: "markdown", size_bytes: 6240, created_at: "2026-06-23T08:42:00Z", preview_text: "# AI Infra 周报 · 2026-W25\n\n## 头条\n\n1. **OpenAI** 发布 GPT-5.5 ...\n2. **Anthropic** Claude 4.7 ...\n3. **Mistral** ...\n" },
 ];
 
 // ─── Activity events (for NewsTicker + Canvas bubbles) ────────────────────
@@ -347,7 +545,7 @@ export const ACTIVITY: ActivityEvent[] = [
   { id: "a-3", ts: "2026-06-23T16:28:00Z", company_id: "c-saas", dept_id: "dept-pub", agent_id: "c-saas-dept-pub-builder-1", type: "artifact",     text: "draft-v1.md 提交", task_id: "t-001" },
   { id: "a-4", ts: "2026-06-23T16:24:00Z", company_id: "c-saas", dept_id: "dept-pub", agent_id: "c-saas-dept-pub-builder-1", type: "handoff",      text: "outline.md → builder", task_id: "t-001" },
   { id: "a-5", ts: "2026-06-23T16:23:00Z", company_id: "c-saas", dept_id: "dept-pub", agent_id: "c-saas-dept-pub-orchestrator", type: "task_received", text: "新任务：写发布博客", task_id: "t-001" },
-  { id: "a-6", ts: "2026-06-23T15:42:00Z", company_id: "c-personal", dept_id: "dept-research", type: "task_done", text: "本周市场早报已完成", task_id: "t-005" },
+  { id: "a-6", ts: "2026-06-23T15:42:00Z", company_id: "l-newsletter", dept_id: "dept-research", type: "task_done", text: "本周市场早报已完成", task_id: "t-005" },
   { id: "a-7", ts: "2026-06-23T15:18:00Z", company_id: "c-saas", dept_id: "dept-dev", type: "task_done", text: "catalog SQL schema migration 完成", task_id: "t-002" },
   { id: "a-8", ts: "2026-06-23T14:00:00Z", company_id: "c-saas", dept_id: "dept-dev", type: "task_received", text: "实现 marketplace catalog schema", task_id: "t-002" },
 ];

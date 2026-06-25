@@ -22,9 +22,17 @@ import Conversations from "./pages/business/company/Conversations";
 import CompanyMarketplace from "./pages/business/company/Marketplace";
 import Settings from "./pages/business/company/Settings";
 
-// Solo (镜像 Business，仅 Landing 不同)
+// Solo (超级个体 — 完全独立 IA：产线 + 团队 + 杠杆)
 import SoloLanding from "./pages/solo/Landing";
-import SoloDashboard from "./pages/solo/Dashboard";
+import SoloOverview from "./pages/solo/Overview";
+import SoloLinesList from "./pages/solo/lines/List";
+import SoloNewWizard from "./pages/solo/lines/NewWizard";
+import LineShell from "./pages/solo/line/LineShell";
+import TeamView from "./pages/solo/line/TeamView";
+import PortfolioView from "./pages/solo/line/PortfolioView";
+import TimelineView from "./pages/solo/line/TimelineView";
+import BillingView from "./pages/solo/line/BillingView";
+import SettingsView from "./pages/solo/line/SettingsView";
 
 // Dev / Admin (S11 才发力)
 import DevLanding from "./pages/dev/Landing";
@@ -102,7 +110,18 @@ export default function App() {
 
         <Route path="solo">
           <Route index element={<SoloLanding />} />
-          <Route path="dashboard" element={<SoloDashboard />} />
+          <Route path="overview" element={<SoloOverview />} />
+          <Route path="lines">
+            <Route index element={<SoloLinesList />} />
+            <Route path="new" element={<SoloNewWizard />} />
+          </Route>
+          <Route path="l/:lineId" element={<LineShell />}>
+            <Route index element={<TeamView />} />
+            <Route path="portfolio" element={<PortfolioView />} />
+            <Route path="timeline" element={<TimelineView />} />
+            <Route path="billing" element={<BillingView />} />
+            <Route path="settings" element={<SettingsView />} />
+          </Route>
         </Route>
 
         <Route path="dev">

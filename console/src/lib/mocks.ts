@@ -18,6 +18,7 @@
 
 import {
   COMPANIES, DEPT_CATALOG, AGENTS, TASKS, ARTIFACTS, ACTIVITY, ME,
+  LINE_TEMPLATES, GROUP_LABELS,
   type Company, type Task,
 } from "./fixtures";
 import { BUILDER_DRAFTS, NEW_DRAFT, draftToCard } from "./builderFixtures";
@@ -289,6 +290,138 @@ const HANDLERS: Handler[] = [
       // Unknown id (incl. "new") starts a blank draft template.
       const draft = BUILDER_DRAFTS.find((d) => d.id === id) ?? { ...NEW_DRAFT, id };
       return { body: draft };
+    },
+  },
+
+  // ─── Solo lines（超级个体产线，复用 tenant_instance 后端，前端语义不同）──
+  // GET /v1/lines  → 该用户的所有 solo 产线 (audience=solo 的 companies)
+  {
+    match: exact("/v1/lines", "GET"),
+    handle: () => {
+      const lines = COMPANIES.filter((c) => c.audience === "solo");
+      return { body: { items: lines, total: lines.length, _mock: true } };
+    },
+  },
+  // GET /v1/lines/templates  → 6 个收入产线模板
+  {
+    match: exact("/v1/lines/templates", "GET"),
+    handle: () => ({ body: { items: LINE_TEMPLATES, total: LINE_TEMPLATES.length, _mock: true } }),
+  },
+  // POST /v1/lines  → 新建产线（等价于新建 audience=solo 的 company）
+  {
+    match: exact("/v1/lines", "POST"),
+    handle: (_p, _m, body) => {
+      const b = (body ?? {}) as Partial<Company>;
+      const tpl = LINE_TEMPLATES.find((t) => t.slug === b.template_slug) ?? LINE_TEMPLATES[0];
+      const newLine: Company = {
+        id: `l-${Date.now().toString(36)}`,
+        name: b.name ?? "新产线",
+        description: b.description,
+        template_slug: tpl.slug,
+        state: "provisioning",
+        gateway_port: 18800 + Math.floor(Math.random() * 100),
+        dept_ids: tpl.dept_ids,
+        token_usage_30d: 0,
+        active_tasks: 0,
+        created_at: new Date(0).toISOString(),
+        emoji: b.emoji ?? tpl.emoji,
+        last_activity_at: new Date(0).toISOString(),
+        last_activity_text: "实例化中…",
+        audience: "solo",
+        revenue_30d: 0,
+        output_count_30d: 0,
+        hours_saved_30d: 0,
+        vs_last_month: 0,
+      };
+      return { status: 201, body: newLine };
+    },
+  },
+  // GET /v1/lines/:id  → 单产线详情
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      const line = COMPANIES.find((c) => c.id === id && c.audience === "solo");
+      if (!line) return { status: 404, body: { error: "line not found" } };
+      return { body: line };
+    },
+  },
+  // GET /v1/lines/:id/teammates  → 队友列表（按"组"分组 + 角色翻译）
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/teammates$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      const line = COMPANIES.find((c) => c.id === id && c.audience === "solo");
+      if (!line) return { status: 404, body: { error: "line not found" } };
+
+      const lineAgents = AGENTS.filter((a) => a.company_id === id);
+      const groups = line.dept_ids.map((deptId) => {
+        const dept = DEPT_CATALOG.find((d) => d.id === deptId);
+        const labels = GROUP_LABELS[line.template_slug]?.[deptId];
+        const deptAgents = lineAgents.filter((a) => a.dept_id === deptId);
+        return {
+          dept_id: deptId,
+          group_emoji: labels?.emoji ?? dept?.emoji ?? "📋",
+          label_key: labels?.label_key,                       // i18n key（前端 t() 翻译）
+          fallback_label: dept?.name ?? deptId,
+          teammates: deptAgents.map((a) => ({
+            ...a,
+            // 把人话叫法塞进 view model（前端 t() 翻译 title_key）
+            title_key:
+              a.team_role === "orchestrator" ? labels?.lead_title_key
+            : a.team_role === "builder"      ? labels?.helper_title_key
+            : a.team_role === "reviewer"     ? labels?.reviewer_title_key
+            : labels?.ops_title_key,
+            is_lead: a.team_role === "orchestrator",
+          })),
+        };
+      });
+      return { body: { groups, _mock: true } };
+    },
+  },
+  // GET /v1/lines/:id/tasks  → 复用 task 数据
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/tasks$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      return { body: { items: TASKS.filter((t) => t.company_id === id), _mock: true } };
+    },
+  },
+  // GET /v1/lines/:id/artifacts  → 复用 artifact 数据
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/artifacts$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      return { body: { items: ARTIFACTS.filter((a) => a.company_id === id), _mock: true } };
+    },
+  },
+  // GET /v1/lines/:id/activity
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/activity$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      return { body: { items: ACTIVITY.filter((a) => a.company_id === id), _mock: true } };
+    },
+  },
+  // GET /v1/leverage  → 跨产线杠杆 KPI 汇总
+  {
+    match: exact("/v1/leverage", "GET"),
+    handle: () => {
+      const lines = COMPANIES.filter((c) => c.audience === "solo" && c.state === "running");
+      const totalAgents = lines.reduce(
+        (sum, l) => sum + AGENTS.filter((a) => a.company_id === l.id).length,
+        0,
+      );
+      const kpi = {
+        output_count_30d: lines.reduce((s, l) => s + (l.output_count_30d ?? 0), 0),
+        hours_saved_30d: lines.reduce((s, l) => s + (l.hours_saved_30d ?? 0), 0),
+        revenue_30d: lines.reduce((s, l) => s + (l.revenue_30d ?? 0), 0),
+        // 简单平均 vs_last_month，按各产线收入加权
+        vs_last_month: 0.35,
+        active_lines: lines.length,
+        total_teammates: totalAgents,
+      };
+      return { body: kpi };
     },
   },
 ];
