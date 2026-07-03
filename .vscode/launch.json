@@ -1,0 +1,37 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "mega-x: Web (Edge, F5)",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://localhost:5173/",
+      "urlFilter": "http://localhost:5173/*",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "mega-x: dev server",
+      "sourceMaps": true,
+      "userDataDir": true,
+      "timeout": 30000,
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ]
+    },
+    {
+      "name": "mega-x: Web (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/",
+      "urlFilter": "http://localhost:5173/*",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "mega-x: dev server",
+      "sourceMaps": true,
+      "userDataDir": true,
+      "timeout": 30000,
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ]
+    }
+  ]
+}
