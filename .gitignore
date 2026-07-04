@@ -23,3 +23,6 @@ package-lock.json
 # Local npm cache/config (machine-specific)
 .npm-cache/
 .npmrc
+
+# VSCode workspace config (machine-specific, local only)
+.vscode/
