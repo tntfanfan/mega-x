@@ -85,7 +85,7 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/console" or path.startswith("/console/"):
             return CONSOLE_URL, "vite (phyntom-console)"
         if path.startswith("/v1/") or path == "/v1" or path == "/health":
-            return API_URL, "FastAPI (tools.ai_native)"
+            return API_URL, "FastAPI (platform.ai_native)"
         return None
 
     def _do_request(self):
@@ -180,7 +180,7 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
                 f"Start it:\n"
                 f"  - vite (console):   pnpm --filter @megax/console dev   (from frontend/mega-x/)\n"
                 f"                       or: cd frontend/mega-x/apps/console && pnpm dev\n"
-                f"  - FastAPI backend:  python -m tools.ai_native.main\n"
+                f"  - FastAPI backend:  python -m platform.ai_native.main\n"
             )
             self.log_error(hint.replace("\n", " | "))
             body_bytes = hint.encode("utf-8", "replace")
