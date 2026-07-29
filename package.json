@@ -14,27 +14,29 @@
     "inject:partials-legacy": "python tools/inject_partials.py"
   },
   "dependencies": {
+    "@xyflow/react": "^12.3.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "i18next": "^23.15.1",
+    "lucide-react": "^0.451.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-i18next": "^15.0.2",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.26.2",
-    "@xyflow/react": "^12.3.0",
-    "lucide-react": "^0.451.0",
-    "clsx": "^2.1.1",
-    "class-variance-authority": "^0.7.0",
-    "tailwind-merge": "^2.5.4",
-    "i18next": "^23.15.1",
-    "react-i18next": "^15.0.2"
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.2",
-    "typescript": "^5.6.2",
-    "vite": "^5.4.8",
-    "tailwindcss": "^3.4.13",
-    "postcss": "^8.4.47",
     "autoprefixer": "^10.4.20",
-    "tailwindcss-animate": "^1.0.7"
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
   },
   "packageManager": "pnpm@9.0.0",
   "engines": {

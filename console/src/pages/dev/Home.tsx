@@ -3,7 +3,7 @@
  * (draft / in-review / published) and links into the Studio. v0 mock-driven.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -18,22 +18,46 @@ const STATE_COLOR: Record<string, string> = {
   published: "text-spark-mint",
 };
 
+const USER_ID = "user-dev-0001";
+
+/** List items are DraftCards; published entries additionally carry version/_key. */
+type DeptItem = DraftCard & { version?: string; _key?: string };
+
 export default function DevHome() {
   const { t } = useTranslation();
   const toast = useToast();
-  const [items, setItems] = useState<DraftCard[]>([]);
+  const [items, setItems] = useState<DeptItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let cancelled = false;
     setLoading(true);
     api
-      .get<{ items: DraftCard[] }>("/v1/dev/depts")
+      .get<{ items: DeptItem[] }>(`/v1/dev/depts?user_id=${encodeURIComponent(USER_ID)}`)
       .then((r) => { if (!cancelled) setItems(r.items); })
       .catch((e) => { if (!cancelled) toast.error(apiErrorMessage(e, t("dev.mydepts.load-error"))); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast, t]);
+
+  useEffect(() => load(), [load]);
+
+  const onDelete = useCallback(async (e: React.MouseEvent, d: DeptItem) => {
+    // Card is a <Link> — keep the click from navigating into the Studio.
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(t("dev.mydepts.delete-confirm", { name: d.name }))) return;
+    try {
+      const scope = d.version ? "published" : "draft";
+      await api.delete(
+        `/v1/dev/depts/${d.id}?user_id=${encodeURIComponent(USER_ID)}&scope=${scope}`,
+      );
+      toast.info(t("dev.mydepts.deleted"));
+      load();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, t("dev.mydepts.delete-error")));
+    }
+  }, [t, toast, load]);
 
   return (
     <section className="container py-10 space-y-6">
@@ -53,13 +77,24 @@ export default function DevHome() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((d) => (
             <Link
-              key={d.id}
+              key={d._key ?? d.id}
               to={`/dev/depts/${d.id}/studio`}
               className="group rounded-md border border-border-solid bg-surface p-5 hover:border-primary transition-colors flex flex-col"
             >
               <div className="flex items-start justify-between">
                 <span className="text-2xl">{d.emoji}</span>
-                <span className={`text-[11px] ${STATE_COLOR[d.state] ?? "text-muted"}`}>{t(`dev.dept.state.${d.state}`)}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[11px] ${STATE_COLOR[d.state] ?? "text-muted"}`}>{t(`dev.dept.state.${d.state}`)}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => onDelete(e, d)}
+                    title={t("dev.mydepts.delete")}
+                    aria-label={t("dev.mydepts.delete")}
+                    className="rounded px-1 text-sm leading-none text-muted opacity-0 group-hover:opacity-100 hover:text-fusion transition"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
               <h3 className="font-display text-lg text-heading mt-2 group-hover:text-primary">{d.name}</h3>
               <p className="text-[11px] text-muted mt-1 line-clamp-2">{d.mission}</p>

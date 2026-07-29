@@ -1,18 +1,12 @@
 /**
- * /dev/depts/:deptId/studio — For Builders Studio (v0 skeleton, mock-driven).
+ * /dev/depts/:deptId/studio — For Builders Studio (Recruiter WS).
  *
- * Two-pane: vibe chat (placeholder) on the start side, a live preview on the
- * end side. The preview's "Preview" tab reuses the SAME buyer-facing canvas
- * nodes (HQNode / DeptNode / MessageEdge) so what the Builder builds is what
- * buyers will see. Other tabs show the generated files (with a diff toggle),
- * skills, and a publish-readiness meter.
- *
- * v0 is a clickable shell: chat is not yet wired to the dept-hr recruit/reorg
- * engine, and Test-drive/Submit are stubs. Design: doc/product/builders-studio-prd.md.
+ * Two-pane: Recruiter chat (claude-agent-sdk via /v1/dev/recruiter/ws) on the
+ * start side; live preview on the end side driven by draft_update.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ReactFlow, ReactFlowProvider, Background, BackgroundVariant,
@@ -20,15 +14,17 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import { api, apiErrorMessage } from "../../lib/api";
+import { api, apiErrorMessage, type Me } from "../../lib/api";
 import type { Company, DeptCatalogItem, Agent } from "../../lib/api";
 import type { BuilderDraft, DraftFile, ChatMsg } from "../../lib/builderFixtures";
 import { estCostPerTask } from "../../lib/builderFixtures";
+import { RecruiterWs } from "../../lib/recruiterWs";
 import { HQNode, type HQNodeData } from "../../components/canvas/HQNode";
 import { DeptNode, type DeptNodeData } from "../../components/canvas/DeptNode";
 import { MessageEdge } from "../../components/canvas/MessageEdge";
 import { useToast } from "../../components/ui/Toast";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { Markdown } from "../../components/ui/Markdown";
 
 const NODE_TYPES = { hq: HQNode, dept: DeptNode };
 const EDGE_TYPES = { message: MessageEdge };
@@ -47,6 +43,8 @@ const DRAFT_STATE_COLOR: Record<string, string> = {
   draft: "text-spark-flare",
   in_review: "text-spark-blue",
   published: "text-spark-mint",
+  publishing: "text-spark-blue",
+  publish_failed: "text-fusion",
 };
 
 // ── canvas construction (reuses buyer node components) ──────────────────────
@@ -89,26 +87,202 @@ function computeReadiness(draft: BuilderDraft, t: (k: string) => string): Check[
   ];
 }
 
+const CHAT_WIDTH_KEY = "dev.studio.chat-width";
+const CHAT_MIN_W = 280;
+const CHAT_MAX_W = 720;
+
 export default function DevStudio() {
   const { deptId } = useParams<{ deptId: string }>();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const toast = useToast();
   const [draft, setDraft] = useState<BuilderDraft | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [tab, setTab] = useState<string>("__canvas");
+  const [userId, setUserId] = useState("user-dev-0001");
+  const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameVal, setRenameVal] = useState("");
+  const wsRef = useRef<RecruiterWs | null>(null);
+  const streamingIdRef = useRef<string | null>(null);
+  const [chatWidth, setChatWidth] = useState<number>(() => {
+    const saved = Number(localStorage.getItem(CHAT_WIDTH_KEY));
+    return Number.isFinite(saved) && saved >= CHAT_MIN_W && saved <= CHAT_MAX_W ? saved : 420;
+  });
+
+  const onResizeStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = chatWidth;
+    // In RTL layouts the chat pane sits on the right, so dragging left widens it.
+    const dir = getComputedStyle(document.documentElement).direction === "rtl" ? -1 : 1;
+    const onMove = (ev: PointerEvent) => {
+      const w = Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, startW + dir * (ev.clientX - startX)));
+      setChatWidth(w);
+    };
+    const onUp = (ev: PointerEvent) => {
+      const w = Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, startW + dir * (ev.clientX - startX)));
+      localStorage.setItem(CHAT_WIDTH_KEY, String(Math.round(w)));
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.removeProperty("cursor");
+      document.body.style.removeProperty("user-select");
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, [chatWidth]);
+
+  // "new" is never used as a draft id — a fresh one is allocated server-side below.
+  const draftId = deptId && deptId !== "new" ? deptId : null;
+  const creatingRef = useRef(false);
 
   useEffect(() => {
-    if (!deptId) return;
+    let cancelled = false;
+    api.get<Me>("/v1/me").then((me) => {
+      if (!cancelled && me?.user?.id) setUserId(me.user.id);
+    }).catch(() => { /* keep default */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  // 新建部门 — allocate a fresh draft server-side, then swap the URL to its id
+  // so every "new" opens a clean draft instead of the stale dept-untitled.
+  useEffect(() => {
+    if (deptId !== "new" || creatingRef.current) return;
+    creatingRef.current = true;
+    api
+      .post<BuilderDraft>(`/v1/dev/depts?user_id=${encodeURIComponent(userId)}`)
+      .then((d) => navigate(`/dev/depts/${d.id}/studio`, { replace: true }))
+      .catch((e) => {
+        creatingRef.current = false;
+        toast.error(apiErrorMessage(e, t("dev.studio.load-error")));
+      });
+  }, [deptId, userId, navigate, toast, t]);
+
+  // Reset view state when the bound draft changes (e.g. new-draft redirect).
+  useEffect(() => {
+    setDraft(null);
+    setMessages([]);
+  }, [draftId]);
+
+  useEffect(() => {
+    if (!draftId) return;
     let cancelled = false;
     api
-      .get<BuilderDraft>(`/v1/dev/depts/${deptId}`)
-      .then((d) => { if (!cancelled) { setDraft(d); setMessages(d.chat); } })
+      .get<BuilderDraft>(`/v1/dev/depts/${draftId}?user_id=${encodeURIComponent(userId)}`)
+      .then((d) => { if (!cancelled) { setDraft(d); } })
       .catch((e) => toast.error(apiErrorMessage(e, t("dev.studio.load-error"))));
     return () => { cancelled = true; };
-  }, [deptId, toast, t]);
+  }, [draftId, userId, toast, t]);
+
+  useEffect(() => {
+    if (!draftId || !userId) return;
+    const client = new RecruiterWs(userId, draftId, {
+      onUserText: (text) => {
+        setMessages((cur) => [...cur, { id: `hu-${cur.length}`, role: "user", text }]);
+      },
+      onAssistantReset: () => {
+        const id = `c-${Date.now()}`;
+        streamingIdRef.current = id;
+        setMessages((cur) => [...cur, { id, role: "copilot", text: "" }]);
+      },
+      onAssistantDelta: (text) => {
+        const id = streamingIdRef.current;
+        if (!id) {
+          const nid = `c-${Date.now()}`;
+          streamingIdRef.current = nid;
+          setMessages((cur) => [...cur, { id: nid, role: "copilot", text }]);
+          return;
+        }
+        setMessages((cur) => cur.map((m) => (m.id === id ? { ...m, text: m.text + text } : m)));
+      },
+      onToolUse: (name) => {
+        setToolStatus(name.replace(/^mcp__recruiter__/, ""));
+      },
+      onDraftUpdate: (d) => {
+        if (d && typeof d === "object") {
+          setDraft(d as BuilderDraft);
+          setToolStatus(null);
+        }
+      },
+      onDone: () => {
+        setBusy(false);
+        setToolStatus(null);
+        streamingIdRef.current = null;
+      },
+      onError: (message) => {
+        setBusy(false);
+        toast.error(message);
+      },
+    });
+    wsRef.current = client;
+    client.connect(true);
+    return () => {
+      client.close();
+      wsRef.current = null;
+    };
+  }, [draftId, userId, toast]);
+
+  const onSend = useCallback((text: string) => {
+    setMessages((cur) => [...cur, { id: `u-${Date.now()}`, role: "user", text }]);
+    setBusy(true);
+    streamingIdRef.current = null;
+    wsRef.current?.sendPrompt(text);
+  }, []);
+
+  const onCancel = useCallback(() => {
+    wsRef.current?.cancel();
+  }, []);
+
+  const startRename = useCallback(() => {
+    if (!draft) return;
+    setRenameVal(draft.name);
+    setRenaming(true);
+  }, [draft]);
+
+  const onRename = useCallback(async () => {
+    const name = renameVal.trim();
+    setRenaming(false);
+    if (!name || !draftId || name === draft?.name) return;
+    try {
+      const d = await api.patch<BuilderDraft>(
+        `/v1/dev/depts/${draftId}?user_id=${encodeURIComponent(userId)}`,
+        { name },
+      );
+      toast.info(t("dev.studio.renamed"));
+      if (d.id !== draftId) {
+        // ascii rename also changes the draft id — rebind URL/WS to the new id
+        navigate(`/dev/depts/${d.id}/studio`, { replace: true });
+      } else {
+        setDraft(d);
+      }
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("dev.studio.rename-failed")));
+    }
+  }, [renameVal, draftId, draft?.name, userId, navigate, toast, t]);
+
+  const onSubmit = useCallback(async () => {
+    if (!draftId) return;
+    setSubmitting(true);
+    try {
+      await api.post(`/v1/dev/depts/${draftId}/submit?user_id=${encodeURIComponent(userId)}`);
+      toast.info("已上架");
+      const d = await api.get<BuilderDraft>(
+        `/v1/dev/depts/${draftId}?user_id=${encodeURIComponent(userId)}`,
+      );
+      setDraft(d);
+    } catch (e) {
+      toast.error(apiErrorMessage(e, "Submit failed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [draftId, userId, toast]);
 
   const checks = useMemo(() => (draft ? computeReadiness(draft, t) : []), [draft, t]);
-  const blocked = checks.some((c) => c.status === "fail" || c.status === "warn");
+  const blocked = checks.some((c) => c.status === "fail") || submitting;
   const passes = checks.filter((c) => c.status === "pass").length;
   const scoreTotal = checks.filter((c) => c.status !== "info").length;
 
@@ -118,15 +292,45 @@ export default function DevStudio() {
 
   return (
     <div className="min-h-[calc(100vh-8rem)] flex flex-col">
-      {/* Header */}
       <header className="border-b border-border-solid bg-surface px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <Link to="/dev/home" className="text-xs text-muted hover:text-primary shrink-0">{t("dev.studio.back")}</Link>
           <span className="text-2xl shrink-0">{draft.emoji}</span>
           <div className="min-w-0">
-            <h1 className="font-display text-lg text-heading truncate">{draft.name}</h1>
+            {renaming ? (
+              <input
+                autoFocus
+                value={renameVal}
+                onChange={(e) => setRenameVal(e.target.value)}
+                onBlur={onRename}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onRename();
+                  if (e.key === "Escape") setRenaming(false);
+                }}
+                className="font-display text-lg text-heading bg-surface border border-primary rounded px-2 py-0.5 outline-none w-56"
+              />
+            ) : (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h1
+                  className="font-display text-lg text-heading truncate cursor-pointer hover:text-primary"
+                  title={t("dev.studio.rename")}
+                  onClick={startRename}
+                >
+                  {draft.name}
+                </h1>
+                <button
+                  type="button"
+                  onClick={startRename}
+                  title={t("dev.studio.rename")}
+                  aria-label={t("dev.studio.rename")}
+                  className="text-xs text-muted hover:text-primary shrink-0"
+                >
+                  ✏️
+                </button>
+              </div>
+            )}
             <span className={`text-[11px] ${DRAFT_STATE_COLOR[draft.state] ?? "text-muted"}`}>
-              {t(`dev.dept.state.${draft.state}`)}
+              {t(`dev.dept.state.${draft.state}`, { defaultValue: draft.state })}
             </span>
           </div>
         </div>
@@ -158,25 +362,32 @@ export default function DevStudio() {
           </button>
           <button
             type="button"
-            disabled={blocked}
+            disabled={blocked || draft.state === "published"}
             title={blocked ? t("dev.studio.action.submit-blocked") : undefined}
-            onClick={() => toast.info(t("dev.studio.action.stub"))}
+            onClick={onSubmit}
             className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("dev.studio.action.submit")}
+            {submitting ? "…" : t("dev.studio.action.submit")}
           </button>
         </div>
       </header>
 
-      {/* Two-pane */}
       <div className="flex-1 flex min-h-0">
-        <VibeChat messages={messages} onSend={(text) => {
-          setMessages((cur) => [
-            ...cur,
-            { id: `u-${cur.length}`, role: "user", text },
-            { id: `c-${cur.length}`, role: "copilot", text: t("dev.studio.chat.mock-reply") },
-          ]);
-        }} />
+        <VibeChat
+          width={chatWidth}
+          messages={messages}
+          onSend={onSend}
+          onCancel={onCancel}
+          busy={busy}
+          toolStatus={toolStatus}
+        />
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onPointerDown={onResizeStart}
+          className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -ms-1.5 relative z-10"
+          title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
+        />
         <PreviewPane draft={draft} checks={checks} tab={tab} setTab={setTab} />
       </div>
     </div>
@@ -184,22 +395,34 @@ export default function DevStudio() {
 }
 
 // ── left: vibe chat ─────────────────────────────────────────────────────────
-function VibeChat({ messages, onSend }: { messages: ChatMsg[]; onSend: (text: string) => void }) {
+function VibeChat({
+  width, messages, onSend, onCancel, busy, toolStatus,
+}: {
+  width: number;
+  messages: ChatMsg[];
+  onSend: (text: string) => void;
+  onCancel: () => void;
+  busy: boolean;
+  toolStatus: string | null;
+}) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages.length]);
+  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages.length, messages[messages.length - 1]?.text]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || busy) return;
     onSend(text);
     setInput("");
   };
 
   return (
-    <aside className="w-[40%] max-w-[460px] shrink-0 border-e border-border-solid flex flex-col min-h-0 bg-surface/40">
+    <aside
+      style={{ width }}
+      className="shrink-0 border-e border-border-solid flex flex-col min-h-0 bg-surface/40"
+    >
       <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0">
         💬 {t("dev.studio.chat.title")}
       </div>
@@ -208,28 +431,43 @@ function VibeChat({ messages, onSend }: { messages: ChatMsg[]; onSend: (text: st
           <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
             <div className={`max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed ${
               m.role === "user"
-                ? "bg-surface-2 text-body"
+                ? "bg-surface-2 text-body whitespace-pre-wrap"
                 : "bg-surface border border-border-solid text-body"
             }`}>
-              {m.role === "copilot" && <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>}
-              {m.text}
+              {m.role === "copilot" ? (
+                <>
+                  <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>
+                  {m.text ? <Markdown text={m.text} /> : (busy ? "…" : "")}
+                </>
+              ) : (
+                m.text || (busy ? "…" : "")
+              )}
             </div>
           </div>
         ))}
+        {toolStatus && (
+          <div className="text-[11px] text-muted px-1">⏳ {toolStatus}…</div>
+        )}
         <div ref={endRef} />
       </div>
       <div className="border-t border-border-solid p-3 shrink-0">
-        <div className="text-[10px] text-muted mb-2">{t("dev.studio.chat.mock-note")}</div>
         <form onSubmit={submit} className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={t("dev.studio.chat.placeholder")}
-            className="flex-1 bg-surface border border-border-solid rounded px-3 py-1.5 text-sm text-body placeholder:text-dim focus:border-primary outline-none"
+            disabled={busy}
+            className="flex-1 bg-surface border border-border-solid rounded px-3 py-1.5 text-sm text-body placeholder:text-dim focus:border-primary outline-none disabled:opacity-60"
           />
-          <button type="submit" className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition">
-            {t("dev.studio.chat.send")}
-          </button>
+          {busy ? (
+            <button type="button" onClick={onCancel} className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-fusion hover:text-fusion">
+              Cancel
+            </button>
+          ) : (
+            <button type="submit" className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition">
+              {t("dev.studio.chat.send")}
+            </button>
+          )}
         </form>
       </div>
     </aside>

@@ -23,8 +23,10 @@ const API_BASE =
 const MOCK = isMockMode();
 if (MOCK) {
   // eslint-disable-next-line no-console
-  console.warn("[api] MOCK MODE — see VITE_USE_MOCK in .env.development. " +
-    "No real /v1/* requests will leave the browser.");
+  console.info(
+    "[api] VITE_USE_MOCK=true — unmatched paths fall through to real /v1/*; " +
+      "Console catalog/companies/lines/tasks/chat are live (see mocks.ts).",
+  );
 }
 
 export class ApiError extends Error {

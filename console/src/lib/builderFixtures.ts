@@ -12,7 +12,7 @@
 
 import type { AgentTeamRole, AgentTier } from "./fixtures";
 
-export type DraftState = "draft" | "in_review" | "published";
+export type DraftState = "draft" | "in_review" | "published" | "publishing" | "publish_failed";
 
 /** Rough mock cost weight per task by model tier (元), drives the cost meter. */
 export const TIER_COST: Record<AgentTier, number> = { HIGH: 0.1, MEDIUM: 0.04, LOW: 0.01 };

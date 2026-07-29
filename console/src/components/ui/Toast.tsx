@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -67,8 +68,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const error = useCallback((m: string, d?: number) => toast(m, "error", d), [toast]);
   const info = useCallback((m: string, d?: number) => toast(m, "info", d), [toast]);
 
+  // Memoized so the context identity never changes across re-renders.
+  // Consumers put `toast` in useEffect deps (e.g. Studio's WS effect); an
+  // unstable object here made those effects re-run on every toast show/dismiss,
+  // which tore down the Recruiter WebSocket in an infinite loop.
+  const api = useMemo(
+    () => ({ toast, success, error, info }),
+    [toast, success, error, info],
+  );
+
   return (
-    <ToastContext.Provider value={{ toast, success, error, info }}>
+    <ToastContext.Provider value={api}>
       {children}
       <div
         className="fixed bottom-4 end-4 z-[100] flex flex-col gap-2 w-[min(22rem,calc(100vw-2rem))]"

@@ -289,13 +289,15 @@ export interface DeptCatalogItem {
   name: string;
   emoji: string;
   short_desc: string;
-  source_type: "builtin" | "marketplace";
+  source_type: "builtin" | "marketplace" | "recruited";
   publisher?: string;
   price_monthly: number;                          // 元 / 月 ; 0 = official free
   role_count: number;
   tier_breakdown: { HIGH: number; MEDIUM: number; LOW: number };
   rating?: number;                                // 0-5
   install_count?: number;
+  /** Pinned published version when sourced from user_depts/published (e.g. "v1"). */
+  version?: string;
   category: "leadership" | "engineering" | "creative" | "ops" | "finance" |
             "research" | "marketing" | "security" | "vertical";
 }
@@ -322,10 +324,6 @@ export const DEPT_CATALOG: DeptCatalogItem[] = [
   { id: "dept-panel",      name: "专家面板",             emoji: "🧠", short_desc: "7 位垂直专家",              source_type: "builtin", price_monthly: 0, role_count: 7, tier_breakdown: { HIGH: 7, MEDIUM: 0, LOW: 0 }, category: "research" },
   { id: "dept-quant",      name: "多策略量化",           emoji: "📈", short_desc: "信号 + 风险 + 执行",        source_type: "builtin", price_monthly: 0, role_count: 6, tier_breakdown: { HIGH: 2, MEDIUM: 3, LOW: 1 }, category: "vertical" },
   { id: "dept-template",   name: "HR 自检模板",          emoji: "🧪", short_desc: "测试用，可重生成",          source_type: "builtin", price_monthly: 0, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 1, LOW: 1 }, category: "research" },
-
-  // Marketplace 第三方部门示例
-  { id: "dept-mkt-seo",    name: "SEO 专家",            emoji: "🔍", short_desc: "落地页优化 + 关键词",        source_type: "marketplace", publisher: "@indie-seo", price_monthly: 299, rating: 4.6, install_count: 218, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 0 }, category: "marketing" },
-  { id: "dept-mkt-ai-drama", name: "AI 短剧生成器",      emoji: "📺", short_desc: "脚本→分镜→视频一键产出",     source_type: "marketplace", publisher: "@drama-lab",  price_monthly: 499, rating: 4.3, install_count: 56,  role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 }, category: "creative" },
 ];
 
 // ─── Agents in a department (per-company instance) ────────────────────────

@@ -53,7 +53,7 @@ export default function TeamView() {
     // mock：先随便挑第一个 group / dept 当目标
     const targetDept = groups[0]?.dept_id ?? line.dept_ids[0];
     try {
-      await api.post(`/v1/companies/${line.id}/tasks`, {
+      await api.post(`/v1/lines/${line.id}/tasks`, {
         title: text.slice(0, 60),
         brief: text,
         dept_id: targetDept,

@@ -35,7 +35,22 @@ export default function SoloNewWizard() {
     setSubmitting(true);
     setError(null);
     try {
-      const line = await api.post<Company>("/v1/lines", { name: name.trim(), template_slug: tplSlug });
+      const line = await api.post<Company & { operation_id?: string }>(
+        "/v1/lines",
+        { name: name.trim(), template_slug: tplSlug },
+      );
+      if (line.operation_id) {
+        // Fire-and-forget poll — navigate immediately; status shows on line page
+        void (async () => {
+          try {
+            for (let i = 0; i < 300; i++) {
+              const op = await api.get<{ status: string }>(`/v1/operations/${line.operation_id}`);
+              if (op.status === "done" || op.status === "failed") break;
+              await new Promise((r) => setTimeout(r, 2000));
+            }
+          } catch { /* ignore */ }
+        })();
+      }
       navigate(`/solo/l/${line.id}/`);
     } catch (e) {
       console.error(e);
