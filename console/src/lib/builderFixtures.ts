@@ -26,6 +26,24 @@ export interface DraftAgent {
   display_name: string;
   team_role: AgentTeamRole; // orchestrator | builder | reviewer | ops
   tier: AgentTier;          // HIGH | MEDIUM | LOW
+  /** 一句话职责（来自 recruiter 骨架 manifest；旧草稿可能为空）。 */
+  duty?: string;
+  /** 该子 agent 独占调用的 skills/<name>（部长永远为空）。 */
+  skills?: string[];
+}
+
+/** 子 Agent 协作流水线的一步（对应 AGENTS.md 架构图）。 */
+export interface DraftWorkflowStep {
+  agent: string;   // role title，与 DraftAgent.display_name 对应
+  slug?: string;   // agents/<slug>/ 目录名（后端已解析好）
+  action?: string;
+  output?: string;
+  gate?: string;   // 串行门禁：上一步产物未通过校验前不得进入
+}
+
+export interface DraftWorkflow {
+  description?: string;
+  steps: DraftWorkflowStep[];
 }
 
 export interface DraftFile {
@@ -53,6 +71,8 @@ export interface BuilderDraft {
   install_count: number;
   earnings_30d: number;
   agents: DraftAgent[];
+  /** 子 Agent 协作流水线；旧草稿 / 未设计工作流时为 null。 */
+  workflow?: DraftWorkflow | null;
   files: DraftFile[];
   skills: { name: string; desc: string }[];
   chat: ChatMsg[];

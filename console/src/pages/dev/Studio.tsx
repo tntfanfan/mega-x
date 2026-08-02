@@ -15,19 +15,15 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
-import type { Company, DeptCatalogItem, Agent } from "../../lib/api";
-import type { BuilderDraft, DraftFile, ChatMsg } from "../../lib/builderFixtures";
+import type { BuilderDraft, DraftAgent, DraftFile, ChatMsg } from "../../lib/builderFixtures";
 import { estCostPerTask } from "../../lib/builderFixtures";
 import { RecruiterWs } from "../../lib/recruiterWs";
-import { HQNode, type HQNodeData } from "../../components/canvas/HQNode";
-import { DeptNode, type DeptNodeData } from "../../components/canvas/DeptNode";
-import { MessageEdge } from "../../components/canvas/MessageEdge";
+import { AgentNode, type AgentNodeData } from "../../components/canvas/AgentNode";
 import { useToast } from "../../components/ui/Toast";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Markdown } from "../../components/ui/Markdown";
 
-const NODE_TYPES = { hq: HQNode, dept: DeptNode };
-const EDGE_TYPES = { message: MessageEdge };
+const NODE_TYPES = { agent: AgentNode };
 
 type RStatus = "pass" | "warn" | "fail" | "info";
 interface Check { key: string; label: string; status: RStatus; detail?: string }
@@ -47,31 +43,86 @@ const DRAFT_STATE_COLOR: Record<string, string> = {
   publish_failed: "text-fusion",
 };
 
-// ── canvas construction (reuses buyer node components) ──────────────────────
-function buildCanvas(draft: BuilderDraft, companyLabel: string): { nodes: Node[]; edges: Edge[] } {
-  const company: Company = {
-    id: "you", name: companyLabel, template_slug: "-", state: "running",
-    gateway_port: 0, dept_ids: [draft.id], token_usage_30d: 0, active_tasks: 0,
-    created_at: "1970-01-01T00:00:00Z", emoji: "🏢",
-    last_activity_at: "1970-01-01T00:00:00Z", last_activity_text: "",
-  };
-  const agents: Agent[] = draft.agents.map((a) => ({
-    id: `${draft.id}-${a.slug}`, company_id: "you", dept_id: draft.id, slug: a.slug,
-    display_name: a.display_name, team_role: a.team_role, tier: a.tier, status: "idle",
-    soul_summary: "", bubble: "", skills_count: 0, recent_activity: [],
-  }));
-  const tier = { HIGH: 0, MEDIUM: 0, LOW: 0 };
-  for (const a of draft.agents) tier[a.tier] += 1;
-  const dept: DeptCatalogItem = {
-    id: draft.id, name: draft.name, emoji: draft.emoji, short_desc: draft.mission,
-    source_type: "marketplace", price_monthly: draft.price_monthly,
-    role_count: draft.agents.length, tier_breakdown: tier, category: "creative",
-  };
+// ── canvas construction: 部长 → 子 Agent 工作流阶段图 ────────────────────────
+// 对应 AGENTS.md 的架构图：部长（Orchestrator，只编排不执行）在顶部，
+// workflow.steps 按序竖排成流水线（带门禁标注）；不在流水线里的子 Agent
+// 挂在右侧一列（虚线 = 部长按需 spawn）。无 workflow 时退化为扇出布局。
+const NODE_W = 224;   // AgentNode w-56
+const COL_GAP = 96;
+const ROW_H = 168;
+const LEAD_POS = { x: 0, y: 0 };
+const STEP_Y0 = 200;
+
+function buildCanvas(draft: BuilderDraft, leadNote: string): { nodes: Node[]; edges: Edge[] } {
+  const lead: DraftAgent = draft.agents.find((a) => a.team_role === "orchestrator")
+    ?? { slug: "lead", display_name: `${draft.name} Lead`, team_role: "orchestrator", tier: "HIGH" };
+  const subs = draft.agents.filter((a) => a.team_role !== "orchestrator");
+  const bySlug = new Map(subs.map((a) => [a.slug, a]));
+  const byName = new Map(subs.map((a) => [a.display_name, a]));
+  const steps = draft.workflow?.steps ?? [];
+
   const nodes: Node[] = [
-    { id: "hq", type: "hq", position: { x: -32, y: 0 }, data: { company, totalAgents: agents.length, activeTasks: 0 } as HQNodeData, draggable: true },
-    { id: "dept", type: "dept", position: { x: 0, y: 240 }, data: { dept, agents, activeTasks: 0, bubble: draft.mission || "—", bubbleActive: false } as DeptNodeData, draggable: true },
+    {
+      id: "lead", type: "agent", position: LEAD_POS, draggable: true,
+      data: { agent: lead, isLead: true, emoji: draft.emoji, leadNote } as AgentNodeData,
+    },
   ];
-  const edges: Edge[] = [{ id: "e", source: "hq", target: "dept", type: "message", data: { active: false } }];
+  const edges: Edge[] = [];
+  const inPipeline = new Set<string>();
+
+  steps.forEach((step, i) => {
+    const agent: DraftAgent =
+      (step.slug && bySlug.get(step.slug))
+      || byName.get(step.agent)
+      || { slug: step.slug || `step-${i}`, display_name: step.agent, team_role: "builder", tier: "MEDIUM" };
+    inPipeline.add(agent.slug);
+    const id = `step-${i}`;
+    nodes.push({
+      id, type: "agent", draggable: true,
+      position: { x: 0, y: STEP_Y0 + i * ROW_H },
+      data: {
+        agent, stepIndex: i + 1,
+        action: step.action, output: step.output, gate: step.gate,
+      } as AgentNodeData,
+    });
+    if (i === 0) {
+      edges.push({
+        id: `e-lead-${id}`, source: "lead", target: id, type: "smoothstep", animated: true,
+        style: { stroke: "rgba(212,168,78,0.7)" },
+      });
+    } else {
+      edges.push({
+        id: `e-${i - 1}-${i}`, source: `step-${i - 1}`, target: id, type: "smoothstep", animated: true,
+        style: { stroke: "rgba(212,168,78,0.7)" },
+        label: step.gate ? `🚧 ${step.gate}` : undefined,
+        labelStyle: { fill: "var(--color-spark-flare, #e8a44a)", fontSize: 10 },
+        labelBgStyle: { fill: "rgba(20,18,14,0.85)" },
+        labelBgPadding: [4, 2] as [number, number],
+      });
+    }
+  });
+
+  // 不在流水线里的子 Agent（按需 spawn）：有流水线时挂右侧一列，
+  // 没有流水线时双列扇出在部长下方。
+  const rest = subs.filter((a) => !inPipeline.has(a.slug));
+  rest.forEach((a, i) => {
+    const id = `sub-${a.slug}`;
+    const position = steps.length
+      ? { x: NODE_W + COL_GAP, y: STEP_Y0 + i * ROW_H }
+      : {
+          x: (i % 2) * (NODE_W + 48) - (rest.length > 1 ? (NODE_W + 48) / 2 : 0),
+          y: STEP_Y0 - 20 + Math.floor(i / 2) * ROW_H,
+        };
+    nodes.push({
+      id, type: "agent", draggable: true, position,
+      data: { agent: a } as AgentNodeData,
+    });
+    edges.push({
+      id: `e-lead-${id}`, source: "lead", target: id, type: "smoothstep",
+      style: { stroke: "rgba(212,168,78,0.35)", strokeDasharray: "5 4" },
+    });
+  });
+
   return { nodes, edges };
 }
 
@@ -291,7 +342,9 @@ export default function DevStudio() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col">
+    // 固定高度（非 min-h）：让左右两栏各自内部滚动，页面本身不滚 —— 否则
+    // 聊天一长整页跟着滚，右侧预览也会被带着动。
+    <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
       <header className="border-b border-border-solid bg-surface px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <Link to="/dev/home" className="text-xs text-muted hover:text-primary shrink-0">{t("dev.studio.back")}</Link>
@@ -407,8 +460,13 @@ function VibeChat({
 }) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
-  const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages.length, messages[messages.length - 1]?.text]);
+  // 只滚聊天容器自己 —— scrollIntoView 会把所有可滚祖先（包括页面）一起滚，
+  // 右侧预览会被带着动。
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length, messages[messages.length - 1]?.text]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -426,7 +484,7 @@ function VibeChat({
       <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0">
         💬 {t("dev.studio.chat.title")}
       </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
         {messages.map((m) => (
           <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
             <div className={`max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed ${
@@ -448,7 +506,6 @@ function VibeChat({
         {toolStatus && (
           <div className="text-[11px] text-muted px-1">⏳ {toolStatus}…</div>
         )}
-        <div ref={endRef} />
       </div>
       <div className="border-t border-border-solid p-3 shrink-0">
         <form onSubmit={submit} className="flex gap-2">
@@ -477,13 +534,14 @@ function VibeChat({
 // ── right: preview tabs ─────────────────────────────────────────────────────
 function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; checks: Check[]; tab: string; setTab: (t: string) => void }) {
   const { t } = useTranslation();
+  // skills 不再单独开 tab —— skills/<name>/SKILL.md 已归入文件树的 Skills 分组，
+  // 两处并存反而重复。旧状态兼容：文件名 / "__skills" 都归到文件页。
   const tabs: { key: string; label: string }[] = [
     { key: "__canvas", label: t("dev.studio.tab.canvas") },
-    ...draft.files.map((f) => ({ key: f.name, label: f.name })),
-    { key: "__skills", label: t("dev.studio.tab.skills") },
+    { key: "__files", label: t("dev.studio.tab.files", { defaultValue: "文件" }) },
     { key: "__readiness", label: t("dev.studio.tab.readiness") },
   ];
-  const file = draft.files.find((f) => f.name === tab);
+  const isFileTab = !tab.startsWith("__") || tab === "__skills";
 
   return (
     <main className="flex-1 min-w-0 flex flex-col min-h-0">
@@ -494,7 +552,8 @@ function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; chec
             type="button"
             onClick={() => setTab(tb.key)}
             className={`px-3 py-2 text-xs whitespace-nowrap border-b-2 -mb-px transition-colors ${
-              tab === tb.key ? "border-primary text-primary" : "border-transparent text-body hover:text-primary"
+              tab === tb.key || (tb.key === "__files" && isFileTab)
+                ? "border-primary text-primary" : "border-transparent text-body hover:text-primary"
             }`}
           >
             {tb.label}
@@ -503,8 +562,9 @@ function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; chec
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
         {tab === "__canvas" && <DraftCanvas draft={draft} />}
-        {file && <FileView file={file} />}
-        {tab === "__skills" && <SkillsList draft={draft} />}
+        {(tab === "__files" || isFileTab) && (
+          <FilesExplorer draft={draft} initialFile={!tab.startsWith("__") ? tab : undefined} />
+        )}
         {tab === "__readiness" && <Readiness checks={checks} />}
       </div>
     </main>
@@ -513,19 +573,33 @@ function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; chec
 
 function DraftCanvas({ draft }: { draft: BuilderDraft }) {
   const { t } = useTranslation();
-  const { nodes, edges } = useMemo(() => buildCanvas(draft, t("dev.studio.your-company")), [draft, t]);
+  const leadNote = t("dev.studio.canvas.lead-note", { defaultValue: "只编排，不亲自干活" });
+  const { nodes, edges } = useMemo(() => buildCanvas(draft, leadNote), [draft, leadNote]);
+  const hasWorkflow = (draft.workflow?.steps?.length ?? 0) > 0;
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 py-2 text-[11px] text-muted shrink-0">{t("dev.studio.canvas.hint")}</div>
+      <div className="px-4 py-2 text-[11px] shrink-0 flex items-center gap-2 flex-wrap">
+        <span className="text-muted">{t("dev.studio.canvas.hint")}</span>
+        {hasWorkflow ? (
+          draft.workflow?.description && (
+            <span className="text-primary bg-primary/10 rounded px-1.5 py-0.5">
+              ⛓ {draft.workflow.description}
+            </span>
+          )
+        ) : (
+          <span className="text-spark-flare">
+            {t("dev.studio.canvas.no-workflow", { defaultValue: "还没有工作流——让 Recruiter 帮你设计子 Agent 流水线" })}
+          </span>
+        )}
+      </div>
       <div className="flex-1 relative bg-bg min-h-0">
         <ReactFlowProvider>
           <ReactFlow
             nodes={nodes}
             edges={edges}
             nodeTypes={NODE_TYPES}
-            edgeTypes={EDGE_TYPES}
             fitView
-            fitViewOptions={{ padding: 0.25 }}
+            fitViewOptions={{ padding: 0.2 }}
             minZoom={0.3}
             maxZoom={1.5}
             proOptions={{ hideAttribution: true }}
@@ -534,6 +608,92 @@ function DraftCanvas({ draft }: { draft: BuilderDraft }) {
             <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(212, 168, 78, 0.15)" />
           </ReactFlow>
         </ReactFlowProvider>
+      </div>
+    </div>
+  );
+}
+
+// ── files explorer: 主 Agent / 子 Agent / Skills 分组文件树 ──────────────────
+interface FileGroup { key: string; label: string; icon: string; files: DraftFile[] }
+
+function groupDraftFiles(draft: BuilderDraft, leadFallback: string): FileGroup[] {
+  const nameBySlug = new Map(draft.agents.map((a) => [a.slug, a.display_name]));
+  const lead: DraftFile[] = [];
+  const byAgent = new Map<string, DraftFile[]>();
+  const skills: DraftFile[] = [];
+  for (const f of draft.files) {
+    if (f.name.startsWith("agents/")) {
+      const slug = f.name.split("/")[1] ?? "";
+      if (!byAgent.has(slug)) byAgent.set(slug, []);
+      byAgent.get(slug)!.push(f);
+    } else if (f.name.startsWith("skills/")) {
+      skills.push(f);
+    } else {
+      lead.push(f);
+    }
+  }
+  const leadAgent = draft.agents.find((a) => a.team_role === "orchestrator");
+  const groups: FileGroup[] = [{
+    key: "__lead",
+    label: leadAgent?.display_name || leadFallback,
+    icon: draft.emoji || "👑",
+    files: lead,
+  }];
+  for (const [slug, files] of [...byAgent.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    groups.push({ key: slug, label: nameBySlug.get(slug) || slug, icon: "🤖", files });
+  }
+  if (skills.length) {
+    groups.push({ key: "__skills", label: "Skills", icon: "🧩", files: skills });
+  }
+  return groups.filter((g) => g.files.length > 0);
+}
+
+function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; initialFile?: string }) {
+  const { t } = useTranslation();
+  const leadFallback = t("dev.studio.files.lead", { defaultValue: "部长（主 Agent）" });
+  const groups = useMemo(() => groupDraftFiles(draft, leadFallback), [draft, leadFallback]);
+  const [selected, setSelected] = useState<string | null>(initialFile ?? null);
+  const file =
+    draft.files.find((f) => f.name === selected)
+    ?? draft.files.find((f) => f.name === "AGENTS.md")
+    ?? draft.files[0];
+
+  if (!file) {
+    return <div className="p-6"><EmptyState icon="📄" title={t("dev.studio.files.empty", { defaultValue: "还没有文件——先和 Recruiter 聊出一版草稿" })} /></div>;
+  }
+
+  const baseName = (n: string) => n.split("/").pop() ?? n;
+
+  return (
+    <div className="h-full flex min-h-0">
+      <aside className="w-56 shrink-0 border-e border-border-solid overflow-y-auto py-2">
+        {groups.map((g) => (
+          <div key={g.key} className="mb-1.5">
+            <div className="px-3 py-1 flex items-center gap-1.5 text-[11px] text-muted uppercase tracking-wider truncate" title={g.label}>
+              <span>{g.icon}</span>
+              <span className="truncate">{g.label}</span>
+              <span className="text-dim">{g.files.length}</span>
+            </div>
+            {g.files.map((f) => (
+              <button
+                key={f.name}
+                type="button"
+                onClick={() => setSelected(f.name)}
+                title={f.name}
+                className={`w-full text-start ps-7 pe-3 py-1 text-xs font-mono truncate transition-colors ${
+                  f.name === file.name
+                    ? "text-primary bg-primary/10 border-e-2 border-primary"
+                    : "text-body hover:text-primary hover:bg-surface"
+                }`}
+              >
+                {g.key === "__skills" ? f.name.replace(/^skills\//, "") : baseName(f.name)}
+              </button>
+            ))}
+          </div>
+        ))}
+      </aside>
+      <div className="flex-1 min-w-0">
+        <FileView file={file} />
       </div>
     </div>
   );
@@ -573,23 +733,6 @@ function FileView({ file }: { file: DraftFile }) {
           <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-body">{file.content}</pre>
         )}
       </div>
-    </div>
-  );
-}
-
-function SkillsList({ draft }: { draft: BuilderDraft }) {
-  const { t } = useTranslation();
-  if (draft.skills.length === 0) {
-    return <div className="p-6"><EmptyState icon="🧩" title={t("dev.studio.skills.empty")} /></div>;
-  }
-  return (
-    <div className="p-4 space-y-2">
-      {draft.skills.map((s) => (
-        <div key={s.name} className="rounded-md border border-border-solid bg-surface px-3 py-2.5">
-          <div className="text-sm text-heading font-mono">{s.name}</div>
-          <div className="text-[11px] text-muted mt-0.5">{s.desc}</div>
-        </div>
-      ))}
     </div>
   );
 }
