@@ -11,8 +11,8 @@
 # `npm install -g pnpm@9.0.0` reaches the public npm registry directly and
 # completes in ~5 seconds.
 #
-# Mock mode is on in production via .env.production (VITE_USE_MOCK=true), so
-# the deployed site runs without any backend.
+# Production API: .env.production sets VITE_USE_MOCK=false and
+# VITE_API_BASE=https://api.mega-x.ai (EC2 FastAPI behind Caddy).
 
 version: 1
 applications:
