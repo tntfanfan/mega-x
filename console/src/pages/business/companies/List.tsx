@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -26,6 +26,17 @@ export default function CompaniesList() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast, t]);
+
+  const onDelete = useCallback(async (c: Company) => {
+    if (!window.confirm(t("business.companies.delete-confirm", { name: c.name }))) return;
+    try {
+      await api.delete(`/v1/companies/${c.id}`);
+      setItems((prev) => prev.filter((x) => x.id !== c.id));
+      toast.info(t("business.companies.deleted"));
+    } catch (err) {
+      toast.error(apiErrorMessage(err, t("business.companies.delete-error")));
+    }
+  }, [t, toast]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -63,7 +74,7 @@ export default function CompaniesList() {
         ) : (
         <div className="rounded-md border border-border-solid bg-surface divide-y divide-border-solid">
           {filtered.map((c) => (
-          <div key={c.id} className="px-4 py-3 flex items-center gap-3">
+          <div key={c.id} className="group px-4 py-3 flex items-center gap-3">
             <span className="text-2xl">{c.emoji}</span>
             <div className="flex-1 min-w-0">
               <div className="text-sm text-heading">{c.name}</div>
@@ -76,6 +87,15 @@ export default function CompaniesList() {
                <span className="text-muted">{c.state}</span>}
             </div>
             <Link to={`/business/c/${c.id}/`} className="text-xs text-primary hover:underline">{t("business.companies.open")}</Link>
+            <button
+              type="button"
+              onClick={() => onDelete(c)}
+              title={t("business.companies.delete")}
+              aria-label={t("business.companies.delete")}
+              className="rounded px-1 text-sm leading-none text-muted opacity-0 group-hover:opacity-100 hover:text-fusion transition"
+            >
+              ✕
+            </button>
           </div>
           ))}
         </div>

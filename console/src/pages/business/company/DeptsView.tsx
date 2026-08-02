@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
@@ -22,6 +22,7 @@ export default function DeptsView() {
   const toast = useToast();
   const [items, setItems] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removing, setRemoving] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -34,6 +35,21 @@ export default function DeptsView() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [company.id, toast]);
+
+  const removeDept = async (d: Row) => {
+    if (!window.confirm(t("business.company.depts.remove-confirm", { name: d.name }))) return;
+    setRemoving(d.id);
+    try {
+      await api.delete(`/v1/companies/${company.id}/depts/${d.id}`);
+      setItems((cur) => cur.filter((x) => x.id !== d.id));
+      company.dept_ids = company.dept_ids.filter((x) => x !== d.id);
+      toast.success(t("business.company.depts.remove-success", { name: d.name }));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("business.company.depts.remove-error", { name: d.name })));
+    } finally {
+      setRemoving(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -53,12 +69,23 @@ export default function DeptsView() {
       {items.length > 6 && (
         <SearchInput value={query} onChange={setQuery} placeholder={t("business.company.depts.search-placeholder")} className="w-full sm:w-64" />
       )}
-      {filtered.length === 0 ? (
+      {items.length === 0 ? (
+        <EmptyState
+          icon="🏢"
+          title={t("business.company.depts.empty.title")}
+          hint={t("business.company.depts.empty.hint")}
+          action={
+            <Link to={`/business/c/${company.id}/marketplace`} className="rounded-md bg-primary text-bg px-4 py-1.5 text-sm font-medium hover:bg-accent">
+              {t("business.company.depts.empty.cta")}
+            </Link>
+          }
+        />
+      ) : filtered.length === 0 ? (
         <EmptyState icon="🔍" title={t("business.company.depts.no-match")} hint={t("common.keyword-hint")} />
       ) : (
       <div className="rounded-md border border-border-solid bg-surface divide-y divide-border-solid">
         {filtered.map((d) => (
-          <div key={d.id} className="px-4 py-3 flex items-center gap-3 hover:bg-surface-2">
+          <div key={d.id} className="group px-4 py-3 flex items-center gap-3 hover:bg-surface-2">
             <span className="text-2xl shrink-0">{d.emoji}</span>
             <div className="flex-1 min-w-0">
               <div className="text-sm text-heading">{d.name}</div>
@@ -68,6 +95,16 @@ export default function DeptsView() {
             <div className="text-xs shrink-0 w-20 text-end">
               {d.active_tasks > 0 ? <span className="text-spark-blue">{t("business.company.depts.tasks-active", { count: d.active_tasks })}</span> : <span className="text-dim">{t("business.company.depts.idle")}</span>}
             </div>
+            <button
+              type="button"
+              disabled={removing === d.id}
+              onClick={() => removeDept(d)}
+              title={t("business.company.depts.remove")}
+              aria-label={t("business.company.depts.remove")}
+              className="rounded px-1 text-sm leading-none text-muted opacity-0 group-hover:opacity-100 hover:text-fusion transition disabled:opacity-50"
+            >
+              ✕
+            </button>
           </div>
         ))}
       </div>

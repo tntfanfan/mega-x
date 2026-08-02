@@ -51,6 +51,25 @@ export default function CompanyMarketplace() {
     }
   };
 
+  const uninstall = async (d: DeptCatalogItem) => {
+    if (!window.confirm(t("business.company.marketplace.uninstall-confirm", { name: d.name }))) return;
+    setInstalling(d.id);
+    try {
+      await api.delete(`/v1/companies/${company.id}/depts/${d.id}`);
+      setEnabled((cur) => {
+        const next = new Set(cur);
+        next.delete(d.id);
+        return next;
+      });
+      company.dept_ids = company.dept_ids.filter((x) => x !== d.id);
+      toast.success(t("business.company.marketplace.uninstall-success", { name: d.name }));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("business.company.marketplace.uninstall-error", { name: d.name })));
+    } finally {
+      setInstalling(null);
+    }
+  };
+
   const sourceOptions = useMemo<SegmentedOption<SourceFilter>[]>(() => [
     { value: "all", label: t("business.company.marketplace.source.all"), count: items.length },
     { value: "builtin", label: t("business.company.marketplace.source.official"), count: items.filter((d) => d.source_type === "builtin").length },
@@ -102,18 +121,30 @@ export default function CompanyMarketplace() {
               <div className="mt-2 text-[11px] text-body">
                 {d.price_monthly === 0 ? t("common.free") : t("common.price-monthly", { price: d.price_monthly })}
               </div>
-              <button
-                type="button"
-                disabled={installed || busy}
-                onClick={() => install(d)}
-                className="w-full mt-3 rounded text-xs py-1.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-primary text-bg hover:bg-accent"
-              >
-                {installed
-                  ? t("business.company.marketplace.installed")
-                  : busy
-                    ? t("business.company.marketplace.installing")
-                    : t("business.company.marketplace.install")}
-              </button>
+              {installed ? (
+                <div className="mt-3 flex gap-2">
+                  <span className="flex-1 rounded text-xs py-1.5 text-center text-muted border border-border-solid">
+                    {t("business.company.marketplace.installed")}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => uninstall(d)}
+                    className="rounded text-xs py-1.5 px-3 border border-fusion/50 text-fusion hover:bg-fusion/10 transition-colors disabled:opacity-50"
+                  >
+                    {busy ? t("business.company.marketplace.uninstalling") : t("business.company.marketplace.uninstall")}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => install(d)}
+                  className="w-full mt-3 rounded text-xs py-1.5 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-primary text-bg hover:bg-accent"
+                >
+                  {busy ? t("business.company.marketplace.installing") : t("business.company.marketplace.install")}
+                </button>
+              )}
             </div>
           );
         })}
