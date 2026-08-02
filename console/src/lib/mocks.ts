@@ -1,12 +1,37 @@
 /**
  * Frontend mock-mode dispatcher.
  *
- * R1–R6: catalog + companies + lines + tasks + activity + chat hit real FastAPI.
- * Keep VITE_USE_MOCK=true so unmatched paths still fall through; only leave
- * handlers here for routes that remain stubbed (none for Console MVP).
+ * When `import.meta.env.VITE_USE_MOCK` is truthy, `lib/api.ts` consults
+ * `mockHandle()` before making any real fetch. If a handler matches the
+ * (path, method) tuple, its return value is used as the response — no
+ * network call leaves the browser.
  *
- * /v1/dev/* never had mocks (Recruiter).
+ * Why this exists in production: the static site on mega-x.ai (Amplify) has
+ * no FastAPI upstream behind /v1/*, so `.env.production` ships
+ * VITE_USE_MOCK=true and this table is what keeps the Console demo alive.
+ * When the backend (platform/ai_native/main.py) is deployed and /v1/* is
+ * routed to it, flip VITE_USE_MOCK=false and rebuild — same call sites, no
+ * refactor.
+ *
+ * Known gap: the Builders Studio chat rides the Recruiter WebSocket
+ * (/v1/dev/recruiter/ws), which a fetch-level mock cannot intercept. Studio
+ * draft load/save/submit below are mocked; the chat pane needs the real
+ * backend.
+ *
+ * Matching note: paths are matched with the query string stripped —
+ * call sites pass e.g. `/v1/dev/depts?user_id=...` and handlers declare
+ * `/v1/dev/depts`. Mutations write to session-scoped stores so a created
+ * company/line/task/draft shows up in subsequent GETs until reload.
  */
+
+import {
+  COMPANIES, DEPT_CATALOG, AGENTS, TASKS, ARTIFACTS, ACTIVITY, ME,
+  LINE_TEMPLATES, GROUP_LABELS,
+  type Company, type Task,
+} from "./fixtures";
+import {
+  BUILDER_DRAFTS, NEW_DRAFT, draftToCard, type BuilderDraft,
+} from "./builderFixtures";
 
 const SIMULATED_LATENCY_MS = 80;
 
@@ -26,18 +51,486 @@ interface Handler {
   handle: HandlerFn;
 }
 
+// ─── helpers ────────────────────────────────────────────────────────────
+
+function rx(re: RegExp): HandlerMatch {
+  return (p, _m) => p.match(re);
+}
+
 function exact(p: string, m: Method): HandlerMatch {
   return (path, method) => path === p && method === m;
 }
 
-/** Intentionally empty — all Console routes are live against FastAPI. */
+function companyDeptItems(companyId: string) {
+  const c = COMPANIES.find((x) => x.id === companyId);
+  if (!c) return [];
+  return c.dept_ids
+    .map((id) => DEPT_CATALOG.find((d) => d.id === id))
+    .filter(Boolean)
+    .map((d) => ({
+      ...d!,
+      agent_count: AGENTS.filter((a) => a.company_id === companyId && a.dept_id === d!.id).length,
+      active_tasks: TASKS.filter((t) => t.company_id === companyId && t.dept_id === d!.id && (t.state === "in_progress" || t.state === "review")).length,
+    }));
+}
+
+function makeCompany(b: Partial<Company>, audience: "business" | "solo"): Company {
+  return {
+    id: `${audience === "solo" ? "l" : "c"}-${Date.now().toString(36)}`,
+    name: b.name ?? (audience === "solo" ? "新产线" : "新公司"),
+    description: b.description,
+    template_slug: b.template_slug ?? "mega-x-default",
+    state: "running", // mock: skip the provisioning wait entirely
+    gateway_port: 18800 + Math.floor(Math.random() * 100),
+    dept_ids: b.dept_ids ?? ["dept-ceo", "dept-dev", "dept-pub"],
+    token_usage_30d: 0,
+    active_tasks: 0,
+    created_at: new Date().toISOString(),
+    emoji: b.emoji ?? (audience === "solo" ? "🚀" : "🏢"),
+    last_activity_at: new Date().toISOString(),
+    last_activity_text: "（演示数据）刚刚创建",
+    ...(audience === "solo"
+      ? { audience: "solo" as const, revenue_30d: 0, output_count_30d: 0, hours_saved_30d: 0, vs_last_month: 0 }
+      : {}),
+  };
+}
+
+// ─── session-scoped mutable stores ────────────────────────────────────────
+// COMPANIES / TASKS are mutated in place so every handler sees creations;
+// drafts get their own copy so fixtures stay pristine for other importers.
+
+const drafts: BuilderDraft[] = BUILDER_DRAFTS.map((d) => ({ ...d }));
+
+/** Company templates for GET /v1/templates. Slugs must have i18n entries
+ *  under `business.companies.new.tpl.<slug>.{name,desc}` (see zh/en/ar.json). */
+const COMPANY_TEMPLATES = [
+  { slug: "blank",              emoji: "📄", dept_ids: [] as string[] },
+  { slug: "mega-x-default",     emoji: "🏢", dept_ids: DEPT_CATALOG.map((d) => d.id) },
+  { slug: "game-studio",        emoji: "🎮", dept_ids: ["dept-ceo", "dept-game", "dept-dev", "dept-cinematic", "dept-pub", "dept-production"] },
+  { slug: "mcn-content-machine", emoji: "🎬", dept_ids: ["dept-ceo", "dept-drama", "dept-cinematic", "dept-organic", "dept-ad", "dept-growth"] },
+  { slug: "fintech-research",   emoji: "📈", dept_ids: ["dept-ceo", "dept-quant", "dept-research", "dept-panel", "dept-finance"] },
+  { slug: "solo-assistant",     emoji: "🧑‍💻", dept_ids: ["dept-ceo", "dept-research", "dept-pub"] },
+  { slug: "law-firm",           emoji: "⚖️", dept_ids: ["dept-ceo", "dept-legal", "dept-security", "dept-research"] },
+].map((t) => ({
+  ...t,
+  name_key: `business.companies.new.tpl.${t.slug}.name`,
+  desc_key: `business.companies.new.tpl.${t.slug}.desc`,
+}));
+
+// ─── dispatch table ──────────────────────────────────────────────────────
+
 const HANDLERS: Handler[] = [
-  // Optional: keep health mock so UI works if API is down during pure layout work.
-  // { match: exact("/health", "GET"), handle: () => ({ body: { status: "ok", _mock: true } }) },
+  // ── meta ──
+  { match: exact("/health", "GET"), handle: () => ({ body: { status: "ok", _mock: true } }) },
+  { match: exact("/v1/me", "GET"),  handle: () => ({ body: ME }) },
+  {
+    match: exact("/v1/templates", "GET"),
+    handle: () => ({ body: { items: COMPANY_TEMPLATES, total: COMPANY_TEMPLATES.length, _mock: true } }),
+  },
+  {
+    // Provision-progress polling. Mocked companies are born "running", so any
+    // operation id a caller happens to hold is immediately done.
+    match: rx(/^\/v1\/operations\/([^/]+)$/),
+    handle: () => ({ body: { status: "done", _mock: true } }),
+  },
+
+  // ── catalog (legacy single-tenant view, kept for back-compat) ──
+  {
+    match: exact("/v1/depts", "GET"),
+    handle: () => ({
+      body: {
+        items: DEPT_CATALOG.filter((d) => d.source_type === "builtin").map((d) => ({
+          id: d.id, name: d.name, source_type: d.source_type,
+          role_count: d.role_count, tier_breakdown: d.tier_breakdown,
+        })),
+        total: DEPT_CATALOG.filter((d) => d.source_type === "builtin").length,
+        _mock: true,
+      },
+    }),
+  },
+
+  // ── companies (multi-company) ──
+  {
+    match: exact("/v1/companies", "GET"),
+    handle: () => {
+      const items = COMPANIES.filter((c) => c.audience !== "solo");
+      return { body: { items, total: items.length, _mock: true } };
+    },
+  },
+  {
+    match: exact("/v1/companies", "POST"),
+    handle: (_p, _m, body) => {
+      const newCo = makeCompany((body ?? {}) as Partial<Company>, "business");
+      COMPANIES.push(newCo);
+      return { status: 201, body: newCo };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)$/),
+    handle: (_p, method, body, match) => {
+      const m = match as RegExpMatchArray;
+      const id = m[1];
+      const co = COMPANIES.find((c) => c.id === id);
+      if (!co) return { status: 404, body: { error: "company not found" } };
+      if (method === "GET") return { body: co };
+      if (method === "PATCH") {
+        Object.assign(co, body);
+        return { body: co };
+      }
+      if (method === "DELETE") {
+        COMPANIES.splice(COMPANIES.indexOf(co), 1);
+        return { body: { deleted: true } };
+      }
+      return { status: 405, body: { error: "method not allowed" } };
+    },
+  },
+
+  // ── company chat (Conversations tab) ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/chat$/),
+    handle: (_p, _m, body, match) => {
+      const cid = (match as RegExpMatchArray)[1];
+      const b = (body ?? {}) as { message?: string; dept_id?: string; session_id?: string };
+      const dept = DEPT_CATALOG.find((d) => d.id === b.dept_id);
+      return {
+        body: {
+          ok: true,
+          reply:
+            `【演示回复 · ${dept ? dept.name : "总控"}】已收到：「${b.message ?? ""}」。` +
+            "当前站点为纯前端演示（未接入后端），部署 FastAPI 后这里会由部门 Agent 真实作答。",
+          session_id: b.session_id ?? `mock-sess-${cid}`,
+          _mock: true,
+        },
+      };
+    },
+  },
+
+  // ── company depts ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/depts$/),
+    handle: (_p, method, body, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      if (method === "POST") {
+        // Install a marketplace/builtin dept into this company.
+        const co = COMPANIES.find((c) => c.id === cid);
+        if (!co) return { status: 404, body: { error: "company not found" } };
+        const deptId = (body as { dept_id?: string } | undefined)?.dept_id;
+        const dept = DEPT_CATALOG.find((d) => d.id === deptId);
+        if (!deptId || !dept) return { status: 400, body: { error: "未知的部门 id" } };
+        if (!co.dept_ids.includes(deptId)) co.dept_ids.push(deptId);
+        return { status: 201, body: { dept_id: deptId, company_id: cid, dept_ids: co.dept_ids } };
+      }
+      return { body: { items: companyDeptItems(cid), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/depts\/([^/]+)$/),
+    handle: (_p, method, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, did] = m;
+      if (method === "DELETE") {
+        const co = COMPANIES.find((c) => c.id === cid);
+        if (co) co.dept_ids = co.dept_ids.filter((x) => x !== did);
+        return { body: { deleted: true } };
+      }
+      const d = DEPT_CATALOG.find((x) => x.id === did);
+      if (!d) return { status: 404, body: { error: "dept not found" } };
+      return {
+        body: {
+          ...d,
+          company_id: cid,
+          agents: AGENTS.filter((a) => a.company_id === cid && a.dept_id === did),
+          tasks: TASKS.filter((t) => t.company_id === cid && t.dept_id === did),
+        },
+      };
+    },
+  },
+
+  // ── company agents ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/depts\/([^/]+)\/agents$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, did] = m;
+      return { body: { items: AGENTS.filter((a) => a.company_id === cid && a.dept_id === did), _mock: true } };
+    },
+  },
+
+  // ── company tasks ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/tasks$/),
+    handle: (_p, method, body, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      if (method === "GET") {
+        return { body: { items: TASKS.filter((t) => t.company_id === cid), _mock: true } };
+      }
+      if (method === "POST") {
+        const newTask = makeTask(cid, (body ?? {}) as Partial<Task>);
+        TASKS.push(newTask);
+        return { status: 201, body: newTask };
+      }
+      return { status: 405, body: { error: "method not allowed" } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/tasks\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, tid] = m;
+      const task = TASKS.find((t) => t.company_id === cid && t.id === tid);
+      if (!task) return { status: 404, body: { error: "task not found" } };
+      const artifacts = ARTIFACTS.filter((a) => task.artifact_ids.includes(a.id));
+      return { body: { ...task, artifacts } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/tasks\/([^/]+)\/timeline$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, tid] = m;
+      return { body: { items: ACTIVITY.filter((a) => a.company_id === cid && a.task_id === tid), _mock: true } };
+    },
+  },
+
+  // ── company artifacts ──
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/artifacts$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      return { body: { items: ARTIFACTS.filter((a) => a.company_id === cid), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/artifacts\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const [, cid, aid] = m;
+      const art = ARTIFACTS.find((a) => a.company_id === cid && a.id === aid);
+      if (!art) return { status: 404, body: { error: "artifact not found" } };
+      return { body: art };
+    },
+  },
+
+  // ── activity stream (cross-company) ──
+  {
+    match: exact("/v1/activity", "GET"),
+    handle: () => ({ body: { items: ACTIVITY, _mock: true } }),
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/activity$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const cid = m[1];
+      return { body: { items: ACTIVITY.filter((a) => a.company_id === cid), _mock: true } };
+    },
+  },
+
+  // ── marketplace ──
+  {
+    match: exact("/v1/marketplace", "GET"),
+    handle: () => ({ body: { items: DEPT_CATALOG, total: DEPT_CATALOG.length, _mock: true } }),
+  },
+  {
+    match: rx(/^\/v1\/marketplace\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const m = match as RegExpMatchArray;
+      const d = DEPT_CATALOG.find((x) => x.id === m[1]);
+      if (!d) return { status: 404, body: { error: "dept not found" } };
+      return { body: d };
+    },
+  },
+
+  // ── builder / dev (For Builders Studio) ──
+  // REST only — Studio's chat pane needs the Recruiter WS (real backend).
+  {
+    match: exact("/v1/dev/depts", "GET"),
+    handle: () => ({ body: { items: drafts.map(draftToCard), _mock: true } }),
+  },
+  {
+    match: exact("/v1/dev/depts", "POST"),
+    handle: () => {
+      const draft: BuilderDraft = { ...NEW_DRAFT, id: `d-${Date.now().toString(36)}` };
+      drafts.push(draft);
+      return { status: 201, body: draft };
+    },
+  },
+  {
+    match: rx(/^\/v1\/dev\/depts\/([^/]+)\/submit$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      const draft = drafts.find((d) => d.id === id);
+      if (!draft) return { status: 404, body: { error: "draft not found" } };
+      draft.state = "published";
+      return { body: draft };
+    },
+  },
+  {
+    match: rx(/^\/v1\/dev\/depts\/([^/]+)$/),
+    handle: (_p, method, body, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      const idx = drafts.findIndex((d) => d.id === id);
+      if (method === "GET") {
+        // Unknown id (incl. "new") starts a blank draft template.
+        return { body: idx >= 0 ? drafts[idx] : { ...NEW_DRAFT, id } };
+      }
+      if (idx < 0) return { status: 404, body: { error: "draft not found" } };
+      if (method === "PATCH") {
+        Object.assign(drafts[idx], body);
+        return { body: drafts[idx] };
+      }
+      if (method === "DELETE") {
+        drafts.splice(idx, 1);
+        return { body: { deleted: true } };
+      }
+      return { status: 405, body: { error: "method not allowed" } };
+    },
+  },
+
+  // ─── Solo lines（超级个体产线，复用 tenant_instance 后端，前端语义不同）──
+  // GET /v1/lines  → 该用户的所有 solo 产线 (audience=solo 的 companies)
+  {
+    match: exact("/v1/lines", "GET"),
+    handle: () => {
+      const lines = COMPANIES.filter((c) => c.audience === "solo");
+      return { body: { items: lines, total: lines.length, _mock: true } };
+    },
+  },
+  // GET /v1/lines/templates  → 6 个收入产线模板
+  {
+    match: exact("/v1/lines/templates", "GET"),
+    handle: () => ({ body: { items: LINE_TEMPLATES, total: LINE_TEMPLATES.length, _mock: true } }),
+  },
+  // POST /v1/lines  → 新建产线（等价于新建 audience=solo 的 company）
+  {
+    match: exact("/v1/lines", "POST"),
+    handle: (_p, _m, body) => {
+      const b = (body ?? {}) as Partial<Company>;
+      const tpl = LINE_TEMPLATES.find((t) => t.slug === b.template_slug) ?? LINE_TEMPLATES[0];
+      const newLine = makeCompany(
+        { ...b, template_slug: tpl.slug, dept_ids: tpl.dept_ids, emoji: b.emoji ?? tpl.emoji },
+        "solo",
+      );
+      COMPANIES.push(newLine);
+      return { status: 201, body: newLine };
+    },
+  },
+  // GET /v1/lines/:id  → 单产线详情
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      const line = COMPANIES.find((c) => c.id === id && c.audience === "solo");
+      if (!line) return { status: 404, body: { error: "line not found" } };
+      return { body: line };
+    },
+  },
+  // GET /v1/lines/:id/teammates  → 队友列表（按"组"分组 + 角色翻译）
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/teammates$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      const line = COMPANIES.find((c) => c.id === id && c.audience === "solo");
+      if (!line) return { status: 404, body: { error: "line not found" } };
+
+      const lineAgents = AGENTS.filter((a) => a.company_id === id);
+      const groups = line.dept_ids.map((deptId) => {
+        const dept = DEPT_CATALOG.find((d) => d.id === deptId);
+        const labels = GROUP_LABELS[line.template_slug]?.[deptId];
+        const deptAgents = lineAgents.filter((a) => a.dept_id === deptId);
+        return {
+          dept_id: deptId,
+          group_emoji: labels?.emoji ?? dept?.emoji ?? "📋",
+          label_key: labels?.label_key,                       // i18n key（前端 t() 翻译）
+          fallback_label: dept?.name ?? deptId,
+          teammates: deptAgents.map((a) => ({
+            ...a,
+            // 把人话叫法塞进 view model（前端 t() 翻译 title_key）
+            title_key:
+              a.team_role === "orchestrator" ? labels?.lead_title_key
+            : a.team_role === "builder"      ? labels?.helper_title_key
+            : a.team_role === "reviewer"     ? labels?.reviewer_title_key
+            : labels?.ops_title_key,
+            is_lead: a.team_role === "orchestrator",
+          })),
+        };
+      });
+      return { body: { groups, _mock: true } };
+    },
+  },
+  // GET/POST /v1/lines/:id/tasks  → 复用 task 数据
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/tasks$/),
+    handle: (_p, method, body, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      if (method === "POST") {
+        const newTask = makeTask(id, (body ?? {}) as Partial<Task>);
+        TASKS.push(newTask);
+        return { status: 201, body: newTask };
+      }
+      return { body: { items: TASKS.filter((t) => t.company_id === id), _mock: true } };
+    },
+  },
+  // GET /v1/lines/:id/artifacts  → 复用 artifact 数据
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/artifacts$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      return { body: { items: ARTIFACTS.filter((a) => a.company_id === id), _mock: true } };
+    },
+  },
+  // GET /v1/lines/:id/activity
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/activity$/),
+    handle: (_p, _m, _b, match) => {
+      const id = (match as RegExpMatchArray)[1];
+      return { body: { items: ACTIVITY.filter((a) => a.company_id === id), _mock: true } };
+    },
+  },
+  // GET /v1/leverage  → 跨产线杠杆 KPI 汇总
+  {
+    match: exact("/v1/leverage", "GET"),
+    handle: () => {
+      const lines = COMPANIES.filter((c) => c.audience === "solo" && c.state === "running");
+      const totalAgents = lines.reduce(
+        (sum, l) => sum + AGENTS.filter((a) => a.company_id === l.id).length,
+        0,
+      );
+      const kpi = {
+        output_count_30d: lines.reduce((s, l) => s + (l.output_count_30d ?? 0), 0),
+        hours_saved_30d: lines.reduce((s, l) => s + (l.hours_saved_30d ?? 0), 0),
+        revenue_30d: lines.reduce((s, l) => s + (l.revenue_30d ?? 0), 0),
+        // 简单平均 vs_last_month，按各产线收入加权
+        vs_last_month: 0.35,
+        active_lines: lines.length,
+        total_teammates: totalAgents,
+      };
+      return { body: kpi };
+    },
+  },
 ];
 
-void exact; // retain helper for future stubs
-void HANDLERS;
+function makeTask(companyId: string, b: Partial<Task>): Task {
+  return {
+    id: `t-${Date.now().toString(36)}`,
+    company_id: companyId,
+    dept_id: b.dept_id ?? "dept-pub",
+    title: b.title ?? "未命名任务",
+    brief: b.brief ?? "",
+    state: "pending",
+    progress: 0,
+    created_at: new Date().toISOString(),
+    deadline: b.deadline,
+    expected_artifacts: b.expected_artifacts ?? ["markdown"],
+    token_used: 0,
+    cost_yuan: 0,
+    artifact_ids: [],
+  };
+}
+
+// ─── public API ──────────────────────────────────────────────────────────
 
 export function isMockMode(): boolean {
   const v = import.meta.env.VITE_USE_MOCK;
@@ -50,11 +543,14 @@ export async function mockHandle(
   method: Method,
   body?: unknown,
 ): Promise<MockResponse | undefined> {
+  // Call sites carry query strings (`?user_id=...`) the handlers don't care
+  // about — match on the bare path.
+  const bare = path.split("?")[0];
   for (const h of HANDLERS) {
-    const m = h.match(path, method);
+    const m = h.match(bare, method);
     if (!m) continue;
     await new Promise((r) => setTimeout(r, SIMULATED_LATENCY_MS));
-    const res = h.handle(path, method, body, m as RegExpMatchArray | boolean);
+    const res = h.handle(bare, method, body, m as RegExpMatchArray | boolean);
     // eslint-disable-next-line no-console
     console.debug("[mock]", method, path, "→", res.status ?? 200);
     return res;
