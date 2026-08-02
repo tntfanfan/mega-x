@@ -56,3 +56,38 @@
   font-family: "Segoe UI", Tahoma, "Geeza Pro", "Noto Naskh Arabic",
     "Noto Sans Arabic", sans-serif;
 }
+
+/*
+ * Scrollbars — match the console dark-gold palette (bg / border-solid / primary).
+ * Firefox: scrollbar-color + scrollbar-width. Chromium/Safari: webkit pseudo-elements.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: theme("colors.border-solid") theme("colors.bg");
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: theme("colors.bg");
+}
+
+*::-webkit-scrollbar-thumb {
+  background: theme("colors.border-solid");
+  border-radius: 9999px;
+  border: 2px solid theme("colors.bg");
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: theme("colors.primary.dim");
+  border: 2px solid theme("colors.bg");
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: theme("colors.bg");
+}

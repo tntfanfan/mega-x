@@ -522,6 +522,8 @@
   "dev.studio.readiness.mcp-warn": "Glossary MCP not registered — declare before submitting",
   "dev.studio.readiness.danger": "No dangerous skill APIs",
   "dev.studio.readiness.cost": "Est. cost per task",
+  "dev.studio.publish.back": "← Back to develop",
+  "dev.studio.publish.hint": "Review readiness checks, then publish. Go back to develop if anything still fails.",
   "dev.studio.action.fork": "Fork official dept",
   "dev.studio.action.testdrive": "Test-drive",
   "dev.studio.action.testdrive-soon": "Sandbox lands in v1",

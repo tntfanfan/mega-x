@@ -336,6 +336,8 @@
   "dev.studio.readiness.mcp-warn": "لم يُسجَّل MCP الخاص بمعجم المصطلحات — صرّح به قبل الإرسال",
   "dev.studio.readiness.danger": "لا توجد واجهات skill خطيرة",
   "dev.studio.readiness.cost": "التكلفة التقديرية لكل مهمة",
+  "dev.studio.publish.back": "→ العودة إلى التطوير",
+  "dev.studio.publish.hint": "راجع عناصر الجاهزية ثم انشر. إن لم تكتمل، ارجع إلى التطوير لإكمالها.",
   "dev.studio.action.fork": "انسخ قسمًا رسميًا",
   "dev.studio.action.testdrive": "تجربة تشغيل",
   "dev.studio.action.testdrive-soon": "تصل البيئة المعزولة في v1",

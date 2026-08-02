@@ -522,6 +522,8 @@
   "dev.studio.readiness.mcp-warn": "术语库 MCP 未登记，提交前需声明",
   "dev.studio.readiness.danger": "无危险 skill API",
   "dev.studio.readiness.cost": "每任务预估成本",
+  "dev.studio.publish.back": "← 返回开发",
+  "dev.studio.publish.hint": "核对就绪项后即可上架。未达标时请先回到开发页继续完善。",
   "dev.studio.action.fork": "Fork 官方部门",
   "dev.studio.action.testdrive": "试跑",
   "dev.studio.action.testdrive-soon": "沙箱将在 v1 上线",

@@ -48,10 +48,11 @@ const DRAFT_STATE_COLOR: Record<string, string> = {
 // workflow.steps 按序竖排成流水线（带门禁标注）；不在流水线里的子 Agent
 // 挂在右侧一列（虚线 = 部长按需 spawn）。无 workflow 时退化为扇出布局。
 const NODE_W = 224;   // AgentNode w-56
-const COL_GAP = 96;
-const ROW_H = 168;
+const COL_GAP = 128;
+const ROW_H = 200;
+const FAN_GAP = 72;   // 无 workflow 时双列扇出的列间距
 const LEAD_POS = { x: 0, y: 0 };
-const STEP_Y0 = 200;
+const STEP_Y0 = 240;
 
 function buildCanvas(draft: BuilderDraft, leadNote: string): { nodes: Node[]; edges: Edge[] } {
   const lead: DraftAgent = draft.agents.find((a) => a.team_role === "orchestrator")
@@ -110,8 +111,8 @@ function buildCanvas(draft: BuilderDraft, leadNote: string): { nodes: Node[]; ed
     const position = steps.length
       ? { x: NODE_W + COL_GAP, y: STEP_Y0 + i * ROW_H }
       : {
-          x: (i % 2) * (NODE_W + 48) - (rest.length > 1 ? (NODE_W + 48) / 2 : 0),
-          y: STEP_Y0 - 20 + Math.floor(i / 2) * ROW_H,
+          x: (i % 2) * (NODE_W + FAN_GAP) - (rest.length > 1 ? (NODE_W + FAN_GAP) / 2 : 0),
+          y: STEP_Y0 + Math.floor(i / 2) * ROW_H,
         };
     nodes.push({
       id, type: "agent", draggable: true, position,
@@ -188,7 +189,8 @@ export default function DevStudio() {
   const toast = useToast();
   const [draft, setDraft] = useState<BuilderDraft | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [tab, setTab] = useState<string>("__canvas");
+  // develop = 文件/预览/对话；publish = 整页发布（就绪度）
+  const [view, setView] = useState<"develop" | "publish">("develop");
   const [userId, setUserId] = useState("user-dev-0001");
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -241,6 +243,7 @@ export default function DevStudio() {
   useEffect(() => {
     setDraft(null);
     setMessages([]);
+    setView("develop");
   }, [draftId]);
 
   useEffect(() => {
@@ -412,70 +415,85 @@ export default function DevStudio() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setTab("__readiness")}
-            title={t("dev.studio.readiness.title")}
-            className={`rounded-full px-2.5 py-1 text-[11px] border ${
-              blocked ? "border-spark-flare/40 text-spark-flare" : "border-spark-mint/40 text-spark-mint"
-            }`}
-          >
-            {t("dev.studio.readiness.title")} {passes}/{scoreTotal}
-          </button>
-          <button
-            type="button"
-            onClick={() => toast.info(t("dev.studio.action.stub"))}
-            className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-primary hover:text-primary"
-          >
-            {t("dev.studio.action.fork")}
-          </button>
-          <button
-            type="button"
-            disabled
-            title={t("dev.studio.action.testdrive-soon")}
-            className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-muted opacity-50 cursor-not-allowed"
-          >
-            {t("dev.studio.action.testdrive")}
-          </button>
-          <button
-            type="button"
-            disabled={blocked || draft.state === "published"}
-            title={blocked ? t("dev.studio.action.submit-blocked") : undefined}
-            onClick={onSubmit}
-            className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {submitting ? "…" : t("dev.studio.action.submit")}
-          </button>
+          {view === "publish" ? (
+            <button
+              type="button"
+              onClick={() => setView("develop")}
+              className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-primary hover:text-primary"
+            >
+              {t("dev.studio.publish.back")}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setView("publish")}
+                title={t("dev.studio.readiness.title")}
+                className={`rounded-full px-2.5 py-1 text-[11px] border ${
+                  blocked ? "border-spark-flare/40 text-spark-flare" : "border-spark-mint/40 text-spark-mint"
+                }`}
+              >
+                {t("dev.studio.readiness.title")} {passes}/{scoreTotal}
+              </button>
+              <button
+                type="button"
+                onClick={() => toast.info(t("dev.studio.action.stub"))}
+                className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-primary hover:text-primary"
+              >
+                {t("dev.studio.action.fork")}
+              </button>
+              <button
+                type="button"
+                disabled
+                title={t("dev.studio.action.testdrive-soon")}
+                className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-muted opacity-50 cursor-not-allowed"
+              >
+                {t("dev.studio.action.testdrive")}
+              </button>
+            </>
+          )}
         </div>
       </header>
 
-      {/* 三栏：文件（最左） | 节点图预览（中间） | 聊天（最右） */}
-      <div className="flex-1 flex min-h-0">
-        <FilesPanel draft={draft} width={filesWidth} />
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          onPointerDown={onFilesResizeStart}
-          className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -ms-1.5 relative z-10"
-          title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
+      {view === "publish" ? (
+        <PublishPage
+          draft={draft}
+          checks={checks}
+          passes={passes}
+          scoreTotal={scoreTotal}
+          blocked={blocked}
+          submitting={submitting}
+          onSubmit={onSubmit}
         />
-        <PreviewPane draft={draft} checks={checks} tab={tab} setTab={setTab} />
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          onPointerDown={onChatResizeStart}
-          className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -me-1.5 relative z-10"
-          title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
-        />
-        <VibeChat
-          width={chatWidth}
-          messages={messages}
-          onSend={onSend}
-          onCancel={onCancel}
-          busy={busy}
-          toolStatus={toolStatus}
-        />
-      </div>
+      ) : (
+        /* 三栏：文件（最左） | 节点图预览（中间） | 聊天（最右） */
+        <div className="flex-1 flex min-h-0">
+          <FilesPanel draft={draft} width={filesWidth} />
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onPointerDown={onFilesResizeStart}
+            className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -ms-1.5 relative z-10"
+            title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
+          />
+          <PreviewPane draft={draft} />
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onPointerDown={onChatResizeStart}
+            className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -me-1.5 relative z-10"
+            title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
+          />
+          <VibeChat
+            width={chatWidth}
+            messages={messages}
+            onSend={onSend}
+            onCancel={onCancel}
+            busy={busy}
+            toolStatus={toolStatus}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -564,33 +582,16 @@ function VibeChat({
   );
 }
 
-// ── middle: preview tabs（文件已拆成常驻左栏，这里只剩画布/就绪度）──────────
-function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; checks: Check[]; tab: string; setTab: (t: string) => void }) {
+// ── middle: 节点图预览（就绪度已挪到整页发布视图）──────────────────────────
+function PreviewPane({ draft }: { draft: BuilderDraft }) {
   const { t } = useTranslation();
-  const tabs: { key: string; label: string }[] = [
-    { key: "__canvas", label: t("dev.studio.tab.canvas") },
-    { key: "__readiness", label: t("dev.studio.tab.readiness") },
-  ];
-
   return (
     <main className="flex-1 min-w-0 flex flex-col min-h-0">
-      <div className="border-b border-border-solid px-4 flex gap-1 overflow-x-auto shrink-0">
-        {tabs.map((tb) => (
-          <button
-            key={tb.key}
-            type="button"
-            onClick={() => setTab(tb.key)}
-            className={`px-3 py-2 text-xs whitespace-nowrap border-b-2 -mb-px transition-colors ${
-              (tab === tb.key || (tb.key === "__canvas" && tab !== "__readiness"))
-                ? "border-primary text-primary" : "border-transparent text-body hover:text-primary"
-            }`}
-          >
-            {tb.label}
-          </button>
-        ))}
+      <div className="border-b border-border-solid px-4 py-2 text-xs text-muted shrink-0">
+        {t("dev.studio.tab.canvas")}
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
-        {tab === "__readiness" ? <Readiness checks={checks} /> : <DraftCanvas draft={draft} />}
+        <DraftCanvas draft={draft} />
       </div>
     </main>
   );
@@ -642,13 +643,13 @@ function DraftCanvas({ draft }: { draft: BuilderDraft }) {
             edges={edges}
             nodeTypes={NODE_TYPES}
             fitView
-            fitViewOptions={{ padding: 0.2 }}
+            fitViewOptions={{ padding: 0.32 }}
             minZoom={0.3}
             maxZoom={1.5}
             proOptions={{ hideAttribution: true }}
             style={{ background: "transparent" }}
           >
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="rgba(212, 168, 78, 0.15)" />
+            <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(212, 168, 78, 0.12)" />
           </ReactFlow>
         </ReactFlowProvider>
       </div>
@@ -840,23 +841,71 @@ function FileView({ file }: { file: DraftFile }) {
   );
 }
 
-function Readiness({ checks }: { checks: Check[] }) {
+function PublishPage({
+  draft, checks, passes, scoreTotal, blocked, submitting, onSubmit,
+}: {
+  draft: BuilderDraft;
+  checks: Check[];
+  passes: number;
+  scoreTotal: number;
+  blocked: boolean;
+  submitting: boolean;
+  onSubmit: () => void;
+}) {
   const { t } = useTranslation();
+  const published = draft.state === "published";
   return (
-    <div className="p-4 max-w-xl space-y-2">
-      <h3 className="text-xs uppercase tracking-widest text-muted mb-1">{t("dev.studio.readiness.title")}</h3>
-      {checks.map((c) => {
-        const m = STATUS_META[c.status];
-        return (
-          <div key={c.key} className="flex items-start gap-2.5 rounded-md border border-border-solid bg-surface px-3 py-2">
-            <span className={`shrink-0 text-sm leading-5 ${m.color}`} aria-hidden>{m.icon}</span>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-body">{c.label}</div>
-              {c.detail && <div className="text-[11px] text-muted mt-0.5">{c.detail}</div>}
-            </div>
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <h2 className="font-display text-xl text-heading">
+              {t("dev.studio.readiness.title")}
+            </h2>
+            <p className="text-sm text-muted mt-1">
+              {t("dev.studio.publish.hint")}
+            </p>
           </div>
-        );
-      })}
+          <div className={`rounded-full px-3 py-1 text-sm border shrink-0 ${
+            blocked ? "border-spark-flare/40 text-spark-flare" : "border-spark-mint/40 text-spark-mint"
+          }`}>
+            {passes}/{scoreTotal}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {checks.map((c) => {
+            const m = STATUS_META[c.status];
+            return (
+              <div key={c.key} className="flex items-start gap-2.5 rounded-md border border-border-solid bg-surface px-4 py-3">
+                <span className={`shrink-0 text-sm leading-5 ${m.color}`} aria-hidden>{m.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-body">{c.label}</div>
+                  {c.detail && <div className="text-[11px] text-muted mt-0.5">{c.detail}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            type="button"
+            disabled={blocked || published}
+            title={blocked ? t("dev.studio.action.submit-blocked") : undefined}
+            onClick={onSubmit}
+            className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {submitting ? "…" : t("dev.studio.action.submit")}
+          </button>
+          {blocked && (
+            <span className="text-xs text-spark-flare">{t("dev.studio.action.submit-blocked")}</span>
+          )}
+          {published && !blocked && (
+            <span className="text-xs text-spark-mint">{t("dev.dept.state.published")}</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
