@@ -23,6 +23,9 @@ export default function Conversations() {
   const [sending, setSending] = useState(false);
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [turns, setTurns] = useState<Turn[]>([]);
+  // provisioning = dept install/remove rebuilding the container; the backend
+  // now waits for the reconcile before invoking, so keep the input usable.
+  const canChat = company.state === "running" || company.state === "provisioning";
 
   const send = async () => {
     const msg = input.trim();
@@ -105,21 +108,23 @@ export default function Conversations() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
           placeholder="输入消息…"
-          disabled={sending || company.state !== "running"}
+          disabled={sending || !canChat}
           className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
         />
         <button
           type="button"
           onClick={() => void send()}
-          disabled={sending || !input.trim() || company.state !== "running"}
+          disabled={sending || !input.trim() || !canChat}
           className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
           {sending ? "…" : "发送"}
         </button>
       </div>
-      {company.state !== "running" && (
+      {company.state === "provisioning" ? (
+        <p className="text-xs text-muted">实例重建中（安装/移除部门后约需 1 分钟）——可以直接发消息，就绪后会自动送达</p>
+      ) : company.state !== "running" ? (
         <p className="text-xs text-muted">实例状态：{company.state}（就绪后可对话）</p>
-      )}
+      ) : null}
     </section>
   );
 }

@@ -656,87 +656,147 @@ function DraftCanvas({ draft }: { draft: BuilderDraft }) {
   );
 }
 
-// ── files explorer: 主 Agent / 子 Agent / Skills 分组文件树 ──────────────────
-interface FileGroup { key: string; label: string; icon: string; files: DraftFile[] }
+// ── files explorer: 按 dept-* 目录契约（dept-drama 形态）分组 ────────────────
+// 部门根目录 = 部长（主 Agent）的 bootstrap MDs；agents / config / hooks /
+// mcp / skills 五个标准目录后端保证每次创建都存在（即使为空），这里恒常
+// 显示；子 Agent 全部挂在 agents/<slug>/ 下。
+const STD_DIRS = ["agents", "config", "hooks", "mcp", "skills"] as const;
+type StdDir = (typeof STD_DIRS)[number];
+const DIR_ICON: Record<StdDir, string> = {
+  agents: "🤖", config: "⚙️", hooks: "🪝", mcp: "🔌", skills: "🧩",
+};
 
-function groupDraftFiles(draft: BuilderDraft, leadFallback: string): FileGroup[] {
-  const nameBySlug = new Map(draft.agents.map((a) => [a.slug, a.display_name]));
+interface AgentGroup { slug: string; label: string; files: DraftFile[] }
+interface DirSection { dir: StdDir; files: DraftFile[]; agents: AgentGroup[] }
+
+function groupDraftFiles(draft: BuilderDraft): { lead: DraftFile[]; dirs: DirSection[] } {
   const lead: DraftFile[] = [];
-  const byAgent = new Map<string, DraftFile[]>();
-  const skills: DraftFile[] = [];
+  const byDir = new Map<string, DraftFile[]>(STD_DIRS.map((d) => [d, []]));
   for (const f of draft.files) {
-    if (f.name.startsWith("agents/")) {
+    const top = f.name.includes("/") ? f.name.split("/")[0] : "";
+    const bucket = byDir.get(top);
+    if (bucket) bucket.push(f);
+    else lead.push(f);
+  }
+  const nameBySlug = new Map(draft.agents.map((a) => [a.slug, a.display_name]));
+  const dirs: DirSection[] = STD_DIRS.map((dir) => {
+    const files = byDir.get(dir)!;
+    if (dir !== "agents") return { dir, files, agents: [] };
+    const byAgent = new Map<string, DraftFile[]>();
+    for (const f of files) {
       const slug = f.name.split("/")[1] ?? "";
       if (!byAgent.has(slug)) byAgent.set(slug, []);
       byAgent.get(slug)!.push(f);
-    } else if (f.name.startsWith("skills/")) {
-      skills.push(f);
-    } else {
-      lead.push(f);
     }
-  }
-  const leadAgent = draft.agents.find((a) => a.team_role === "orchestrator");
-  const groups: FileGroup[] = [{
-    key: "__lead",
-    label: leadAgent?.display_name || leadFallback,
-    icon: draft.emoji || "👑",
-    files: lead,
-  }];
-  for (const [slug, files] of [...byAgent.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-    groups.push({ key: slug, label: nameBySlug.get(slug) || slug, icon: "🤖", files });
-  }
-  if (skills.length) {
-    groups.push({ key: "__skills", label: "Skills", icon: "🧩", files: skills });
-  }
-  return groups.filter((g) => g.files.length > 0);
+    const agents: AgentGroup[] = [...byAgent.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([slug, fs]) => ({ slug, label: nameBySlug.get(slug) || slug, files: fs }));
+    return { dir, files, agents };
+  });
+  return { lead, dirs };
+}
+
+function FileBtn({
+  file, selected, indent, label, onSelect,
+}: {
+  file: DraftFile; selected: boolean; indent: "md" | "lg"; label: string;
+  onSelect: (name: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(file.name)}
+      title={file.name}
+      className={`w-full text-start ${indent === "lg" ? "ps-9" : "ps-7"} pe-3 py-1 text-xs font-mono truncate transition-colors ${
+        selected
+          ? "text-primary bg-primary/10 border-e-2 border-primary"
+          : "text-body hover:text-primary hover:bg-surface"
+      }`}
+    >
+      {label}
+    </button>
+  );
 }
 
 function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; initialFile?: string }) {
   const { t } = useTranslation();
   const leadFallback = t("dev.studio.files.lead", { defaultValue: "部长（主 Agent）" });
-  const groups = useMemo(() => groupDraftFiles(draft, leadFallback), [draft, leadFallback]);
+  const { lead, dirs } = useMemo(() => groupDraftFiles(draft), [draft]);
   const [selected, setSelected] = useState<string | null>(initialFile ?? null);
   const file =
     draft.files.find((f) => f.name === selected)
     ?? draft.files.find((f) => f.name === "AGENTS.md")
     ?? draft.files[0];
+  const leadAgent = draft.agents.find((a) => a.team_role === "orchestrator");
 
-  if (!file) {
-    return <div className="p-6"><EmptyState icon="📄" title={t("dev.studio.files.empty", { defaultValue: "还没有文件——先和 Recruiter 聊出一版草稿" })} /></div>;
-  }
-
-  const baseName = (n: string) => n.split("/").pop() ?? n;
+  const emptyRow = (
+    <div className="ps-7 pe-3 py-1 text-xs text-dim italic">
+      {t("dev.studio.files.dir-empty", { defaultValue: "（空）" })}
+    </div>
+  );
 
   return (
     <div className="h-full flex min-h-0">
-      <aside className="w-44 shrink-0 border-e border-border-solid overflow-y-auto py-2">
-        {groups.map((g) => (
-          <div key={g.key} className="mb-1.5">
-            <div className="px-3 py-1 flex items-center gap-1.5 text-[11px] text-muted uppercase tracking-wider truncate" title={g.label}>
-              <span>{g.icon}</span>
-              <span className="truncate">{g.label}</span>
-              <span className="text-dim">{g.files.length}</span>
+      <aside className="w-48 shrink-0 border-e border-border-solid overflow-y-auto py-2">
+        <div className="mb-1.5">
+          <div
+            className="px-3 py-1 flex items-center gap-1.5 text-[11px] text-muted uppercase tracking-wider truncate"
+            title={leadAgent?.display_name || leadFallback}
+          >
+            <span>{draft.emoji || "👑"}</span>
+            <span className="truncate">{leadAgent?.display_name || leadFallback}</span>
+            <span className="text-dim">{lead.length}</span>
+          </div>
+          {lead.length ? lead.map((f) => (
+            <FileBtn
+              key={f.name} file={f} indent="md" label={f.name}
+              selected={f.name === file?.name} onSelect={setSelected}
+            />
+          )) : emptyRow}
+        </div>
+        {dirs.map((sec) => (
+          <div key={sec.dir} className="mb-1.5">
+            <div className="px-3 py-1 flex items-center gap-1.5 text-[11px] text-muted tracking-wider truncate">
+              <span>{DIR_ICON[sec.dir]}</span>
+              <span className="truncate font-mono">{sec.dir}/</span>
+              <span className="text-dim">{sec.files.length}</span>
             </div>
-            {g.files.map((f) => (
-              <button
-                key={f.name}
-                type="button"
-                onClick={() => setSelected(f.name)}
-                title={f.name}
-                className={`w-full text-start ps-7 pe-3 py-1 text-xs font-mono truncate transition-colors ${
-                  f.name === file.name
-                    ? "text-primary bg-primary/10 border-e-2 border-primary"
-                    : "text-body hover:text-primary hover:bg-surface"
-                }`}
-              >
-                {g.key === "__skills" ? f.name.replace(/^skills\//, "") : baseName(f.name)}
-              </button>
-            ))}
+            {sec.dir === "agents" ? (
+              sec.agents.length ? sec.agents.map((g) => (
+                <div key={g.slug}>
+                  <div className="ps-6 pe-3 py-1 flex items-center gap-1.5 text-[11px] text-muted truncate" title={g.label}>
+                    <span className="truncate font-mono">{g.slug}/</span>
+                    <span className="text-dim truncate">{g.label}</span>
+                  </div>
+                  {g.files.map((f) => (
+                    <FileBtn
+                      key={f.name} file={f} indent="lg"
+                      label={f.name.split("/").pop() ?? f.name}
+                      selected={f.name === file?.name} onSelect={setSelected}
+                    />
+                  ))}
+                </div>
+              )) : emptyRow
+            ) : (
+              sec.files.length ? sec.files.map((f) => (
+                <FileBtn
+                  key={f.name} file={f} indent="md"
+                  label={f.name.slice(sec.dir.length + 1)}
+                  selected={f.name === file?.name} onSelect={setSelected}
+                />
+              )) : emptyRow
+            )}
           </div>
         ))}
       </aside>
       <div className="flex-1 min-w-0">
-        <FileView file={file} />
+        {file ? (
+          <FileView file={file} />
+        ) : (
+          <div className="p-6">
+            <EmptyState icon="📄" title={t("dev.studio.files.empty", { defaultValue: "还没有文件——先和 Recruiter 聊出一版草稿" })} />
+          </div>
+        )}
       </div>
     </div>
   );

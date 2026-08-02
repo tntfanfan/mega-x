@@ -59,9 +59,17 @@ export default function DeptsView() {
 
   return (
     <section className="p-6 space-y-6">
-      <header className="space-y-1">
-        <h1 className="font-display text-2xl text-heading">{t("business.company.depts.title")}</h1>
-        <p className="text-sm text-muted">{t("business.company.depts.subtitle", { count: items.length })}</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div className="space-y-1">
+          <h1 className="font-display text-2xl text-heading">{t("business.company.depts.title")}</h1>
+          <p className="text-sm text-muted">{t("business.company.depts.subtitle", { count: items.length })}</p>
+        </div>
+        <Link
+          to={`/business/c/${company.id}/marketplace`}
+          className="rounded-md bg-primary text-bg px-4 py-1.5 text-sm font-medium hover:bg-accent"
+        >
+          + {t("business.company.depts.add")}
+        </Link>
       </header>
 
       {loading ? <ListSkeleton rows={6} /> : (
@@ -99,11 +107,9 @@ export default function DeptsView() {
               type="button"
               disabled={removing === d.id}
               onClick={() => removeDept(d)}
-              title={t("business.company.depts.remove")}
-              aria-label={t("business.company.depts.remove")}
-              className="rounded px-1 text-sm leading-none text-muted opacity-0 group-hover:opacity-100 hover:text-fusion transition disabled:opacity-50"
+              className="shrink-0 rounded text-xs py-1 px-3 border border-fusion/50 text-fusion hover:bg-fusion/10 transition-colors disabled:opacity-50"
             >
-              ✕
+              {removing === d.id ? t("business.company.depts.removing") : t("business.company.depts.remove")}
             </button>
           </div>
         ))}
