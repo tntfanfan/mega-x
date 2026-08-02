@@ -141,6 +141,45 @@ function computeReadiness(draft: BuilderDraft, t: (k: string) => string): Check[
 const CHAT_WIDTH_KEY = "dev.studio.chat-width";
 const CHAT_MIN_W = 280;
 const CHAT_MAX_W = 720;
+const FILES_WIDTH_KEY = "dev.studio.files-width";
+const FILES_MIN_W = 240;
+const FILES_MAX_W = 860;
+
+function loadPaneWidth(key: string, min: number, max: number, fallback: number): number {
+  const saved = Number(localStorage.getItem(key));
+  return Number.isFinite(saved) && saved >= min && saved <= max ? saved : fallback;
+}
+
+// side: 该栏贴在容器的哪一侧（start = 最左栏拖右边缘，end = 最右栏拖左边缘）。
+function usePaneResize(
+  width: number,
+  setWidth: (w: number) => void,
+  opts: { key: string; min: number; max: number; side: "start" | "end" },
+) {
+  const { key, min, max, side } = opts;
+  return useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    const rtl = getComputedStyle(document.documentElement).direction === "rtl";
+    // start 栏向中间（物理右/RTL 物理左）拖变宽；end 栏相反。
+    const dir = (side === "start" ? 1 : -1) * (rtl ? -1 : 1);
+    const clamp = (ev: PointerEvent) =>
+      Math.min(max, Math.max(min, startW + dir * (ev.clientX - startX)));
+    const onMove = (ev: PointerEvent) => setWidth(clamp(ev));
+    const onUp = (ev: PointerEvent) => {
+      localStorage.setItem(key, String(Math.round(clamp(ev))));
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.removeProperty("cursor");
+      document.body.style.removeProperty("user-select");
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, [width, setWidth, key, min, max, side]);
+}
 
 export default function DevStudio() {
   const { deptId } = useParams<{ deptId: string }>();
@@ -158,34 +197,19 @@ export default function DevStudio() {
   const [renameVal, setRenameVal] = useState("");
   const wsRef = useRef<RecruiterWs | null>(null);
   const streamingIdRef = useRef<string | null>(null);
-  const [chatWidth, setChatWidth] = useState<number>(() => {
-    const saved = Number(localStorage.getItem(CHAT_WIDTH_KEY));
-    return Number.isFinite(saved) && saved >= CHAT_MIN_W && saved <= CHAT_MAX_W ? saved : 420;
+  const [chatWidth, setChatWidth] = useState<number>(
+    () => loadPaneWidth(CHAT_WIDTH_KEY, CHAT_MIN_W, CHAT_MAX_W, 420),
+  );
+  const [filesWidth, setFilesWidth] = useState<number>(
+    () => loadPaneWidth(FILES_WIDTH_KEY, FILES_MIN_W, FILES_MAX_W, 460),
+  );
+  // 聊天在最右（end 侧），文件在最左（start 侧）
+  const onChatResizeStart = usePaneResize(chatWidth, setChatWidth, {
+    key: CHAT_WIDTH_KEY, min: CHAT_MIN_W, max: CHAT_MAX_W, side: "end",
   });
-
-  const onResizeStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startW = chatWidth;
-    // In RTL layouts the chat pane sits on the right, so dragging left widens it.
-    const dir = getComputedStyle(document.documentElement).direction === "rtl" ? -1 : 1;
-    const onMove = (ev: PointerEvent) => {
-      const w = Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, startW + dir * (ev.clientX - startX)));
-      setChatWidth(w);
-    };
-    const onUp = (ev: PointerEvent) => {
-      const w = Math.min(CHAT_MAX_W, Math.max(CHAT_MIN_W, startW + dir * (ev.clientX - startX)));
-      localStorage.setItem(CHAT_WIDTH_KEY, String(Math.round(w)));
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-      document.body.style.removeProperty("cursor");
-      document.body.style.removeProperty("user-select");
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-  }, [chatWidth]);
+  const onFilesResizeStart = usePaneResize(filesWidth, setFilesWidth, {
+    key: FILES_WIDTH_KEY, min: FILES_MIN_W, max: FILES_MAX_W, side: "start",
+  });
 
   // "new" is never used as a draft id — a fresh one is allocated server-side below.
   const draftId = deptId && deptId !== "new" ? deptId : null;
@@ -425,7 +449,24 @@ export default function DevStudio() {
         </div>
       </header>
 
+      {/* 三栏：文件（最左） | 节点图预览（中间） | 聊天（最右） */}
       <div className="flex-1 flex min-h-0">
+        <FilesPanel draft={draft} width={filesWidth} />
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onPointerDown={onFilesResizeStart}
+          className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -ms-1.5 relative z-10"
+          title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
+        />
+        <PreviewPane draft={draft} checks={checks} tab={tab} setTab={setTab} />
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onPointerDown={onChatResizeStart}
+          className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -me-1.5 relative z-10"
+          title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
+        />
         <VibeChat
           width={chatWidth}
           messages={messages}
@@ -434,20 +475,12 @@ export default function DevStudio() {
           busy={busy}
           toolStatus={toolStatus}
         />
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          onPointerDown={onResizeStart}
-          className="w-1.5 shrink-0 cursor-col-resize bg-transparent hover:bg-primary/30 active:bg-primary/50 transition-colors -ms-1.5 relative z-10"
-          title={t("dev.studio.chat.resize", { defaultValue: "拖动调整宽度" })}
-        />
-        <PreviewPane draft={draft} checks={checks} tab={tab} setTab={setTab} />
       </div>
     </div>
   );
 }
 
-// ── left: vibe chat ─────────────────────────────────────────────────────────
+// ── right: vibe chat ────────────────────────────────────────────────────────
 function VibeChat({
   width, messages, onSend, onCancel, busy, toolStatus,
 }: {
@@ -479,7 +512,7 @@ function VibeChat({
   return (
     <aside
       style={{ width }}
-      className="shrink-0 border-e border-border-solid flex flex-col min-h-0 bg-surface/40"
+      className="shrink-0 border-s border-border-solid flex flex-col min-h-0 bg-surface/40"
     >
       <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0">
         💬 {t("dev.studio.chat.title")}
@@ -531,17 +564,13 @@ function VibeChat({
   );
 }
 
-// ── right: preview tabs ─────────────────────────────────────────────────────
+// ── middle: preview tabs（文件已拆成常驻左栏，这里只剩画布/就绪度）──────────
 function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; checks: Check[]; tab: string; setTab: (t: string) => void }) {
   const { t } = useTranslation();
-  // skills 不再单独开 tab —— skills/<name>/SKILL.md 已归入文件树的 Skills 分组，
-  // 两处并存反而重复。旧状态兼容：文件名 / "__skills" 都归到文件页。
   const tabs: { key: string; label: string }[] = [
     { key: "__canvas", label: t("dev.studio.tab.canvas") },
-    { key: "__files", label: t("dev.studio.tab.files", { defaultValue: "文件" }) },
     { key: "__readiness", label: t("dev.studio.tab.readiness") },
   ];
-  const isFileTab = !tab.startsWith("__") || tab === "__skills";
 
   return (
     <main className="flex-1 min-w-0 flex flex-col min-h-0">
@@ -552,7 +581,7 @@ function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; chec
             type="button"
             onClick={() => setTab(tb.key)}
             className={`px-3 py-2 text-xs whitespace-nowrap border-b-2 -mb-px transition-colors ${
-              tab === tb.key || (tb.key === "__files" && isFileTab)
+              (tab === tb.key || (tb.key === "__canvas" && tab !== "__readiness"))
                 ? "border-primary text-primary" : "border-transparent text-body hover:text-primary"
             }`}
           >
@@ -561,13 +590,27 @@ function PreviewPane({ draft, checks, tab, setTab }: { draft: BuilderDraft; chec
         ))}
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
-        {tab === "__canvas" && <DraftCanvas draft={draft} />}
-        {(tab === "__files" || isFileTab) && (
-          <FilesExplorer draft={draft} initialFile={!tab.startsWith("__") ? tab : undefined} />
-        )}
-        {tab === "__readiness" && <Readiness checks={checks} />}
+        {tab === "__readiness" ? <Readiness checks={checks} /> : <DraftCanvas draft={draft} />}
       </div>
     </main>
+  );
+}
+
+// ── left: files panel（常驻最左栏）──────────────────────────────────────────
+function FilesPanel({ draft, width }: { draft: BuilderDraft; width: number }) {
+  const { t } = useTranslation();
+  return (
+    <aside
+      style={{ width }}
+      className="shrink-0 border-e border-border-solid flex flex-col min-h-0 bg-surface/40"
+    >
+      <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0">
+        📄 {t("dev.studio.tab.files", { defaultValue: "文件" })}
+      </div>
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <FilesExplorer draft={draft} />
+      </div>
+    </aside>
   );
 }
 
@@ -666,7 +709,7 @@ function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; initialFil
 
   return (
     <div className="h-full flex min-h-0">
-      <aside className="w-56 shrink-0 border-e border-border-solid overflow-y-auto py-2">
+      <aside className="w-44 shrink-0 border-e border-border-solid overflow-y-auto py-2">
         {groups.map((g) => (
           <div key={g.key} className="mb-1.5">
             <div className="px-3 py-1 flex items-center gap-1.5 text-[11px] text-muted uppercase tracking-wider truncate" title={g.label}>
