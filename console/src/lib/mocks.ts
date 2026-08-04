@@ -13,15 +13,15 @@
  * routed to it, flip VITE_USE_MOCK=false and rebuild — same call sites, no
  * refactor.
  *
- * Known gap: the Builders Studio chat rides the Recruiter WebSocket
- * (/v1/dev/recruiter/ws), which a fetch-level mock cannot intercept. Studio
- * draft load/save/submit below are mocked; the chat pane needs the real
- * backend.
+ * Builders Studio (`/v1/dev/*`) and marketplace (`/v1/marketplace*`) are
+ * intentionally NOT mocked: Studio chat needs the Recruiter WS (real draft
+ * ids `dept-*`), and marketplace must merge `user_depts/published` so
+ * third-party publishes show up. Those routes fall through to FastAPI.
  *
  * Matching note: paths are matched with the query string stripped —
- * call sites pass e.g. `/v1/dev/depts?user_id=...` and handlers declare
- * `/v1/dev/depts`. Mutations write to session-scoped stores so a created
- * company/line/task/draft shows up in subsequent GETs until reload.
+ * call sites pass e.g. `/v1/companies?…` and handlers declare bare paths.
+ * Mutations write to session-scoped stores so a created company/line/task
+ * shows up in subsequent GETs until reload.
  */
 
 import {
@@ -29,9 +29,6 @@ import {
   LINE_TEMPLATES, GROUP_LABELS,
   type Company, type Task,
 } from "./fixtures";
-import {
-  BUILDER_DRAFTS, NEW_DRAFT, draftToCard, type BuilderDraft,
-} from "./builderFixtures";
 
 const SIMULATED_LATENCY_MS = 80;
 
@@ -96,10 +93,7 @@ function makeCompany(b: Partial<Company>, audience: "business" | "solo"): Compan
 }
 
 // ─── session-scoped mutable stores ────────────────────────────────────────
-// COMPANIES / TASKS are mutated in place so every handler sees creations;
-// drafts get their own copy so fixtures stay pristine for other importers.
-
-const drafts: BuilderDraft[] = BUILDER_DRAFTS.map((d) => ({ ...d }));
+// COMPANIES / TASKS are mutated in place so every handler sees creations.
 
 /** Company templates for GET /v1/templates. Slugs must have i18n entries
  *  under `business.companies.new.tpl.<slug>.{name,desc}` (see zh/en/ar.json). */
@@ -328,66 +322,9 @@ const HANDLERS: Handler[] = [
     },
   },
 
-  // ── marketplace ──
-  {
-    match: exact("/v1/marketplace", "GET"),
-    handle: () => ({ body: { items: DEPT_CATALOG, total: DEPT_CATALOG.length, _mock: true } }),
-  },
-  {
-    match: rx(/^\/v1\/marketplace\/([^/]+)$/),
-    handle: (_p, _m, _b, match) => {
-      const m = match as RegExpMatchArray;
-      const d = DEPT_CATALOG.find((x) => x.id === m[1]);
-      if (!d) return { status: 404, body: { error: "dept not found" } };
-      return { body: d };
-    },
-  },
-
-  // ── builder / dev (For Builders Studio) ──
-  // REST only — Studio's chat pane needs the Recruiter WS (real backend).
-  {
-    match: exact("/v1/dev/depts", "GET"),
-    handle: () => ({ body: { items: drafts.map(draftToCard), _mock: true } }),
-  },
-  {
-    match: exact("/v1/dev/depts", "POST"),
-    handle: () => {
-      const draft: BuilderDraft = { ...NEW_DRAFT, id: `d-${Date.now().toString(36)}` };
-      drafts.push(draft);
-      return { status: 201, body: draft };
-    },
-  },
-  {
-    match: rx(/^\/v1\/dev\/depts\/([^/]+)\/submit$/),
-    handle: (_p, _m, _b, match) => {
-      const id = (match as RegExpMatchArray)[1];
-      const draft = drafts.find((d) => d.id === id);
-      if (!draft) return { status: 404, body: { error: "draft not found" } };
-      draft.state = "published";
-      return { body: draft };
-    },
-  },
-  {
-    match: rx(/^\/v1\/dev\/depts\/([^/]+)$/),
-    handle: (_p, method, body, match) => {
-      const id = (match as RegExpMatchArray)[1];
-      const idx = drafts.findIndex((d) => d.id === id);
-      if (method === "GET") {
-        // Unknown id (incl. "new") starts a blank draft template.
-        return { body: idx >= 0 ? drafts[idx] : { ...NEW_DRAFT, id } };
-      }
-      if (idx < 0) return { status: 404, body: { error: "draft not found" } };
-      if (method === "PATCH") {
-        Object.assign(drafts[idx], body);
-        return { body: drafts[idx] };
-      }
-      if (method === "DELETE") {
-        drafts.splice(idx, 1);
-        return { body: { deleted: true } };
-      }
-      return { status: 405, body: { error: "method not allowed" } };
-    },
-  },
+  // ── marketplace + builder /dev ──
+  // Unmocked — catalog merges roster ∪ user_depts/published (third-party).
+  // A fixture-only /v1/marketplace would hide Studio-published depts.
 
   // ─── Solo lines（超级个体产线，复用 tenant_instance 后端，前端语义不同）──
   // GET /v1/lines  → 该用户的所有 solo 产线 (audience=solo 的 companies)

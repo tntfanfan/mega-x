@@ -4,20 +4,21 @@
  */
 
 import { useOutletContext } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
-import type { Company } from "../../../lib/api";
+import type { Company, DeptCatalogItem } from "../../../lib/api";
 import { useToast } from "../../../components/ui/Toast";
 
 type Ctx = { company: Company };
-type Turn = { role: "user" | "assistant"; text: string; session_id?: string };
+type Turn = { role: "user" | "assistant"; text: string; session_id?: string; label?: string };
 
 export default function Conversations() {
   const { company } = useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
+  const [depts, setDepts] = useState<DeptCatalogItem[]>([]);
   const [deptId, setDeptId] = useState(company.dept_ids[0] ?? "");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -27,12 +28,51 @@ export default function Conversations() {
   // now waits for the reconcile before invoking, so keep the input usable.
   const canChat = company.state === "running" || company.state === "provisioning";
 
+  useEffect(() => {
+    api
+      .get<{ items: DeptCatalogItem[] }>(`/v1/companies/${company.id}/depts`)
+      .then((r) => {
+        setDepts(r.items);
+        if (r.items.length === 0) return;
+        // Keep current selection if still installed; otherwise pick the first.
+        setDeptId((cur) =>
+          r.items.some((d) => d.id === cur) ? cur : r.items[0].id,
+        );
+      })
+      .catch((e) =>
+        toast.error(
+          apiErrorMessage(
+            e,
+            t("business.company.conversations.depts-error", { defaultValue: "加载部门失败" }),
+          ),
+        ),
+      );
+  }, [company.id, toast, t]);
+
+  const selectedDept = useMemo(
+    () => depts.find((d) => d.id === deptId),
+    [depts, deptId],
+  );
+  const selectedDeptLabel = selectedDept
+    ? `${selectedDept.emoji ? `${selectedDept.emoji} ` : ""}${selectedDept.name}`
+    : deptId;
+
+  // Fallback options when the depts API hasn't loaded / failed — still chatable by id.
+  const selectOptions: { id: string; label: string }[] =
+    depts.length > 0
+      ? depts.map((d) => ({
+          id: d.id,
+          label: `${d.emoji ? `${d.emoji} ` : ""}${d.name}`,
+        }))
+      : company.dept_ids.map((id) => ({ id, label: id }));
+
   const send = async () => {
     const msg = input.trim();
     if (!msg || sending) return;
     setSending(true);
     setInput("");
-    setTurns((cur) => [...cur, { role: "user", text: msg }]);
+    const assistantLabel = selectedDept?.name || deptId || "Agent";
+    setTurns((cur) => [...cur, { role: "user", text: msg, label: "你" }]);
     try {
       const res = await api.post<{
         ok: boolean;
@@ -47,12 +87,17 @@ export default function Conversations() {
       if (res.session_id) setSessionId(res.session_id);
       setTurns((cur) => [
         ...cur,
-        { role: "assistant", text: res.reply || res.error || "(空回复)", session_id: res.session_id },
+        {
+          role: "assistant",
+          text: res.reply || res.error || "(空回复)",
+          session_id: res.session_id,
+          label: assistantLabel,
+        },
       ]);
       if (!res.ok) toast.error(res.error || t("business.company.conversations.send-error", { defaultValue: "对话失败" }));
     } catch (e) {
       const err = apiErrorMessage(e, "对话失败");
-      setTurns((cur) => [...cur, { role: "assistant", text: err }]);
+      setTurns((cur) => [...cur, { role: "assistant", text: err, label: assistantLabel }]);
       toast.error(err);
     } finally {
       setSending(false);
@@ -77,15 +122,19 @@ export default function Conversations() {
           onChange={(e) => { setDeptId(e.target.value); setSessionId(undefined); }}
           className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm"
         >
-          {company.dept_ids.map((id) => (
-            <option key={id} value={id}>{id}</option>
+          {selectOptions.map((d) => (
+            <option key={d.id} value={d.id}>{d.label}</option>
           ))}
         </select>
       </label>
 
       <div className="flex-1 min-h-[240px] border border-border-solid rounded bg-surface/50 p-4 space-y-3 overflow-y-auto">
         {turns.length === 0 && (
-          <p className="text-sm text-muted">向实例中的部门发消息，走真实 Gateway 对话。</p>
+          <p className="text-sm text-muted">
+            {selectedDept
+              ? `向「${selectedDeptLabel}」发消息，走真实 Gateway 对话。`
+              : "向实例中的部门发消息，走真实 Gateway 对话。"}
+          </p>
         )}
         {turns.map((turn, i) => (
           <div
@@ -95,7 +144,7 @@ export default function Conversations() {
             }`}
           >
             <span className="text-[10px] uppercase tracking-widest text-muted me-2">
-              {turn.role === "user" ? "你" : "Agent"}
+              {turn.label || (turn.role === "user" ? "你" : selectedDept?.name || "Agent")}
             </span>
             {turn.text}
           </div>
