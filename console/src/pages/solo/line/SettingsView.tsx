@@ -1,12 +1,33 @@
-import { useOutletContext } from "react-router-dom";
+import { useCallback, useState } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+
+import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company } from "../../../lib/api";
+import { useToast } from "../../../components/ui/Toast";
 
 type Ctx = { line: Company };
 
 export default function SettingsView() {
   const { line } = useOutletContext<Ctx>();
   const { t } = useTranslation();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+
+  const onDelete = useCallback(async () => {
+    if (!window.confirm(t("solo.line.settings.delete-confirm", { name: line.name }))) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/v1/lines/${line.id}`);
+      toast.info(t("solo.line.settings.deleted"));
+      navigate("/solo/overview");
+    } catch (err) {
+      toast.error(apiErrorMessage(err, t("solo.line.settings.delete-error")));
+      setDeleting(false);
+    }
+  }, [line.id, line.name, t, toast, navigate]);
+
   return (
     <section className="p-6 space-y-4 max-w-2xl">
       <header>
@@ -17,15 +38,20 @@ export default function SettingsView() {
         <Row label={t("solo.line.settings.template")} value={line.template_slug} mono />
         <Row label={t("solo.line.settings.state")} value={line.state} mono />
       </dl>
-      <div className="flex gap-2 pt-4 border-t border-border-solid">
-        <button className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:text-primary hover:border-primary">
-          {line.state === "running" ? t("solo.line.settings.pause") : t("solo.line.settings.resume")}
-        </button>
-        <button className="rounded-md border border-fusion/40 px-3 py-1.5 text-xs text-fusion hover:bg-fusion/10">
-          {t("solo.line.settings.delete")}
+      <div className="pt-4 border-t border-border-solid space-y-2">
+        <h3 className="text-xs uppercase tracking-widest text-fusion">
+          {t("solo.line.settings.danger-title")}
+        </h3>
+        <p className="text-xs text-muted">{t("solo.line.settings.danger-hint")}</p>
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          className="rounded-md border border-fusion/50 text-fusion px-4 py-1.5 text-sm hover:bg-fusion/10 transition disabled:opacity-50"
+        >
+          {deleting ? t("solo.line.settings.deleting") : t("solo.line.settings.delete")}
         </button>
       </div>
-      <p className="text-xs text-muted pt-4 border-t border-border-solid">{t("solo.line.settings.placeholder")}</p>
     </section>
   );
 }

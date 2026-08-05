@@ -354,14 +354,18 @@ const HANDLERS: Handler[] = [
       return { status: 201, body: newLine };
     },
   },
-  // GET /v1/lines/:id  → 单产线详情
+  // GET/DELETE /v1/lines/:id  → 单产线详情 / 删除产线
   {
     match: rx(/^\/v1\/lines\/([^/]+)$/),
-    handle: (_p, _m, _b, match) => {
+    handle: (_p, method, _b, match) => {
       const id = (match as RegExpMatchArray)[1];
-      const line = COMPANIES.find((c) => c.id === id && c.audience === "solo");
-      if (!line) return { status: 404, body: { error: "line not found" } };
-      return { body: line };
+      const idx = COMPANIES.findIndex((c) => c.id === id && c.audience === "solo");
+      if (idx < 0) return { status: 404, body: { error: "line not found" } };
+      if (method === "DELETE") {
+        COMPANIES.splice(idx, 1);
+        return { body: { deleted: true } };
+      }
+      return { body: COMPANIES[idx] };
     },
   },
   // GET /v1/lines/:id/teammates  → 队友列表（按"组"分组 + 角色翻译）
@@ -395,6 +399,55 @@ const HANDLERS: Handler[] = [
         };
       });
       return { body: { groups, _mock: true } };
+    },
+  },
+  // GET/POST /v1/lines/:id/depts — install teams on a solo line
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/depts$/),
+    handle: (_p, method, body, match) => {
+      const cid = (match as RegExpMatchArray)[1];
+      const co = COMPANIES.find((c) => c.id === cid && c.audience === "solo");
+      if (!co) return { status: 404, body: { error: "line not found" } };
+      if (method === "POST") {
+        const deptId = (body as { dept_id?: string } | undefined)?.dept_id;
+        const dept = DEPT_CATALOG.find((d) => d.id === deptId);
+        if (!deptId || !dept) return { status: 400, body: { error: "未知的部门 id" } };
+        if (!co.dept_ids.includes(deptId)) co.dept_ids.push(deptId);
+        return { status: 202, body: { dept_id: deptId, company_id: cid, dept_ids: co.dept_ids } };
+      }
+      return { body: { items: companyDeptItems(cid), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/depts\/([^/]+)$/),
+    handle: (_p, method, _b, match) => {
+      const [, cid, did] = match as RegExpMatchArray;
+      const co = COMPANIES.find((c) => c.id === cid && c.audience === "solo");
+      if (!co) return { status: 404, body: { error: "line not found" } };
+      if (method === "DELETE") {
+        co.dept_ids = co.dept_ids.filter((x) => x !== did);
+        return { status: 202, body: { removed: did, dept_ids: co.dept_ids } };
+      }
+      return { status: 405, body: { error: "method not allowed" } };
+    },
+  },
+  // POST /v1/lines/:id/chat
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/chat$/),
+    handle: (_p, _m, body, match) => {
+      const cid = (match as RegExpMatchArray)[1];
+      const b = (body ?? {}) as { message?: string; dept_id?: string; session_id?: string };
+      const dept = DEPT_CATALOG.find((d) => d.id === b.dept_id);
+      return {
+        body: {
+          ok: true,
+          reply:
+            `【演示回复 · ${dept ? dept.name : "团队"}】已收到：「${b.message ?? ""}」。` +
+            "当前站点为纯前端演示（未接入后端），部署 FastAPI 后这里会由部门 Agent 真实作答。",
+          session_id: b.session_id ?? `mock-sess-${cid}`,
+          _mock: true,
+        },
+      };
     },
   },
   // GET/POST /v1/lines/:id/tasks  → 复用 task 数据

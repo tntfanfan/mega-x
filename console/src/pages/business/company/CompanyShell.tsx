@@ -28,20 +28,37 @@ function useCompany(companyId: string | undefined): LoadState {
   useEffect(() => {
     if (!companyId) return;
     let cancelled = false;
-    Promise.all([
-      api.get<Company>(`/v1/companies/${companyId}`),
-      api.get<{ items: Company[] }>("/v1/companies"),
-    ])
-      .then(([co, all]) => {
-        if (!cancelled) setS({ kind: "ok", company: co, companies: all.items });
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
-        if (status === 404) setS({ kind: "not-found" });
-        else setS({ kind: "error", error: String(e) });
-      });
-    return () => { cancelled = true; };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let companiesCache: Company[] = [];
+
+    const load = (includeList = false) => {
+      const companyReq = api.get<Company>(`/v1/companies/${companyId}`);
+      const listReq = includeList || companiesCache.length === 0
+        ? api.get<{ items: Company[] }>("/v1/companies")
+        : Promise.resolve({ items: companiesCache });
+
+      Promise.all([companyReq, listReq])
+        .then(([co, all]) => {
+          if (cancelled) return;
+          companiesCache = all.items;
+          setS({ kind: "ok", company: co, companies: all.items });
+          if (co.state === "provisioning") {
+            timer = setTimeout(() => load(false), 3000);
+          }
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
+          if (status === 404) setS({ kind: "not-found" });
+          else setS({ kind: "error", error: String(e) });
+        });
+    };
+
+    load(true);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [companyId]);
 
   return s;

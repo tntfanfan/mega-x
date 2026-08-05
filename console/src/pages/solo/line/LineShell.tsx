@@ -24,14 +24,31 @@ function useLine(id: string | undefined): State {
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    api.get<Company>(`/v1/lines/${id}`)
-      .then((line) => { if (!cancelled) setS({ kind: "ok", line }); })
-      .catch((e) => {
-        if (cancelled) return;
-        const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
-        setS(status === 404 ? { kind: "not-found" } : { kind: "error", error: String(e) });
-      });
-    return () => { cancelled = true; };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = () => {
+      api.get<Company>(`/v1/lines/${id}`)
+        .then((line) => {
+          if (cancelled) return;
+          setS({ kind: "ok", line });
+          // Keep polling while the container is still coming up / rebuilding,
+          // otherwise the banner stays on「实例化中」after the backend is ready.
+          if (line.state === "provisioning") {
+            timer = setTimeout(load, 3000);
+          }
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
+          setS(status === 404 ? { kind: "not-found" } : { kind: "error", error: String(e) });
+        });
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [id]);
   return s;
 }
@@ -79,11 +96,13 @@ export default function LineShell() {
 function LineSidebar({ lineId }: { lineId: string }) {
   const { t } = useTranslation();
   const tabs = [
-    { key: "team",      to: "",          end: true,  label: t("solo.line.tab.team") },
-    { key: "portfolio", to: "portfolio", label: t("solo.line.tab.portfolio") },
-    { key: "timeline",  to: "timeline",  label: t("solo.line.tab.timeline") },
-    { key: "billing",   to: "billing",   label: t("solo.line.tab.billing") },
-    { key: "settings",  to: "settings",  label: t("solo.line.tab.settings") },
+    { key: "team",          to: "",              end: true,  label: t("solo.line.tab.team") },
+    { key: "conversations", to: "conversations", label: t("solo.line.tab.conversations") },
+    { key: "marketplace",   to: "marketplace",   label: t("solo.line.tab.marketplace") },
+    { key: "portfolio",     to: "portfolio",     label: t("solo.line.tab.portfolio") },
+    { key: "timeline",      to: "timeline",      label: t("solo.line.tab.timeline") },
+    { key: "billing",       to: "billing",       label: t("solo.line.tab.billing") },
+    { key: "settings",      to: "settings",      label: t("solo.line.tab.settings") },
   ];
   return (
     <aside className="w-44 shrink-0 border-r border-border-solid bg-surface/60 py-4">

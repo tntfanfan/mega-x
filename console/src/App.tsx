@@ -29,6 +29,8 @@ import SoloLinesList from "./pages/solo/lines/List";
 import SoloNewWizard from "./pages/solo/lines/NewWizard";
 import LineShell from "./pages/solo/line/LineShell";
 import TeamView from "./pages/solo/line/TeamView";
+import LineConversations from "./pages/solo/line/Conversations";
+import LineMarketplace from "./pages/solo/line/Marketplace";
 import PortfolioView from "./pages/solo/line/PortfolioView";
 import TimelineView from "./pages/solo/line/TimelineView";
 import BillingView from "./pages/solo/line/BillingView";
@@ -117,6 +119,8 @@ export default function App() {
           </Route>
           <Route path="l/:lineId" element={<LineShell />}>
             <Route index element={<TeamView />} />
+            <Route path="conversations" element={<LineConversations />} />
+            <Route path="marketplace" element={<LineMarketplace />} />
             <Route path="portfolio" element={<PortfolioView />} />
             <Route path="timeline" element={<TimelineView />} />
             <Route path="billing" element={<BillingView />} />
