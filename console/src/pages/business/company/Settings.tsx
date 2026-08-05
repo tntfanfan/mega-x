@@ -33,7 +33,7 @@ export default function Settings() {
       <dl className="text-sm space-y-2">
         <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.name")}</dt><dd className="text-body">{company.name}</dd></div>
         <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.template")}</dt><dd className="text-body font-mono">{company.template_slug}</dd></div>
-        <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.gateway-port")}</dt><dd className="text-body font-mono">{company.gateway_port}</dd></div>
+        <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.gateway-port")}</dt><dd className="text-body font-mono">{company.gateway_port ?? "—"}</dd></div>
         <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.dept-count")}</dt><dd className="text-body">{company.dept_ids.length}</dd></div>
         <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.token-30d")}</dt><dd className="text-body">{company.token_usage_30d.toLocaleString()}</dd></div>
       </dl>

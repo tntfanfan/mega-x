@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, DeptCatalogItem } from "../../../lib/api";
+import { Markdown } from "../../../components/ui/Markdown";
 import { useToast } from "../../../components/ui/Toast";
 
 type Ctx = { company: Company };
@@ -22,8 +23,10 @@ export default function Conversations() {
   const [deptId, setDeptId] = useState(company.dept_ids[0] ?? "");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [sessionId, setSessionId] = useState<string | undefined>();
-  const [turns, setTurns] = useState<Turn[]>([]);
+  // Per-department chat state — switching depts must not continue another
+  // department's session or interleave message history.
+  const [sessionsByDept, setSessionsByDept] = useState<Record<string, string>>({});
+  const [turnsByDept, setTurnsByDept] = useState<Record<string, Turn[]>>({});
   // provisioning = dept install/remove rebuilding the container; the backend
   // now waits for the reconcile before invoking, so keep the input usable.
   const canChat = company.state === "running" || company.state === "provisioning";
@@ -56,6 +59,7 @@ export default function Conversations() {
   const selectedDeptLabel = selectedDept
     ? `${selectedDept.emoji ? `${selectedDept.emoji} ` : ""}${selectedDept.name}`
     : deptId;
+  const turns = deptId ? turnsByDept[deptId] ?? [] : [];
 
   // Fallback options when the depts API hasn't loaded / failed — still chatable by id.
   const selectOptions: { id: string; label: string }[] =
@@ -68,11 +72,15 @@ export default function Conversations() {
 
   const send = async () => {
     const msg = input.trim();
-    if (!msg || sending) return;
+    const activeDept = deptId;
+    if (!msg || sending || !activeDept) return;
     setSending(true);
     setInput("");
-    const assistantLabel = selectedDept?.name || deptId || "Agent";
-    setTurns((cur) => [...cur, { role: "user", text: msg, label: "你" }]);
+    const assistantLabel = selectedDept?.name || activeDept || "Agent";
+    setTurnsByDept((cur) => ({
+      ...cur,
+      [activeDept]: [...(cur[activeDept] ?? []), { role: "user", text: msg, label: "你" }],
+    }));
     try {
       const res = await api.post<{
         ok: boolean;
@@ -81,23 +89,34 @@ export default function Conversations() {
         error?: string;
       }>(`/v1/companies/${company.id}/chat`, {
         message: msg,
-        dept_id: deptId || undefined,
-        session_id: sessionId,
+        dept_id: activeDept,
+        session_id: sessionsByDept[activeDept],
       });
-      if (res.session_id) setSessionId(res.session_id);
-      setTurns((cur) => [
+      if (res.session_id) {
+        setSessionsByDept((cur) => ({ ...cur, [activeDept]: res.session_id! }));
+      }
+      setTurnsByDept((cur) => ({
         ...cur,
-        {
-          role: "assistant",
-          text: res.reply || res.error || "(空回复)",
-          session_id: res.session_id,
-          label: assistantLabel,
-        },
-      ]);
+        [activeDept]: [
+          ...(cur[activeDept] ?? []),
+          {
+            role: "assistant",
+            text: res.reply || res.error || "(空回复)",
+            session_id: res.session_id,
+            label: assistantLabel,
+          },
+        ],
+      }));
       if (!res.ok) toast.error(res.error || t("business.company.conversations.send-error", { defaultValue: "对话失败" }));
     } catch (e) {
       const err = apiErrorMessage(e, "对话失败");
-      setTurns((cur) => [...cur, { role: "assistant", text: err, label: assistantLabel }]);
+      setTurnsByDept((cur) => ({
+        ...cur,
+        [activeDept]: [
+          ...(cur[activeDept] ?? []),
+          { role: "assistant", text: err, label: assistantLabel },
+        ],
+      }));
       toast.error(err);
     } finally {
       setSending(false);
@@ -119,7 +138,7 @@ export default function Conversations() {
         <div className="text-xs uppercase tracking-widest text-muted mb-1">部门</div>
         <select
           value={deptId}
-          onChange={(e) => { setDeptId(e.target.value); setSessionId(undefined); }}
+          onChange={(e) => setDeptId(e.target.value)}
           className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm"
         >
           {selectOptions.map((d) => (
@@ -139,14 +158,16 @@ export default function Conversations() {
         {turns.map((turn, i) => (
           <div
             key={i}
-            className={`text-sm whitespace-pre-wrap ${
-              turn.role === "user" ? "text-heading" : "text-body"
-            }`}
+            className={`text-sm ${turn.role === "user" ? "text-heading" : "text-body"}`}
           >
-            <span className="text-[10px] uppercase tracking-widest text-muted me-2">
+            <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
               {turn.label || (turn.role === "user" ? "你" : selectedDept?.name || "Agent")}
-            </span>
-            {turn.text}
+            </div>
+            {turn.role === "assistant" ? (
+              <Markdown text={turn.text} />
+            ) : (
+              <p className="leading-relaxed whitespace-pre-wrap">{turn.text}</p>
+            )}
           </div>
         ))}
       </div>

@@ -27,7 +27,7 @@ export interface Company {
   description?: string;
   template_slug: string;            // e.g. "mega-x-default" / "content-newsletter"
   state: CompanyState;
-  gateway_port: number;
+  gateway_port: number | null;  // null until host provisioner starts the container
   dept_ids: string[];               // 该公司启用的部门 id
   token_usage_30d: number;
   active_tasks: number;
