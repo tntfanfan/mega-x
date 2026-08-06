@@ -419,6 +419,13 @@ const HANDLERS: Handler[] = [
     },
   },
   {
+    match: rx(/^\/v1\/lines\/([^/]+)\/depts\/([^/]+)\/agents$/),
+    handle: (_p, _m, _b, match) => {
+      const [, cid, did] = match as RegExpMatchArray;
+      return { body: { items: AGENTS.filter((a) => a.company_id === cid && a.dept_id === did), _mock: true } };
+    },
+  },
+  {
     match: rx(/^\/v1\/lines\/([^/]+)\/depts\/([^/]+)$/),
     handle: (_p, method, _b, match) => {
       const [, cid, did] = match as RegExpMatchArray;
@@ -461,6 +468,23 @@ const HANDLERS: Handler[] = [
         return { status: 201, body: newTask };
       }
       return { body: { items: TASKS.filter((t) => t.company_id === id), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/tasks\/([^/]+)\/timeline$/),
+    handle: (_p, _m, _b, match) => {
+      const [, cid, tid] = match as RegExpMatchArray;
+      return { body: { items: ACTIVITY.filter((a) => a.company_id === cid && a.task_id === tid), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/tasks\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const [, cid, tid] = match as RegExpMatchArray;
+      const task = TASKS.find((t) => t.company_id === cid && t.id === tid);
+      if (!task) return { status: 404, body: { error: "task not found" } };
+      const artifacts = ARTIFACTS.filter((a) => task.artifact_ids.includes(a.id));
+      return { body: { ...task, artifacts } };
     },
   },
   // GET /v1/lines/:id/artifacts  → 复用 artifact 数据

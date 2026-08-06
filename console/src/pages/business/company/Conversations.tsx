@@ -1,9 +1,9 @@
 /**
- * Company conversations — real invoke adapter (R3).
- * POST /v1/companies/:id/chat → openclaw agent / Gateway WS RPC.
+ * Company chat panel — POST /v1/companies/:id/chat → openclaw agent / Gateway WS RPC.
+ *
+ * 独立路由已取消，嵌在「任务」页右侧（见 TasksList）。
  */
 
-import { useOutletContext } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -12,11 +12,14 @@ import type { Company, DeptCatalogItem } from "../../../lib/api";
 import { Markdown } from "../../../components/ui/Markdown";
 import { useToast } from "../../../components/ui/Toast";
 
-type Ctx = { company: Company };
 type Turn = { role: "user" | "assistant"; text: string; session_id?: string; label?: string };
 
-export default function Conversations() {
-  const { company } = useOutletContext<Ctx>();
+export interface ChatPanelProps {
+  company: Company;
+  className?: string;
+}
+
+export function ChatPanel({ company, className = "" }: ChatPanelProps) {
   const { t } = useTranslation();
   const toast = useToast();
   const [depts, setDepts] = useState<DeptCatalogItem[]>([]);
@@ -37,7 +40,6 @@ export default function Conversations() {
       .then((r) => {
         setDepts(r.items);
         if (r.items.length === 0) return;
-        // Keep current selection if still installed; otherwise pick the first.
         setDeptId((cur) =>
           r.items.some((d) => d.id === cur) ? cur : r.items[0].id,
         );
@@ -61,7 +63,6 @@ export default function Conversations() {
     : deptId;
   const turns = deptId ? turnsByDept[deptId] ?? [] : [];
 
-  // Fallback options when the depts API hasn't loaded / failed — still chatable by id.
   const selectOptions: { id: string; label: string }[] =
     depts.length > 0
       ? depts.map((d) => ({
@@ -124,35 +125,31 @@ export default function Conversations() {
   };
 
   return (
-    <section className="p-6 flex flex-col h-full max-w-3xl gap-4">
-      <header>
-        <h1 className="font-display text-2xl text-heading">
-          {t("business.company.conversations.title")}
-        </h1>
-        <p className="text-sm text-muted">
-          {t("business.company.conversations.subtitle")}
-        </p>
-      </header>
+    <div className={`flex flex-col h-full min-h-0 ${className}`}>
+      <div className="px-4 py-3 border-b border-border-solid shrink-0 space-y-2">
+        <div className="text-xs text-muted">{t("business.company.conversations.title")}</div>
+        <label className="block">
+          <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
+            {t("business.company.conversations.dept-label")}
+          </div>
+          <select
+            value={deptId}
+            onChange={(e) => setDeptId(e.target.value)}
+            className="w-full bg-surface border border-border-solid rounded px-3 py-1.5 text-sm"
+          >
+            {selectOptions.map((d) => (
+              <option key={d.id} value={d.id}>{d.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <label className="block max-w-xs">
-        <div className="text-xs uppercase tracking-widest text-muted mb-1">部门</div>
-        <select
-          value={deptId}
-          onChange={(e) => setDeptId(e.target.value)}
-          className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm"
-        >
-          {selectOptions.map((d) => (
-            <option key={d.id} value={d.id}>{d.label}</option>
-          ))}
-        </select>
-      </label>
-
-      <div className="flex-1 min-h-[240px] border border-border-solid rounded bg-surface/50 p-4 space-y-3 overflow-y-auto">
+      <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
         {turns.length === 0 && (
           <p className="text-sm text-muted">
             {selectedDept
-              ? `向「${selectedDeptLabel}」发消息，走真实 Gateway 对话。`
-              : "向实例中的部门发消息，走真实 Gateway 对话。"}
+              ? t("business.company.conversations.empty-with-dept", { name: selectedDeptLabel })
+              : t("business.company.conversations.empty")}
           </p>
         )}
         {turns.map((turn, i) => (
@@ -172,29 +169,31 @@ export default function Conversations() {
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
-          placeholder="输入消息…"
-          disabled={sending || !canChat}
-          className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
-        />
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={sending || !input.trim() || !canChat}
-          className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          {sending ? "…" : "发送"}
-        </button>
+      <div className="px-4 py-3 border-t border-border-solid shrink-0 space-y-2">
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+            placeholder={t("business.company.conversations.placeholder")}
+            disabled={sending || !canChat}
+            className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
+          />
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={sending || !input.trim() || !canChat}
+            className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {sending ? "…" : t("business.company.conversations.send")}
+          </button>
+        </div>
+        {company.state === "provisioning" ? (
+          <p className="text-xs text-muted">{t("business.company.conversations.provisioning")}</p>
+        ) : company.state !== "running" ? (
+          <p className="text-xs text-muted">{t("business.company.conversations.not-ready", { state: company.state })}</p>
+        ) : null}
       </div>
-      {company.state === "provisioning" ? (
-        <p className="text-xs text-muted">实例重建中（安装/移除部门后约需 1 分钟）——可以直接发消息，就绪后会自动送达</p>
-      ) : company.state !== "running" ? (
-        <p className="text-xs text-muted">实例状态：{company.state}（就绪后可对话）</p>
-      ) : null}
-    </section>
+    </div>
   );
 }

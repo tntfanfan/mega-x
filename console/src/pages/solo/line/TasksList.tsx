@@ -1,8 +1,7 @@
 /**
- * /business/c/:companyId/tasks — 任务 + 对话（左右分栏）。
+ * /solo/l/:lineId/tasks — 任务 + 对话（左右分栏）。
  *
- * 左：任务列表（筛选 / 搜索 / 派发）
- * 右：与部门的实时对话（原「对话」页）
+ * 与企业版 TasksList 同构；路径走 /v1/lines/:id/*。
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,7 +17,7 @@ import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
 import { ChatPanel } from "./Conversations";
 
-type Ctx = { company: Company };
+type Ctx = { line: Company };
 type StateFilter = TaskState | "all";
 
 const STATE_ORDER: TaskState[] = ["pending", "in_progress", "review", "done", "cancelled", "failed"];
@@ -32,7 +31,7 @@ const STATE_META: Record<TaskState, { emoji: string; color: string }> = {
 };
 
 export default function TasksList() {
-  const { company } = useOutletContext<Ctx>();
+  const { line } = useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -44,12 +43,12 @@ export default function TasksList() {
     let cancelled = false;
     setLoading(true);
     api
-      .get<{ items: Task[] }>(`/v1/companies/${company.id}/tasks`)
+      .get<{ items: Task[] }>(`/v1/lines/${line.id}/tasks`)
       .then((r) => { if (!cancelled) setTasks(r.items); })
-      .catch((e) => { if (!cancelled) toast.error(apiErrorMessage(e, t("business.company.tasks.load-error"))); })
+      .catch((e) => { if (!cancelled) toast.error(apiErrorMessage(e, t("solo.line.tasks.load-error"))); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [company.id, toast, t]);
+  }, [line.id, toast, t]);
 
   const stateOptions = useMemo<SegmentedOption<StateFilter>[]>(() => {
     const counts = tasks.reduce<Record<string, number>>((m, tk) => {
@@ -77,19 +76,18 @@ export default function TasksList() {
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
       <header className="px-6 py-3 border-b border-border-solid bg-surface/60 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="space-y-0.5">
-          <h1 className="font-display text-lg text-heading">{t("business.company.tasks.title")}</h1>
-          <p className="text-xs text-muted">{t("business.company.tasks.subtitle")}</p>
+          <h1 className="font-display text-lg text-heading">{t("solo.line.tasks.title")}</h1>
+          <p className="text-xs text-muted">{t("solo.line.tasks.subtitle")}</p>
         </div>
         <Link
-          to={`/business/c/${company.id}/tasks/new`}
+          to={`/solo/l/${line.id}/tasks/new`}
           className="rounded-md bg-primary text-bg px-4 py-1.5 text-sm font-medium hover:bg-accent transition"
         >
-          {t("business.company.tasks.dispatch-new")}
+          {t("solo.line.tasks.dispatch-new")}
         </Link>
       </header>
 
       <div className="flex flex-1 min-h-0">
-        {/* Left — task list */}
         <div className="flex-1 min-w-0 flex flex-col border-e border-border-solid">
           {loading ? (
             <div className="p-4"><ListSkeleton rows={4} /></div>
@@ -97,13 +95,13 @@ export default function TasksList() {
             <div className="p-6">
               <EmptyState
                 icon="⚡"
-                title={t("business.company.tasks.empty")}
+                title={t("solo.line.tasks.empty")}
                 action={
                   <Link
-                    to={`/business/c/${company.id}/tasks/new`}
+                    to={`/solo/l/${line.id}/tasks/new`}
                     className="rounded-md bg-primary text-bg px-4 py-1.5 text-sm font-medium hover:bg-accent transition"
                   >
-                    {t("business.company.tasks.dispatch-new")}
+                    {t("solo.line.tasks.dispatch-new")}
                   </Link>
                 }
               />
@@ -115,19 +113,19 @@ export default function TasksList() {
                 <SearchInput
                   value={query}
                   onChange={setQuery}
-                  placeholder={t("business.company.tasks.search-placeholder")}
+                  placeholder={t("solo.line.tasks.search-placeholder")}
                   className="w-full sm:w-56"
                 />
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
                 {filtered.length === 0 ? (
                   <div className="p-4">
-                    <EmptyState icon="🔍" title={t("business.company.tasks.no-match")} hint={t("common.filter-hint")} />
+                    <EmptyState icon="🔍" title={t("solo.line.tasks.no-match")} hint={t("common.filter-hint")} />
                   </div>
                 ) : (
                   <div className="divide-y divide-border-solid">
                     {filtered.map((task) => (
-                      <TaskRow key={task.id} task={task} companyId={company.id} />
+                      <TaskRow key={task.id} task={task} lineId={line.id} />
                     ))}
                   </div>
                 )}
@@ -136,22 +134,21 @@ export default function TasksList() {
           )}
         </div>
 
-        {/* Right — chat */}
         <aside className="w-full max-w-md shrink-0 flex flex-col min-h-0 bg-surface/40">
-          <ChatPanel company={company} />
+          <ChatPanel line={line} />
         </aside>
       </div>
     </div>
   );
 }
 
-function TaskRow({ task, companyId }: { task: Task; companyId: string }) {
+function TaskRow({ task, lineId }: { task: Task; lineId: string }) {
   const { t } = useTranslation();
   const meta = STATE_META[task.state];
 
   return (
     <Link
-      to={`/business/c/${companyId}/tasks/${task.id}`}
+      to={`/solo/l/${lineId}/tasks/${task.id}`}
       className="block px-4 py-3 hover:bg-surface-2 transition-colors"
     >
       <div className="flex items-start gap-3">

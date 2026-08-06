@@ -12,13 +12,11 @@ import BusinessOverview from "./pages/business/Overview";
 import CompaniesList from "./pages/business/companies/List";
 import NewWizard from "./pages/business/companies/NewWizard";
 import CompanyShell from "./pages/business/company/CompanyShell";
-import CanvasView from "./pages/business/company/CanvasView";
 import DeptsView from "./pages/business/company/DeptsView";
 import TasksList from "./pages/business/company/TasksList";
 import TaskDetail from "./pages/business/company/TaskDetail";
 import TaskNew from "./pages/business/company/TaskNew";
 import Outputs from "./pages/business/company/Outputs";
-import Conversations from "./pages/business/company/Conversations";
 import CompanyMarketplace from "./pages/business/company/Marketplace";
 import Settings from "./pages/business/company/Settings";
 
@@ -29,7 +27,9 @@ import SoloLinesList from "./pages/solo/lines/List";
 import SoloNewWizard from "./pages/solo/lines/NewWizard";
 import LineShell from "./pages/solo/line/LineShell";
 import TeamView from "./pages/solo/line/TeamView";
-import LineConversations from "./pages/solo/line/Conversations";
+import SoloTasksList from "./pages/solo/line/TasksList";
+import SoloTaskNew from "./pages/solo/line/TaskNew";
+import SoloTaskDetail from "./pages/solo/line/TaskDetail";
 import LineMarketplace from "./pages/solo/line/Marketplace";
 import PortfolioView from "./pages/solo/line/PortfolioView";
 import TimelineView from "./pages/solo/line/TimelineView";
@@ -98,13 +98,13 @@ export default function App() {
 
           {/* 单公司沉浸视图 */}
           <Route path="c/:companyId" element={<CompanyShell />}>
-            <Route index element={<CanvasView />} />              {/* /business/c/:id/ → Canvas */}
-            <Route path="depts" element={<DeptsView />} />
+            <Route index element={<DeptsView />} />               {/* /business/c/:id/ → 部门（图+列表）*/}
+            <Route path="depts" element={<Navigate to=".." replace />} />
             <Route path="tasks" element={<TasksList />} />
             <Route path="tasks/new" element={<TaskNew />} />
             <Route path="tasks/:taskId" element={<TaskDetail />} />
             <Route path="outputs" element={<Outputs />} />
-            <Route path="conversations" element={<Conversations />} />
+            <Route path="conversations" element={<Navigate to="../tasks" replace />} />
             <Route path="marketplace" element={<CompanyMarketplace />} />
             <Route path="settings" element={<Settings />} />
           </Route>
@@ -118,8 +118,11 @@ export default function App() {
             <Route path="new" element={<SoloNewWizard />} />
           </Route>
           <Route path="l/:lineId" element={<LineShell />}>
-            <Route index element={<TeamView />} />
-            <Route path="conversations" element={<LineConversations />} />
+            <Route index element={<TeamView />} />               {/* /solo/l/:id/ → 团队（图+列表）*/}
+            <Route path="tasks" element={<SoloTasksList />} />
+            <Route path="tasks/new" element={<SoloTaskNew />} />
+            <Route path="tasks/:taskId" element={<SoloTaskDetail />} />
+            <Route path="conversations" element={<Navigate to="../tasks" replace />} />
             <Route path="marketplace" element={<LineMarketplace />} />
             <Route path="portfolio" element={<PortfolioView />} />
             <Route path="timeline" element={<TimelineView />} />

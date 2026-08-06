@@ -1,3 +1,7 @@
+/**
+ * /solo/l/:lineId/tasks/:taskId — 任务详情（与企业版同构，走 /v1/lines）。
+ */
+
 import { useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -7,7 +11,7 @@ import type { Company, Task, Artifact, ActivityEvent, TaskState } from "../../..
 import { downloadArtifact } from "../../../lib/artifacts";
 import { useToast } from "../../../components/ui/Toast";
 
-type Ctx = { company: Company };
+type Ctx = { line: Company };
 
 const TYPE_ICON: Record<string, string> = {
   markdown: "📄", code: "📑", json: "📑",
@@ -27,7 +31,7 @@ const LIVE_STATES = new Set<TaskState>(["pending", "in_progress"]);
 const POLL_MS = 3000;
 
 export default function TaskDetail() {
-  const { company } = useOutletContext<Ctx>();
+  const { line } = useOutletContext<Ctx>();
   const { taskId } = useParams<{ taskId: string }>();
   const { t, i18n } = useTranslation();
   const toast = useToast();
@@ -42,8 +46,8 @@ export default function TaskDetail() {
 
     const load = (isPoll = false) => {
       Promise.all([
-        api.get<Task & { artifacts: Artifact[] }>(`/v1/companies/${company.id}/tasks/${taskId}`),
-        api.get<{ items: ActivityEvent[] }>(`/v1/companies/${company.id}/tasks/${taskId}/timeline`),
+        api.get<Task & { artifacts: Artifact[] }>(`/v1/lines/${line.id}/tasks/${taskId}`),
+        api.get<{ items: ActivityEvent[] }>(`/v1/lines/${line.id}/tasks/${taskId}/timeline`),
       ])
         .then(([tk, tl]) => {
           if (cancelled) return;
@@ -59,7 +63,7 @@ export default function TaskDetail() {
         })
         .catch((e) => {
           if (cancelled || isPoll) return;
-          toast.error(apiErrorMessage(e, t("business.company.tasks.detail.load-error")));
+          toast.error(apiErrorMessage(e, t("solo.line.tasks.detail.load-error")));
         });
     };
 
@@ -68,7 +72,7 @@ export default function TaskDetail() {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [company.id, taskId, toast, t]);
+  }, [line.id, taskId, toast, t]);
 
   if (!task) return <section className="p-6"><p className="text-body text-sm">{t("common.loading")}…</p></section>;
   const selected = task.artifacts.find((a) => a.id === selectedId) ?? task.artifacts[task.artifacts.length - 1];
@@ -77,21 +81,21 @@ export default function TaskDetail() {
 
   return (
     <section className="p-6 space-y-6">
-      <Link to={`/business/c/${company.id}/tasks`} className="text-xs text-muted hover:text-primary">{t("business.company.tasks.detail.back")}</Link>
+      <Link to={`/solo/l/${line.id}/tasks`} className="text-xs text-muted hover:text-primary">{t("solo.line.tasks.detail.back")}</Link>
 
       <header>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl text-heading">{task.title}</h1>
           <span className={`text-xs ${stateMeta.color}`}>
             {stateMeta.emoji} {t(`task.state.${task.state}`)}
-            {working ? ` · ${t("business.company.tasks.detail.working")}` : ""}
+            {working ? ` · ${t("solo.line.tasks.detail.working")}` : ""}
           </span>
         </div>
         <p className="text-sm text-muted mt-1">{task.brief}</p>
         <div className="mt-3 flex items-center gap-3 text-xs text-body">
           <span className="font-mono">{task.dept_id}</span>
           <span>·</span>
-          <span>{t("business.company.tasks.detail.progress", { percent: Math.round(task.progress * 100) })}</span>
+          <span>{t("solo.line.tasks.detail.progress", { percent: Math.round(task.progress * 100) })}</span>
           <span>·</span>
           <span>{task.token_used.toLocaleString()} tokens</span>
           <span>·</span>
@@ -100,14 +104,13 @@ export default function TaskDetail() {
       </header>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Timeline */}
         <div className="rounded-md border border-border-solid bg-surface p-4">
-          <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("business.company.tasks.detail.timeline")}</h2>
+          <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("solo.line.tasks.detail.timeline")}</h2>
           {timeline.length === 0 ? (
             <p className="text-sm text-muted">
               {working
-                ? t("business.company.tasks.detail.waiting")
-                : t("business.company.tasks.detail.no-timeline")}
+                ? t("solo.line.tasks.detail.waiting")
+                : t("solo.line.tasks.detail.no-timeline")}
             </p>
           ) : (
             <ul className="space-y-2 text-xs">
@@ -121,14 +124,13 @@ export default function TaskDetail() {
           )}
         </div>
 
-        {/* Artifacts */}
         <div className="rounded-md border border-border-solid bg-surface p-4">
-          <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("business.company.tasks.detail.artifacts", { count: task.artifacts.length })}</h2>
+          <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("solo.line.tasks.detail.artifacts", { count: task.artifacts.length })}</h2>
           {task.artifacts.length === 0 || !selected ? (
             <p className="text-sm text-muted">
               {working
-                ? t("business.company.tasks.detail.waiting-artifacts")
-                : t("business.company.tasks.detail.no-artifacts")}
+                ? t("solo.line.tasks.detail.waiting-artifacts")
+                : t("solo.line.tasks.detail.no-artifacts")}
             </p>
           ) : (
             <>

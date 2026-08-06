@@ -1,11 +1,8 @@
 /**
  * /business/c/:companyId/* — Single-company shell.
  *
- * 包裹所有单公司视图（Canvas / Depts / Tasks / Outputs / Conversations /
- * Marketplace / Settings）。结构：
- *   TopBar       公司切换器 + 公司名 + 状态徽章
- *   Sidebar      tab 切换 + 跨公司导航回链
- *   MainContent  各 tab 通过 react-router <Outlet/> 渲染
+ * 侧栏顺序：集市 → 部门 → 任务 → 产出 → 设置。
+ * 「部门」= 节点图 + 列表；「任务」= 任务列表 + 对话（原 Conversations 已并入）。
  */
 
 import { useEffect, useState } from "react";
@@ -129,12 +126,10 @@ function CompanyHeader({ company, companies }: { company: Company; companies: Co
 function CompanySidebar({ companyId }: { companyId: string }) {
   const { t } = useTranslation();
   const tabs: { key: string; to: string; end?: boolean; label: string }[] = [
-    { key: "canvas", to: ``, end: true, label: t("business.company.tab.canvas") },
-    { key: "depts", to: "depts", label: t("business.company.tab.depts") },
+    { key: "marketplace", to: "marketplace", label: t("business.company.tab.marketplace") },
+    { key: "depts", to: ``, end: true, label: t("business.company.tab.depts") },
     { key: "tasks", to: "tasks", label: t("business.company.tab.tasks") },
     { key: "outputs", to: "outputs", label: t("business.company.tab.outputs") },
-    { key: "conversations", to: "conversations", label: t("business.company.tab.conversations") },
-    { key: "marketplace", to: "marketplace", label: t("business.company.tab.marketplace") },
     { key: "settings", to: "settings", label: t("business.company.tab.settings") },
   ];
 

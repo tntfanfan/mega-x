@@ -35,15 +35,21 @@ export function HQNode({ data, selected }: NodeProps<HQNodeT>) {
 
       <div className="mt-3 pt-3 border-t border-primary/20 grid grid-cols-3 gap-2 text-center">
         <div>
-          <div className="text-[9px] uppercase tracking-widest text-muted">{t("business.company.canvas.hq.depts")}</div>
+          <div className="text-[9px] uppercase tracking-widest text-muted">
+            {t(company.audience === "solo" ? "solo.line.canvas.hq.teams" : "business.company.canvas.hq.depts")}
+          </div>
           <div className="text-sm text-heading">{company.dept_ids.length}</div>
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-widest text-muted">{t("business.company.canvas.hq.agents")}</div>
+          <div className="text-[9px] uppercase tracking-widest text-muted">
+            {t(company.audience === "solo" ? "solo.line.canvas.hq.teammates" : "business.company.canvas.hq.agents")}
+          </div>
           <div className="text-sm text-heading">{totalAgents}</div>
         </div>
         <div>
-          <div className="text-[9px] uppercase tracking-widest text-muted">{t("business.company.canvas.hq.tasks")}</div>
+          <div className="text-[9px] uppercase tracking-widest text-muted">
+            {t(company.audience === "solo" ? "solo.line.canvas.hq.tasks" : "business.company.canvas.hq.tasks")}
+          </div>
           <div className="text-sm text-spark-blue">{activeTasks}</div>
         </div>
       </div>

@@ -129,10 +129,31 @@ function buildCanvas(draft: BuilderDraft, leadNote: string): { nodes: Node[]; ed
 
 function computeReadiness(draft: BuilderDraft, t: (k: string) => string): Check[] {
   const hasOrch = draft.agents.some((a) => a.team_role === "orchestrator");
+  const hasWorkers = draft.agents.some((a) => a.team_role !== "orchestrator");
+  const hasWorkflow = Boolean(draft.workflow?.steps?.length);
+  const agentsMd = draft.files.find((f) => f.name === "AGENTS.md" || f.name.endsWith("/AGENTS.md"));
+  const adoptsOrchestration = Boolean(
+    agentsMd?.content?.includes("agent-team-orchestration"),
+  );
+  const hasSpawnPrompts = Boolean(agentsMd?.content?.includes("Spawn Prompt"));
   const cost = estCostPerTask(draft.agents);
   return [
     { key: "soul", label: t("dev.studio.readiness.soul"), status: "pass" },
     { key: "orch", label: t("dev.studio.readiness.orchestrator"), status: hasOrch ? "pass" : "fail" },
+    {
+      key: "orchestration",
+      label: t("dev.studio.readiness.orchestration"),
+      status: adoptsOrchestration && hasSpawnPrompts ? "pass" : hasWorkers ? "fail" : "warn",
+      detail: adoptsOrchestration && hasSpawnPrompts
+        ? undefined
+        : t("dev.studio.readiness.orchestration-warn"),
+    },
+    {
+      key: "workflow",
+      label: t("dev.studio.readiness.workflow"),
+      status: hasWorkflow ? "pass" : hasWorkers ? "warn" : "fail",
+      detail: hasWorkflow ? undefined : t("dev.studio.readiness.workflow-warn"),
+    },
     { key: "mcp", label: t("dev.studio.readiness.mcp"), status: draft.skills.length ? "warn" : "pass", detail: draft.skills.length ? t("dev.studio.readiness.mcp-warn") : undefined },
     { key: "danger", label: t("dev.studio.readiness.danger"), status: "pass" },
     { key: "cost", label: t("dev.studio.readiness.cost"), status: "info", detail: `¥${cost.toFixed(2)}` },
@@ -499,6 +520,24 @@ export default function DevStudio() {
 }
 
 // ── right: vibe chat ────────────────────────────────────────────────────────
+function TypingDots({ label }: { label?: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-muted"
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <span className="inline-flex items-end gap-[3px] h-3" aria-hidden>
+        <span className="chat-typing-dot block size-1 rounded-full bg-primary" />
+        <span className="chat-typing-dot block size-1 rounded-full bg-primary" />
+        <span className="chat-typing-dot block size-1 rounded-full bg-primary" />
+      </span>
+      {label ? <span className="chat-wait-pulse text-[11px]">{label}</span> : null}
+    </span>
+  );
+}
+
 function VibeChat({
   width, messages, onSend, onCancel, busy, toolStatus,
 }: {
@@ -514,10 +553,12 @@ function VibeChat({
   // 只滚聊天容器自己 —— scrollIntoView 会把所有可滚祖先（包括页面）一起滚，
   // 右侧预览会被带着动。
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastMsg = messages[messages.length - 1];
+  const waitingForReply = busy && (!lastMsg || lastMsg.role !== "copilot" || !lastMsg.text);
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, messages[messages.length - 1]?.text]);
+  }, [messages.length, lastMsg?.text, busy, toolStatus, waitingForReply]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -527,35 +568,62 @@ function VibeChat({
     setInput("");
   };
 
+  const waitingLabel = toolStatus
+    ? t("dev.studio.chat.tool-running", { tool: toolStatus })
+    : t("dev.studio.chat.waiting");
+
   return (
     <aside
       style={{ width }}
       className="shrink-0 border-s border-border-solid flex flex-col min-h-0 bg-surface/40"
     >
-      <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0">
-        💬 {t("dev.studio.chat.title")}
+      <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0 flex items-center gap-2">
+        <span>💬 {t("dev.studio.chat.title")}</span>
+        {busy && (
+          <span className="normal-case tracking-normal ms-auto">
+            <TypingDots label={waitingLabel} />
+          </span>
+        )}
       </div>
       <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
-        {messages.map((m) => (
-          <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
-            <div className={`max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed ${
-              m.role === "user"
-                ? "bg-surface-2 text-body whitespace-pre-wrap"
-                : "bg-surface border border-border-solid text-body"
-            }`}>
-              {m.role === "copilot" ? (
-                <>
-                  <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>
-                  {m.text ? <Markdown text={m.text} /> : (busy ? "…" : "")}
-                </>
-              ) : (
-                m.text || (busy ? "…" : "")
-              )}
+        {messages.map((m) => {
+          const emptyStreaming = m.role === "copilot" && !m.text && busy;
+          return (
+            <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
+              <div className={`max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed ${
+                m.role === "user"
+                  ? "bg-surface-2 text-body whitespace-pre-wrap"
+                  : "bg-surface border border-border-solid text-body"
+              }`}>
+                {m.role === "copilot" ? (
+                  <>
+                    <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>
+                    {m.text ? (
+                      <Markdown text={m.text} />
+                    ) : emptyStreaming ? (
+                      <TypingDots label={waitingLabel} />
+                    ) : null}
+                  </>
+                ) : (
+                  m.text
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {waitingForReply && lastMsg?.role === "user" && (
+          <div className="flex justify-start">
+            <div className="max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed bg-surface border border-border-solid text-body">
+              <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>
+              <TypingDots label={waitingLabel} />
             </div>
           </div>
-        ))}
-        {toolStatus && (
-          <div className="text-[11px] text-muted px-1">⏳ {toolStatus}…</div>
+        )}
+        {busy && toolStatus && lastMsg?.role === "copilot" && lastMsg.text && (
+          <div className="text-[11px] text-muted px-1 flex items-center gap-1.5">
+            <span className="chat-wait-pulse inline-block size-1.5 rounded-full bg-spark-flare" aria-hidden />
+            <span>{t("dev.studio.chat.tool-running", { tool: toolStatus })}</span>
+          </div>
         )}
       </div>
       <div className="border-t border-border-solid p-3 shrink-0">
@@ -569,7 +637,7 @@ function VibeChat({
           />
           {busy ? (
             <button type="button" onClick={onCancel} className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-fusion hover:text-fusion">
-              Cancel
+              {t("dev.studio.chat.cancel")}
             </button>
           ) : (
             <button type="submit" className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition">

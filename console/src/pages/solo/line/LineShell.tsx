@@ -1,9 +1,8 @@
 /**
  * /solo/l/:lineId/* — 单产线沉浸 Shell。
  *
- * 顶栏：返回 + 产线名 + 状态
- * 侧栏：5 个 tab（团队/作品集/时间线/杠杆/设置）
- * 中央：<Outlet/>
+ * 侧栏顺序与企业版对齐：集市 → 团队 → 任务 → 作品集 → 设置。
+ * 「团队」= 节点图 + 列表；「任务」= 任务列表 + 对话（原 Conversations 已并入）。
  */
 
 import { useEffect, useState } from "react";
@@ -31,8 +30,6 @@ function useLine(id: string | undefined): State {
         .then((line) => {
           if (cancelled) return;
           setS({ kind: "ok", line });
-          // Keep polling while the container is still coming up / rebuilding,
-          // otherwise the banner stays on「实例化中」after the backend is ready.
           if (line.state === "provisioning") {
             timer = setTimeout(load, 3000);
           }
@@ -95,17 +92,15 @@ export default function LineShell() {
 
 function LineSidebar({ lineId }: { lineId: string }) {
   const { t } = useTranslation();
-  const tabs = [
-    { key: "team",          to: "",              end: true,  label: t("solo.line.tab.team") },
-    { key: "conversations", to: "conversations", label: t("solo.line.tab.conversations") },
-    { key: "marketplace",   to: "marketplace",   label: t("solo.line.tab.marketplace") },
-    { key: "portfolio",     to: "portfolio",     label: t("solo.line.tab.portfolio") },
-    { key: "timeline",      to: "timeline",      label: t("solo.line.tab.timeline") },
-    { key: "billing",       to: "billing",       label: t("solo.line.tab.billing") },
-    { key: "settings",      to: "settings",      label: t("solo.line.tab.settings") },
+  const tabs: { key: string; to: string; end?: boolean; label: string }[] = [
+    { key: "marketplace", to: "marketplace", label: t("solo.line.tab.marketplace") },
+    { key: "team", to: "", end: true, label: t("solo.line.tab.team") },
+    { key: "tasks", to: "tasks", label: t("solo.line.tab.tasks") },
+    { key: "portfolio", to: "portfolio", label: t("solo.line.tab.portfolio") },
+    { key: "settings", to: "settings", label: t("solo.line.tab.settings") },
   ];
   return (
-    <aside className="w-44 shrink-0 border-r border-border-solid bg-surface/60 py-4">
+    <aside className="w-48 shrink-0 border-e border-border-solid bg-surface/60 py-4">
       <nav className="flex flex-col">
         {tabs.map((tab) => (
           <NavLink
@@ -113,7 +108,7 @@ function LineSidebar({ lineId }: { lineId: string }) {
             end={tab.end}
             to={tab.to ? `/solo/l/${lineId}/${tab.to}` : `/solo/l/${lineId}/`}
             className={({ isActive }) =>
-              `px-4 py-2 text-sm transition-colors border-l-2 ${
+              `px-4 py-2 text-sm transition-colors border-s-2 ${
                 isActive
                   ? "border-primary text-primary bg-surface-2"
                   : "border-transparent text-body hover:text-primary hover:bg-surface-2"

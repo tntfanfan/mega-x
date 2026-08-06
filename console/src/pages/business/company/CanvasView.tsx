@@ -1,19 +1,14 @@
 /**
- * /business/c/:companyId/ — Org Canvas (React Flow).
+ * Org Canvas — React Flow HQ + 部门节点图。
  *
- * 渲染 HQ + 部门节点环形布局，HQ→每个 dept 一条 MessageEdge。
- * 部门内的 agent 头像 + 实时气泡显示当前活动。
- *
- * 后续 S6/S7：右键菜单（招聘部门 / 改组）、单击 agent 弹抽屉换实例。
- * 后续 S10：WSS 接 /v1/companies/:id/activity，气泡实时更新。
+ * 现作为「部门」页左侧面板复用（见 DeptsView）。独立路由已取消。
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ReactFlow, ReactFlowProvider, Background, BackgroundVariant,
-  type Node, type Edge,
+  type Node, type Edge, type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -23,9 +18,7 @@ import { DeptNode, type DeptNodeData } from "../../../components/canvas/DeptNode
 import { HQNode, type HQNodeData } from "../../../components/canvas/HQNode";
 import { MessageEdge } from "../../../components/canvas/MessageEdge";
 
-type Ctx = { company: Company };
-
-interface DeptWithMeta extends DeptCatalogItem {
+export interface DeptWithMeta extends DeptCatalogItem {
   agent_count: number;
   active_tasks: number;
 }
@@ -33,9 +26,6 @@ interface DeptWithMeta extends DeptCatalogItem {
 const NODE_TYPES = { dept: DeptNode, hq: HQNode };
 const EDGE_TYPES = { message: MessageEdge };
 
-// Legend swatches mirror TEAM_ROLE_COLOR in DeptNode so the dots match the
-// actual agent-avatar colors on the canvas (previously the legend was text
-// only, leaving users no way to map a color to a role).
 const LEGEND = [
   { key: "business.company.canvas.legend.orchestrator", swatch: "bg-spark-mint" },
   { key: "business.company.canvas.legend.builder", swatch: "bg-spark-blue" },
@@ -43,13 +33,13 @@ const LEGEND = [
   { key: "business.company.canvas.legend.ops", swatch: "bg-dim" },
 ] as const;
 
-// HQ at center, depts on a circle around it.
 function layoutNodes(
   company: Company,
   depts: DeptWithMeta[],
   agentsByDept: Record<string, Agent[]>,
   activity: ActivityEvent[],
   t: (key: string) => string,
+  selectedDeptId: string | null,
 ): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -57,35 +47,33 @@ function layoutNodes(
   const totalAgents = Object.values(agentsByDept).reduce((s, arr) => s + arr.length, 0);
   const activeTasks = depts.reduce((s, d) => s + d.active_tasks, 0);
 
-  // HQ at center (0, 0)
   nodes.push({
     id: `hq:${company.id}`,
     type: "hq",
     position: { x: 0, y: 0 },
     data: { company, totalAgents, activeTasks } as HQNodeData,
     draggable: true,
+    selectable: false,
   });
 
-  // 算每个 dept 最新活动事件
   const latestByDept = new Map<string, ActivityEvent>();
   for (const evt of activity.slice().sort((a, b) => +new Date(b.ts) - +new Date(a.ts))) {
     if (!latestByDept.has(evt.dept_id)) latestByDept.set(evt.dept_id, evt);
   }
 
-  // Depts on a circle. Size the radius from required arc spacing so nodes
-  // (~224px wide) never overlap regardless of count: keep ≥ MIN_ARC px between
-  // adjacent node centers along the circumference. The old `100 + n*22` grew
-  // too slowly and let nodes collide past ~12 depts.
   const MIN_ARC = 260;
   const radius = Math.max(380, (depts.length * MIN_ARC) / (2 * Math.PI));
-  const angleStart = -Math.PI / 2; // 第一个在顶部
+  const angleStart = -Math.PI / 2;
   depts.forEach((d, i) => {
-    const angle = angleStart + (i / depts.length) * Math.PI * 2;
+    const angle = angleStart + (i / Math.max(depts.length, 1)) * Math.PI * 2;
     const x = Math.cos(angle) * radius;
     const y = Math.sin(angle) * radius;
     const agents = agentsByDept[d.id] ?? [];
     const evt = latestByDept.get(d.id);
-    const bubble = evt?.text ?? (d.active_tasks > 0 ? t("business.company.canvas.bubble.working") : t("business.company.canvas.bubble.idle"));
+    const bubble = evt?.text
+      ?? (d.active_tasks > 0
+        ? t("business.company.canvas.bubble.working")
+        : t("business.company.canvas.bubble.idle"));
     nodes.push({
       id: `dept:${d.id}`,
       type: "dept",
@@ -98,6 +86,7 @@ function layoutNodes(
         bubbleActive: d.active_tasks > 0,
       } as DeptNodeData,
       draggable: true,
+      selected: selectedDeptId === d.id,
     });
     edges.push({
       id: `e:${company.id}-${d.id}`,
@@ -111,54 +100,99 @@ function layoutNodes(
   return { nodes, edges };
 }
 
-export default function CanvasView() {
-  const { company } = useOutletContext<Ctx>();
+export interface OrgCanvasPanelProps {
+  company: Company;
+  /** External dept list — when provided, skips its own depts fetch. */
+  depts?: DeptWithMeta[];
+  selectedDeptId?: string | null;
+  onSelectDept?: (deptId: string | null) => void;
+  /** Hide the legend strip (parent may render its own chrome). */
+  showLegend?: boolean;
+  /**
+   * API root for this tenant. Defaults to `/v1/companies/:id`.
+   * Solo lines pass `/v1/lines/:id` (same shapes, shared backend impl).
+   */
+  apiRoot?: string;
+  className?: string;
+}
+
+export function OrgCanvasPanel({
+  company,
+  depts: deptsProp,
+  selectedDeptId = null,
+  onSelectDept,
+  showLegend = true,
+  apiRoot,
+  className = "",
+}: OrgCanvasPanelProps) {
   const { t } = useTranslation();
-  const [depts, setDepts] = useState<DeptWithMeta[]>([]);
+  const [deptsLocal, setDeptsLocal] = useState<DeptWithMeta[]>([]);
   const [agentsByDept, setAgentsByDept] = useState<Record<string, Agent[]>>({});
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const depts = deptsProp ?? deptsLocal;
+  const root = apiRoot ?? `/v1/companies/${company.id}`;
+
+  // Stable id list so we don't refetch agents when parent only reorders/recreates the array.
+  const deptIdsKey = depts.map((d) => d.id).join(",");
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([
-      api.get<{ items: DeptWithMeta[] }>(`/v1/companies/${company.id}/depts`),
-      api.get<{ items: ActivityEvent[] }>(`/v1/companies/${company.id}/activity`).catch(() => ({ items: [] })),
-    ])
-      .then(async ([deptRes, actRes]) => {
+
+    const load = async () => {
+      try {
+        let list: DeptWithMeta[];
+        if (deptsProp) {
+          list = deptsProp;
+        } else {
+          const deptRes = await api.get<{ items: DeptWithMeta[] }>(`${root}/depts`);
+          if (cancelled) return;
+          list = deptRes.items;
+          setDeptsLocal(list);
+        }
+        const actRes = await api
+          .get<{ items: ActivityEvent[] }>(`${root}/activity`)
+          .catch(() => ({ items: [] as ActivityEvent[] }));
         if (cancelled) return;
-        setDepts(deptRes.items);
         setActivity(actRes.items);
         const pairs = await Promise.all(
-          deptRes.items.map((d) =>
-            api.get<{ items: Agent[] }>(`/v1/companies/${company.id}/depts/${d.id}/agents`)
+          list.map((d) =>
+            api.get<{ items: Agent[] }>(`${root}/depts/${d.id}/agents`)
               .then((r) => [d.id, r.items] as [string, Agent[]])
               .catch(() => [d.id, [] as Agent[]] as [string, Agent[]])
           )
         );
         if (cancelled) return;
         setAgentsByDept(Object.fromEntries(pairs));
-        setLoading(false);
-      })
-      .catch(() => { if (!cancelled) setLoading(false); });
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
     return () => { cancelled = true; };
-  }, [company.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deptIdsKey tracks membership
+  }, [company.id, deptIdsKey, root]);
 
   const { nodes, edges } = useMemo(
-    () => layoutNodes(company, depts, agentsByDept, activity, t),
-    [company, depts, agentsByDept, activity, t],
+    () => layoutNodes(company, depts, agentsByDept, activity, t, selectedDeptId),
+    [company, depts, agentsByDept, activity, t, selectedDeptId],
   );
 
+  const onNodeClick: NodeMouseHandler = useCallback((_evt, node) => {
+    if (!onSelectDept) return;
+    if (node.id.startsWith("dept:")) onSelectDept(node.id.slice("dept:".length));
+  }, [onSelectDept]);
+
+  const onPaneClick = useCallback(() => {
+    onSelectDept?.(null);
+  }, [onSelectDept]);
+
   return (
-    <div className="h-[calc(100vh-8rem-72px)] flex flex-col">
-      {/* Top strip */}
-      <div className="px-6 py-3 border-b border-border-solid bg-surface/60 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-display text-lg text-heading">{t("business.company.canvas.title")}</h1>
-          <p className="text-xs text-muted">{t("business.company.canvas.subtitle")}</p>
-        </div>
-        <div className="flex gap-3 text-[11px] text-muted flex-wrap">
+    <div className={`flex flex-col h-full min-h-0 ${className}`}>
+      {showLegend && (
+        <div className="px-4 py-2 border-b border-border-solid bg-surface/60 flex items-center gap-3 text-[11px] text-muted flex-wrap shrink-0">
           {LEGEND.map((l) => (
             <span key={l.key} className="flex items-center gap-1.5">
               <span className={`inline-block h-2.5 w-2.5 rounded-full ${l.swatch}`} aria-hidden />
@@ -166,10 +200,8 @@ export default function CanvasView() {
             </span>
           ))}
         </div>
-      </div>
-
-      {/* Canvas */}
-      <div className="flex-1 relative bg-bg">
+      )}
+      <div className="flex-1 relative bg-bg min-h-0">
         {loading ? (
           <p className="p-6 text-sm text-body">{t("common.loading")}…</p>
         ) : (
@@ -179,6 +211,8 @@ export default function CanvasView() {
               edges={edges}
               nodeTypes={NODE_TYPES}
               edgeTypes={EDGE_TYPES}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
               fitView
               fitViewOptions={{ padding: 0.2 }}
               minZoom={0.3}

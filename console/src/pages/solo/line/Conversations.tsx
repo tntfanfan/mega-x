@@ -1,23 +1,25 @@
 /**
- * Solo line conversations — pick a team (dept) and chat via Gateway.
- * Mirrors business Conversations; paths use /v1/lines/:id/*.
+ * Solo line chat panel — POST /v1/lines/:id/chat → openclaw agent / Gateway WS RPC.
+ *
+ * 独立路由已取消，嵌在「任务」页右侧（见 TasksList）。
  */
 
-import { useOutletContext } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, DeptCatalogItem } from "../../../lib/api";
 import { Markdown } from "../../../components/ui/Markdown";
 import { useToast } from "../../../components/ui/Toast";
 
-type Ctx = { line: Company };
 type Turn = { role: "user" | "assistant"; text: string; session_id?: string; label?: string };
 
-export default function LineConversations() {
-  const { line } = useOutletContext<Ctx>();
+export interface ChatPanelProps {
+  line: Company;
+  className?: string;
+}
+
+export function ChatPanel({ line, className = "" }: ChatPanelProps) {
   const { t } = useTranslation();
   const toast = useToast();
   const [depts, setDepts] = useState<DeptCatalogItem[]>([]);
@@ -39,9 +41,7 @@ export default function LineConversations() {
         );
       })
       .catch((e) =>
-        toast.error(
-          apiErrorMessage(e, t("solo.line.conversations.depts-error")),
-        ),
+        toast.error(apiErrorMessage(e, t("solo.line.conversations.depts-error"))),
       );
   }, [line.id, toast, t]);
 
@@ -99,9 +99,7 @@ export default function LineConversations() {
           },
         ],
       }));
-      if (!res.ok) {
-        toast.error(res.error || t("solo.line.conversations.send-error"));
-      }
+      if (!res.ok) toast.error(res.error || t("solo.line.conversations.send-error"));
     } catch (e) {
       const err = apiErrorMessage(e, t("solo.line.conversations.send-error"));
       setTurnsByDept((cur) => ({
@@ -117,53 +115,32 @@ export default function LineConversations() {
     }
   };
 
-  if (selectOptions.length === 0) {
-    return (
-      <section className="p-6 max-w-3xl space-y-4">
-        <h1 className="font-display text-2xl text-heading">
-          {t("solo.line.conversations.title")}
-        </h1>
-        <p className="text-sm text-muted">{t("solo.line.conversations.empty")}</p>
-        <Link
-          to={`/solo/l/${line.id}/marketplace`}
-          className="inline-block rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium"
-        >
-          {t("solo.line.conversations.go-marketplace")}
-        </Link>
-      </section>
-    );
-  }
-
   return (
-    <section className="p-6 flex flex-col h-full max-w-3xl gap-4">
-      <header>
-        <h1 className="font-display text-2xl text-heading">
-          {t("solo.line.conversations.title")}
-        </h1>
-        <p className="text-sm text-muted">
-          {t("solo.line.conversations.subtitle")}
-        </p>
-      </header>
+    <div className={`flex flex-col h-full min-h-0 ${className}`}>
+      <div className="px-4 py-3 border-b border-border-solid shrink-0 space-y-2">
+        <div className="text-xs text-muted">{t("solo.line.conversations.title")}</div>
+        <label className="block">
+          <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
+            {t("solo.line.conversations.team-label")}
+          </div>
+          <select
+            value={deptId}
+            onChange={(e) => setDeptId(e.target.value)}
+            className="w-full bg-surface border border-border-solid rounded px-3 py-1.5 text-sm"
+          >
+            {selectOptions.map((d) => (
+              <option key={d.id} value={d.id}>{d.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <label className="block max-w-xs">
-        <div className="text-xs uppercase tracking-widest text-muted mb-1">
-          {t("solo.line.conversations.team-label")}
-        </div>
-        <select
-          value={deptId}
-          onChange={(e) => setDeptId(e.target.value)}
-          className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm"
-        >
-          {selectOptions.map((d) => (
-            <option key={d.id} value={d.id}>{d.label}</option>
-          ))}
-        </select>
-      </label>
-
-      <div className="flex-1 min-h-[240px] border border-border-solid rounded bg-surface/50 p-4 space-y-3 overflow-y-auto">
+      <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
         {turns.length === 0 && (
           <p className="text-sm text-muted">
-            {t("solo.line.conversations.hint", { team: selectedDeptLabel })}
+            {selectedDept
+              ? t("solo.line.conversations.hint", { team: selectedDeptLabel })
+              : t("solo.line.conversations.empty")}
           </p>
         )}
         {turns.map((turn, i) => (
@@ -183,36 +160,31 @@ export default function LineConversations() {
         ))}
       </div>
 
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-          placeholder={t("solo.line.conversations.placeholder")}
-          disabled={sending || !canChat}
-          className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
-        />
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={sending || !input.trim() || !canChat}
-          className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50"
-        >
-          {sending ? "…" : t("solo.line.conversations.send")}
-        </button>
+      <div className="px-4 py-3 border-t border-border-solid shrink-0 space-y-2">
+        <div className="flex gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
+            placeholder={t("solo.line.conversations.placeholder")}
+            disabled={sending || !canChat}
+            className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
+          />
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={sending || !input.trim() || !canChat}
+            className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50"
+          >
+            {sending ? "…" : t("solo.line.conversations.send")}
+          </button>
+        </div>
+        {line.state === "provisioning" ? (
+          <p className="text-xs text-muted">{t("solo.line.conversations.provisioning")}</p>
+        ) : line.state !== "running" ? (
+          <p className="text-xs text-muted">{t("solo.line.conversations.not-ready", { state: line.state })}</p>
+        ) : null}
       </div>
-      {line.state === "provisioning" ? (
-        <p className="text-xs text-muted">{t("solo.line.conversations.provisioning")}</p>
-      ) : line.state !== "running" ? (
-        <p className="text-xs text-muted">
-          {t("solo.line.conversations.not-ready", { state: line.state })}
-        </p>
-      ) : null}
-    </section>
+    </div>
   );
 }
