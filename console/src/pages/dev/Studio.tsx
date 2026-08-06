@@ -601,7 +601,7 @@ function VibeChat({
                     {m.text ? (
                       <Markdown text={m.text} />
                     ) : emptyStreaming ? (
-                      <TypingDots label={waitingLabel} />
+                      <TypingDots />
                     ) : null}
                   </>
                 ) : (
