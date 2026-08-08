@@ -431,6 +431,9 @@ export interface Task {
   token_used: number;
   cost_yuan: number;
   artifact_ids: string[];
+  /** Where the task came from: console form vs chat auto-detect. */
+  source?: "console" | "chat";
+  chat_session_id?: string | null;
 }
 
 export const TASKS: Task[] = [
@@ -461,9 +464,9 @@ export const TASKS: Task[] = [
     brief: "金色调，覆盖 dropdown / dropdown active / hover 三态",
     state: "review", progress: 0.92,
     created_at: "2026-06-23T11:08:00Z",
-    expected_artifacts: ["image"],
+    expected_artifacts: ["image", "video", "audio"],
     token_used: 2100, cost_yuan: 0.08,
-    artifact_ids: ["art-005"],
+    artifact_ids: ["art-005", "art-008", "art-009"],
   },
   {
     id: "t-004", company_id: "c-saas", dept_id: "dept-finance",
@@ -513,14 +516,93 @@ export interface Artifact {
   url?: string;                  // 下载链接（mock 用 data: 或 placeholder）
 }
 
+const MOCK_BLOG_MD = `# 当 AI Agent 长成一家公司：Phyntom X8 发布
+
+_byline_ · 2026-06-23
+
+## TL;DR
+
+我们今天发布 **Phyntom X8** —— 第一个把整建制 AI 公司做成可订阅产品的平台。
+
+## 为什么
+
+2024 至今，AI Agent 工具层出不穷，但绝大多数仍是「单兵」。企业真正需要的是：
+
+1. 可编排的部门编制
+2. 可验收的任务与产出
+3. 可审计的成本与权限
+
+### 产品形态
+
+| 模块 | 角色 |
+| --- | --- |
+| Console | 老板视角：聊天立项、看任务、收产出 |
+| Marketplace | 部门上架与安装 |
+| Departments | OpenClaw 多 agent 拓扑 |
+
+\`\`\`ts
+// 聊天自动立项（示意）
+if (intent) createTask({ source: "chat", ...intent });
+\`\`\`
+
+> 聊天负责沟通与立项，任务会话负责交付 —— 两条链路互不污染。
+
+---
+
+接下来：更多部门模板、产出预览、以及安全审查闸门。
+`;
+
 export const ARTIFACTS: Artifact[] = [
-  { id: "art-001", task_id: "t-001", company_id: "c-saas", dept_id: "dept-pub", name: "outline.md",  type: "markdown", size_bytes: 1240,  created_at: "2026-06-23T16:24:00Z", preview_text: "# Phyntom X8 发布博客 — 提纲\n\n1. 引言（为什么需要 AI 公司）\n2. 产品形态（Console / Marketplace / Departments）\n3. 技术差异化\n4. 早期 case\n5. 接下来" },
-  { id: "art-002", task_id: "t-001", company_id: "c-saas", dept_id: "dept-pub", name: "draft-v1.md", type: "markdown", size_bytes: 8420,  created_at: "2026-06-23T16:28:00Z", preview_text: "# 当 AI Agent 长成一家公司\n\n_byline_  · 2026-06-23\n\n## 引言\n\n2024 至今，AI Agent 工具层出不穷，但...（草稿一）" },
-  { id: "art-003", task_id: "t-001", company_id: "c-saas", dept_id: "dept-pub", name: "draft-v2.md", type: "markdown", size_bytes: 11930, created_at: "2026-06-23T16:35:00Z", preview_text: "# 当 AI Agent 长成一家公司：Phyntom X8 发布\n\n_byline_  · 2026-06-23\n\n## TL;DR\n\n我们今天发布 Phyntom X8 —— 第一个把整建制 AI 公司做成可订阅产品的平台。\n\n## 为什么\n\n...（草稿二，正在 review）" },
-  { id: "art-004", task_id: "t-002", company_id: "c-saas", dept_id: "dept-dev", name: "0001_init.py", type: "code",     size_bytes: 4220,  created_at: "2026-06-23T15:18:00Z", preview_text: "\"\"\"Alembic init migration — Phyntom X8 platform.\"\"\"\nfrom alembic import op\nimport sqlalchemy as sa\n\nrevision = '0001_init'\n...\n" },
-  { id: "art-005", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design", name: "topbar-v2.png", type: "image", size_bytes: 218_400, created_at: "2026-06-23T12:01:00Z", thumbnail_url: "/console/assets/mock-thumb-topbar.svg" },
-  { id: "art-006", task_id: "t-004", company_id: "c-saas", dept_id: "dept-finance", name: "june-2026.xlsx", type: "table", size_bytes: 12_800, created_at: "2026-06-22T22:00:00Z" },
-  { id: "art-007", task_id: "t-005", company_id: "l-newsletter", dept_id: "dept-research", name: "weekly-2026-w25.md", type: "markdown", size_bytes: 6240, created_at: "2026-06-23T08:42:00Z", preview_text: "# AI Infra 周报 · 2026-W25\n\n## 头条\n\n1. **OpenAI** 发布 GPT-5.5 ...\n2. **Anthropic** Claude 4.7 ...\n3. **Mistral** ...\n" },
+  {
+    id: "art-001", task_id: "t-001", company_id: "c-saas", dept_id: "dept-pub",
+    name: "outline.md", type: "markdown", size_bytes: 1240, created_at: "2026-06-23T16:24:00Z",
+    preview_text:
+      "# Phyntom X8 发布博客 — 提纲\n\n1. 引言（为什么需要 AI 公司）\n2. 产品形态（Console / Marketplace / Departments）\n3. 技术差异化\n4. 早期 case\n5. 接下来\n\n- [x] 提纲\n- [ ] 草稿\n- [ ] 终稿",
+  },
+  {
+    id: "art-002", task_id: "t-001", company_id: "c-saas", dept_id: "dept-pub",
+    name: "draft-v1.md", type: "markdown", size_bytes: 8420, created_at: "2026-06-23T16:28:00Z",
+    preview_text:
+      "# 当 AI Agent 长成一家公司\n\n_byline_  · 2026-06-23\n\n## 引言\n\n2024 至今，AI Agent 工具层出不穷，但大多数还是单兵作战……\n\n## 草稿备注\n\n- 语气偏技术\n- 缺 case",
+  },
+  {
+    id: "art-003", task_id: "t-001", company_id: "c-saas", dept_id: "dept-pub",
+    name: "draft-v2.md", type: "markdown", size_bytes: 11930, created_at: "2026-06-23T16:35:00Z",
+    preview_text: MOCK_BLOG_MD,
+  },
+  {
+    id: "art-004", task_id: "t-002", company_id: "c-saas", dept_id: "dept-dev",
+    name: "0001_init.py", type: "code", size_bytes: 4220, created_at: "2026-06-23T15:18:00Z",
+    preview_text:
+      '"""Alembic init migration — Phyntom X8 platform."""\nfrom alembic import op\nimport sqlalchemy as sa\n\nrevision = "0001_init"\ndown_revision = None\n\ndef upgrade() -> None:\n    op.create_table("tenants", sa.Column("id", sa.String(64), primary_key=True))\n',
+  },
+  {
+    id: "art-005", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design",
+    name: "topbar-v2.svg", type: "image", size_bytes: 12_400, created_at: "2026-06-23T12:01:00Z",
+    thumbnail_url: "/assets/megax-logo.svg",
+    url: "/assets/megax-logo.svg",
+  },
+  {
+    id: "art-006", task_id: "t-004", company_id: "c-saas", dept_id: "dept-finance",
+    name: "june-2026.csv", type: "table", size_bytes: 12_800, created_at: "2026-06-22T22:00:00Z",
+    preview_text: "month,revenue,cost,margin\n2026-04,120000,78000,0.35\n2026-05,142000,81000,0.43\n2026-06,168000,88000,0.48\n",
+  },
+  {
+    id: "art-007", task_id: "t-005", company_id: "l-newsletter", dept_id: "dept-research",
+    name: "weekly-2026-w25.md", type: "markdown", size_bytes: 6240, created_at: "2026-06-23T08:42:00Z",
+    preview_text:
+      "# AI Infra 周报 · 2026-W25\n\n## 头条\n\n1. **OpenAI** 发布 GPT-5.5\n2. **Anthropic** Claude 4.7\n3. **Mistral** 新推理端点\n\n## 简评\n\n本周重点仍是 **context window** 与 **tool use** 的组合拳。",
+  },
+  {
+    id: "art-008", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design",
+    name: "walkthrough.webm", type: "video", size_bytes: 1_240_000, created_at: "2026-06-23T12:20:00Z",
+    url: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
+  },
+  {
+    id: "art-009", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design",
+    name: "vo-guide.mp3", type: "audio", size_bytes: 420_000, created_at: "2026-06-23T12:22:00Z",
+    url: "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",
+  },
 ];
 
 // ─── Activity events (for NewsTicker + Canvas bubbles) ────────────────────

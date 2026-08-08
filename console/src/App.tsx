@@ -2,9 +2,12 @@ import { Routes, Route, Navigate, Link, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { isMockMode } from "./lib/mocks";
+import { useAuth } from "./lib/auth";
 import LanguageSwitcher from "./components/LanguageSwitcher";
+import RequireAuth from "./components/RequireAuth";
 
 import LandingChoose from "./pages/Landing";
+import LoginPage from "./pages/Login";
 
 // Business
 import BusinessLanding from "./pages/business/Landing";
@@ -16,7 +19,7 @@ import DeptsView from "./pages/business/company/DeptsView";
 import TasksList from "./pages/business/company/TasksList";
 import TaskDetail from "./pages/business/company/TaskDetail";
 import TaskNew from "./pages/business/company/TaskNew";
-import Outputs from "./pages/business/company/Outputs";
+import ChatView from "./pages/business/company/ChatView";
 import CompanyMarketplace from "./pages/business/company/Marketplace";
 import Settings from "./pages/business/company/Settings";
 
@@ -43,6 +46,33 @@ import DevStudio from "./pages/dev/Studio";
 import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
 
+function UserMenu() {
+  const { t } = useTranslation();
+  const { me, status, logout } = useAuth();
+  if (status !== "authenticated" || !me) {
+    return (
+      <Link to="/login" className="text-sm text-primary hover:underline">
+        {t("auth.login.title")}
+      </Link>
+    );
+  }
+  const label = me.user.display_name || me.user.email;
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="text-body max-w-[10rem] truncate" title={me.user.email}>
+        {label}
+      </span>
+      <button
+        type="button"
+        onClick={() => void logout()}
+        className="text-muted hover:text-primary"
+      >
+        {t("auth.logout")}
+      </button>
+    </div>
+  );
+}
+
 function ConsoleShell() {
   const { t } = useTranslation();
   return (
@@ -68,6 +98,7 @@ function ConsoleShell() {
               <Link to="/admin/" className="hover:text-primary">{t("shell.nav.admin")}</Link>
             </nav>
             <LanguageSwitcher />
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -81,36 +112,45 @@ function ConsoleShell() {
   );
 }
 
+function AuthedOutlet() {
+  return (
+    <RequireAuth>
+      <Outlet />
+    </RequireAuth>
+  );
+}
+
 export default function App() {
   return (
     <Routes>
       <Route element={<ConsoleShell />}>
         <Route index element={<LandingChoose />} />
+        <Route path="login" element={<LoginPage />} />
 
-        <Route path="business">
-          <Route index element={<BusinessLanding />} />            {/* /business/ → Landing（与 solo/dev/admin 对称）*/}
-          <Route path="overview" element={<BusinessOverview />} /> {/* /business/overview → 全局总览（主工作页）*/}
+        <Route path="business" element={<AuthedOutlet />}>
+          <Route index element={<BusinessLanding />} />
+          <Route path="overview" element={<BusinessOverview />} />
 
           <Route path="companies">
             <Route index element={<CompaniesList />} />
             <Route path="new" element={<NewWizard />} />
           </Route>
 
-          {/* 单公司沉浸视图 */}
           <Route path="c/:companyId" element={<CompanyShell />}>
-            <Route index element={<DeptsView />} />               {/* /business/c/:id/ → 部门（图+列表）*/}
+            <Route index element={<DeptsView />} />
             <Route path="depts" element={<Navigate to=".." replace />} />
+            <Route path="chat" element={<ChatView />} />
             <Route path="tasks" element={<TasksList />} />
             <Route path="tasks/new" element={<TaskNew />} />
             <Route path="tasks/:taskId" element={<TaskDetail />} />
-            <Route path="outputs" element={<Outputs />} />
-            <Route path="conversations" element={<Navigate to="../tasks" replace />} />
+            <Route path="outputs" element={<Navigate to="../tasks?view=outputs" replace />} />
+            <Route path="conversations" element={<Navigate to="../chat" replace />} />
             <Route path="marketplace" element={<CompanyMarketplace />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Route>
 
-        <Route path="solo">
+        <Route path="solo" element={<AuthedOutlet />}>
           <Route index element={<SoloLanding />} />
           <Route path="overview" element={<SoloOverview />} />
           <Route path="lines">
@@ -118,7 +158,7 @@ export default function App() {
             <Route path="new" element={<SoloNewWizard />} />
           </Route>
           <Route path="l/:lineId" element={<LineShell />}>
-            <Route index element={<TeamView />} />               {/* /solo/l/:id/ → 团队（图+列表）*/}
+            <Route index element={<TeamView />} />
             <Route path="tasks" element={<SoloTasksList />} />
             <Route path="tasks/new" element={<SoloTaskNew />} />
             <Route path="tasks/:taskId" element={<SoloTaskDetail />} />
@@ -131,13 +171,13 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="dev">
+        <Route path="dev" element={<AuthedOutlet />}>
           <Route index element={<DevLanding />} />
           <Route path="home" element={<DevHome />} />
           <Route path="depts/:deptId/studio" element={<DevStudio />} />
         </Route>
 
-        <Route path="admin">
+        <Route path="admin" element={<AuthedOutlet />}>
           <Route index element={<AdminLanding />} />
           <Route path="review-queue" element={<AdminQueue />} />
         </Route>

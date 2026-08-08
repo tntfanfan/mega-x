@@ -1,8 +1,8 @@
 /**
  * /business/c/:companyId/* — Single-company shell.
  *
- * 侧栏顺序：集市 → 部门 → 任务 → 产出 → 设置。
- * 「部门」= 节点图 + 列表；「任务」= 任务列表 + 对话（原 Conversations 已并入）。
+ * 侧栏顺序：集市 → 部门 → 聊天 → 任务 → 设置。
+ * ChatProvider 挂在壳下，切页不丢会话；任务页左列表右产出。
  */
 
 import { useEffect, useState } from "react";
@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import type { Company } from "../../../lib/api";
 import { CompanySwitcher } from "../../../components/layout/CompanySwitcher";
+import { ChatProvider } from "./ChatProvider";
 
 type LoadState =
   | { kind: "loading" }
@@ -77,15 +78,17 @@ export default function CompanyShell() {
 
   const { company, companies } = state;
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col">
-      <CompanyHeader company={company} companies={companies} />
-      <div className="flex flex-1">
-        <CompanySidebar companyId={company.id} />
-        <main className="flex-1 min-w-0">
-          <Outlet context={{ company, companies }} />
-        </main>
+    <ChatProvider company={company}>
+      <div className="min-h-[calc(100vh-8rem)] flex flex-col">
+        <CompanyHeader company={company} companies={companies} />
+        <div className="flex flex-1">
+          <CompanySidebar companyId={company.id} />
+          <main className="flex-1 min-w-0">
+            <Outlet context={{ company, companies }} />
+          </main>
+        </div>
       </div>
-    </div>
+    </ChatProvider>
   );
 }
 
@@ -128,8 +131,8 @@ function CompanySidebar({ companyId }: { companyId: string }) {
   const tabs: { key: string; to: string; end?: boolean; label: string }[] = [
     { key: "marketplace", to: "marketplace", label: t("business.company.tab.marketplace") },
     { key: "depts", to: ``, end: true, label: t("business.company.tab.depts") },
+    { key: "chat", to: "chat", label: t("business.company.tab.chat") },
     { key: "tasks", to: "tasks", label: t("business.company.tab.tasks") },
-    { key: "outputs", to: "outputs", label: t("business.company.tab.outputs") },
     { key: "settings", to: "settings", label: t("business.company.tab.settings") },
   ];
 

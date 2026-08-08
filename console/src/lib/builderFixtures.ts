@@ -12,7 +12,55 @@
 
 import type { AgentTeamRole, AgentTier } from "./fixtures";
 
-export type DraftState = "draft" | "in_review" | "published" | "publishing" | "publish_failed";
+export type DraftState =
+  | "draft"
+  | "ready"
+  | "in_review"
+  | "published"
+  | "publishing"
+  | "publish_failed";
+
+export type SecurityReviewStatus =
+  | "queued"
+  | "running"
+  | "passed"
+  | "failed"
+  | "error"
+  | "stale"
+  | "cancelled";
+
+export interface SecurityReviewFinding {
+  severity: "high" | "medium" | "low" | "info";
+  file?: string;
+  line?: number | null;
+  rule?: string;
+  message?: string;
+  evidence_redacted?: string;
+  fingerprint?: string;
+}
+
+export interface SecurityReviewStep {
+  key: string;
+  status: "pending" | "running" | "done" | "failed";
+}
+
+export interface SecurityReviewInfo {
+  status: SecurityReviewStatus;
+  review_id?: string;
+  candidate_hash?: string;
+  policy_version?: string;
+  prompt_version?: string;
+  model_id?: string | null;
+  findings?: SecurityReviewFinding[];
+  report_md?: string;
+  steps?: SecurityReviewStep[];
+  listed?: boolean;
+  activated?: boolean;
+  register_error?: string;
+  error_message?: string;
+  started_at?: string;
+  finished_at?: string;
+}
 
 /** Rough mock cost weight per task by model tier (元), drives the cost meter. */
 export const TIER_COST: Record<AgentTier, number> = { HIGH: 0.1, MEDIUM: 0.04, LOW: 0.01 };
@@ -76,6 +124,8 @@ export interface BuilderDraft {
   files: DraftFile[];
   skills: { name: string; desc: string }[];
   chat: ChatMsg[];
+  /** Latest security review (redacted); absent when never reviewed. */
+  security_review?: SecurityReviewInfo | null;
 }
 
 /** Lightweight card shape for the MyDepts gallery. */

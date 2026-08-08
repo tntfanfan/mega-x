@@ -14,11 +14,12 @@ import { CardGridSkeleton } from "../../components/ui/Skeleton";
 
 const STATE_COLOR: Record<string, string> = {
   draft: "text-spark-flare",
+  ready: "text-spark-mint",
   in_review: "text-spark-blue",
   published: "text-spark-mint",
+  publishing: "text-spark-blue",
+  publish_failed: "text-fusion",
 };
-
-const USER_ID = "user-dev-0001";
 
 /** List items are DraftCards; published entries additionally carry version/_key. */
 type DeptItem = DraftCard & { version?: string; _key?: string };
@@ -33,7 +34,7 @@ export default function DevHome() {
     let cancelled = false;
     setLoading(true);
     api
-      .get<{ items: DeptItem[] }>(`/v1/dev/depts?user_id=${encodeURIComponent(USER_ID)}`)
+      .get<{ items: DeptItem[] }>("/v1/dev/depts")
       .then((r) => { if (!cancelled) setItems(r.items); })
       .catch((e) => { if (!cancelled) toast.error(apiErrorMessage(e, t("dev.mydepts.load-error"))); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -49,9 +50,7 @@ export default function DevHome() {
     if (!window.confirm(t("dev.mydepts.delete-confirm", { name: d.name }))) return;
     try {
       const scope = d.version ? "published" : "draft";
-      await api.delete(
-        `/v1/dev/depts/${d.id}?user_id=${encodeURIComponent(USER_ID)}&scope=${scope}`,
-      );
+      await api.delete(`/v1/dev/depts/${d.id}?scope=${scope}`);
       toast.info(t("dev.mydepts.deleted"));
       load();
     } catch (err) {

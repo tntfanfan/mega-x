@@ -27,8 +27,15 @@
 import {
   COMPANIES, DEPT_CATALOG, AGENTS, TASKS, ARTIFACTS, ACTIVITY, ME,
   LINE_TEMPLATES, GROUP_LABELS,
-  type Company, type Task,
+  type Company, type Task, type Artifact,
 } from "./fixtures";
+
+/** Tasks created via makeTask in this tab — fixture rows are left alone. */
+const SIMULATED_TASK_IDS = new Set<string>();
+
+/** Demo-only: verb prefixes that mock chat treats as a task assignment. */
+const MOCK_TASK_VERB_RE =
+  /(?:帮我|请帮|麻烦|写一篇|写一?个|做一个|做一份|生成|整理|设计|起草|撰写|准备)/;
 
 const SIMULATED_LATENCY_MS = 80;
 
@@ -118,6 +125,18 @@ const HANDLERS: Handler[] = [
   { match: exact("/health", "GET"), handle: () => ({ body: { status: "ok", _mock: true } }) },
   { match: exact("/v1/me", "GET"),  handle: () => ({ body: ME }) },
   {
+    match: exact("/v1/auth/login", "POST"),
+    handle: () => ({ body: { user: ME.user, _mock: true } }),
+  },
+  {
+    match: exact("/v1/auth/register", "POST"),
+    handle: () => ({ body: { user: ME.user, _mock: true } }),
+  },
+  {
+    match: exact("/v1/auth/logout", "POST"),
+    handle: () => ({ body: { ok: true, _mock: true } }),
+  },
+  {
     match: exact("/v1/templates", "GET"),
     handle: () => ({ body: { items: COMPANY_TEMPLATES, total: COMPANY_TEMPLATES.length, _mock: true } }),
   },
@@ -179,20 +198,46 @@ const HANDLERS: Handler[] = [
     },
   },
 
-  // ── company chat (Conversations tab) ──
+  // ── company chat ──
   {
     match: rx(/^\/v1\/companies\/([^/]+)\/chat$/),
     handle: (_p, _m, body, match) => {
       const cid = (match as RegExpMatchArray)[1];
       const b = (body ?? {}) as { message?: string; dept_id?: string; session_id?: string };
       const dept = DEPT_CATALOG.find((d) => d.id === b.dept_id);
+      const msg = (b.message ?? "").trim();
+      const sessionId = b.session_id ?? `mock-sess-${cid}`;
+      // Demo-only heuristic (NOT production logic — agent judges there).
+      const isTask = MOCK_TASK_VERB_RE.test(msg);
+      if (isTask) {
+        const title = msg.split(/\r?\n/)[0]?.slice(0, 30) || msg.slice(0, 30) || "未命名任务";
+        const task = makeTask(cid, {
+          title,
+          brief: msg,
+          dept_id: b.dept_id ?? "dept-pub",
+          source: "chat",
+          chat_session_id: sessionId,
+        });
+        TASKS.push(task);
+        return {
+          body: {
+            ok: true,
+            reply:
+              `【演示 · ${dept ? dept.name : "总控"}】已理解这是一项交付任务「${title}」。` +
+              "我先立项确认目标与计划，具体产出会在任务会话中完成——可到「任务」页查看进度。",
+            session_id: sessionId,
+            task,
+            _mock: true,
+          },
+        };
+      }
       return {
         body: {
           ok: true,
           reply:
-            `【演示回复 · ${dept ? dept.name : "总控"}】已收到：「${b.message ?? ""}」。` +
+            `【演示回复 · ${dept ? dept.name : "总控"}】已收到：「${msg}」。` +
             "当前站点为纯前端演示（未接入后端），部署 FastAPI 后这里会由部门 Agent 真实作答。",
-          session_id: b.session_id ?? `mock-sess-${cid}`,
+          session_id: sessionId,
           _mock: true,
         },
       };
@@ -258,7 +303,9 @@ const HANDLERS: Handler[] = [
       const m = match as RegExpMatchArray;
       const cid = m[1];
       if (method === "GET") {
-        return { body: { items: TASKS.filter((t) => t.company_id === cid), _mock: true } };
+        const items = TASKS.filter((t) => t.company_id === cid);
+        for (const task of items) advanceMockTask(task);
+        return { body: { items, _mock: true } };
       }
       if (method === "POST") {
         const newTask = makeTask(cid, (body ?? {}) as Partial<Task>);
@@ -275,6 +322,7 @@ const HANDLERS: Handler[] = [
       const [, cid, tid] = m;
       const task = TASKS.find((t) => t.company_id === cid && t.id === tid);
       if (!task) return { status: 404, body: { error: "task not found" } };
+      advanceMockTask(task);
       const artifacts = ARTIFACTS.filter((a) => task.artifact_ids.includes(a.id));
       return { body: { ...task, artifacts } };
     },
@@ -527,21 +575,74 @@ const HANDLERS: Handler[] = [
 ];
 
 function makeTask(companyId: string, b: Partial<Task>): Task {
-  return {
+  // Mirror real backend: create immediately lands in_progress/0.1.
+  const task: Task = {
     id: `t-${Date.now().toString(36)}`,
     company_id: companyId,
     dept_id: b.dept_id ?? "dept-pub",
     title: b.title ?? "未命名任务",
     brief: b.brief ?? "",
-    state: "pending",
-    progress: 0,
+    state: "in_progress",
+    progress: 0.1,
     created_at: new Date().toISOString(),
     deadline: b.deadline,
     expected_artifacts: b.expected_artifacts ?? ["markdown"],
     token_used: 0,
     cost_yuan: 0,
     artifact_ids: [],
+    source: b.source ?? "console",
+    chat_session_id: b.chat_session_id ?? null,
   };
+  SIMULATED_TASK_IDS.add(task.id);
+  return task;
+}
+
+/**
+ * Advance a mock-created task toward done based on wall-clock age.
+ * Stages (~10s): 0.1 → 0.25 → 0.6 → done/1.0 + one markdown artifact.
+ * Fixture rows are never mutated.
+ */
+function advanceMockTask(task: Task): void {
+  if (!SIMULATED_TASK_IDS.has(task.id)) return;
+  if (task.state !== "pending" && task.state !== "in_progress") return;
+
+  const ageMs = Date.now() - new Date(task.created_at).getTime();
+  if (Number.isNaN(ageMs) || ageMs < 0) return;
+
+  if (ageMs >= 10_000) {
+    task.state = "done";
+    task.progress = 1;
+    ensureMockArtifact(task);
+  } else if (ageMs >= 6_000) {
+    task.state = "in_progress";
+    task.progress = 0.6;
+  } else if (ageMs >= 3_000) {
+    task.state = "in_progress";
+    task.progress = 0.25;
+  } else {
+    task.state = "in_progress";
+    task.progress = Math.max(task.progress, 0.1);
+  }
+}
+
+function ensureMockArtifact(task: Task): void {
+  if (task.artifact_ids.length > 0) return;
+  const id = `art-mock-${task.id}`;
+  if (!ARTIFACTS.some((a) => a.id === id)) {
+    const art: Artifact = {
+      id,
+      task_id: task.id,
+      company_id: task.company_id,
+      dept_id: task.dept_id,
+      name: `${task.title || "task"}.md`,
+      type: "markdown",
+      size_bytes: 256,
+      created_at: new Date().toISOString(),
+      preview_text: `# ${task.title}\n\n${task.brief || "(mock deliverable)"}`,
+    };
+    ARTIFACTS.push(art);
+  }
+  task.artifact_ids.push(id);
 }
 
 // ─── public API ──────────────────────────────────────────────────────────

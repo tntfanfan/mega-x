@@ -6,6 +6,8 @@ import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, Task, Artifact, ActivityEvent, TaskState } from "../../../lib/api";
 import { downloadArtifact } from "../../../lib/artifacts";
 import { useToast } from "../../../components/ui/Toast";
+import { ArtifactViewer } from "../../../components/ui/ArtifactViewer";
+import { ArtifactPreviewModal } from "../../../components/ui/ArtifactPreviewModal";
 
 type Ctx = { company: Company };
 
@@ -34,6 +36,10 @@ export default function TaskDetail() {
   const [task, setTask] = useState<(Task & { artifacts: Artifact[] }) | null>(null);
   const [timeline, setTimeline] = useState<ActivityEvent[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const backTo = taskId
+    ? `/business/c/${company.id}/tasks?task=${taskId}`
+    : `/business/c/${company.id}/tasks`;
 
   useEffect(() => {
     if (!taskId) return;
@@ -77,7 +83,7 @@ export default function TaskDetail() {
 
   return (
     <section className="p-6 space-y-6">
-      <Link to={`/business/c/${company.id}/tasks`} className="text-xs text-muted hover:text-primary">{t("business.company.tasks.detail.back")}</Link>
+      <Link to={backTo} className="text-xs text-muted hover:text-primary">{t("business.company.tasks.detail.back")}</Link>
 
       <header>
         <div className="flex flex-wrap items-center gap-3">
@@ -86,6 +92,11 @@ export default function TaskDetail() {
             {stateMeta.emoji} {t(`task.state.${task.state}`)}
             {working ? ` · ${t("business.company.tasks.detail.working")}` : ""}
           </span>
+          {task.source === "chat" && (
+            <span className="text-[10px] uppercase tracking-widest text-muted border border-border-solid rounded px-1.5 py-0.5">
+              {t("business.company.tasks.detail.source-chat")}
+            </span>
+          )}
         </div>
         <p className="text-sm text-muted mt-1">{task.brief}</p>
         <div className="mt-3 flex items-center gap-3 text-xs text-body">
@@ -153,24 +164,56 @@ export default function TaskDetail() {
                   })}
                 </div>
               )}
-              <div className="mb-2 text-sm text-heading">{selected.name}</div>
-              {selected.preview_text ? (
-                <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-body max-h-80 overflow-y-auto">{selected.preview_text}</pre>
-              ) : selected.thumbnail_url ? (
-                <img src={selected.thumbnail_url} alt={selected.name} className="max-w-full rounded" />
-              ) : (
-                <p className="text-sm text-muted">{t("common.preview.none-download")}</p>
-              )}
               <button
-                onClick={() => {
-                  const r = downloadArtifact(selected);
-                  if (r === "started") toast.success(t("common.download-started", { name: selected.name }));
-                  else toast.info(t("common.download-empty"));
-                }}
-                className="mt-3 rounded-md bg-primary text-bg px-3 py-1 text-xs font-medium hover:bg-accent transition-colors"
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="w-full text-start mb-2 group"
               >
-                {t("common.download")}
+                <div className="text-sm text-heading group-hover:text-primary">
+                  {selected.name}
+                </div>
+                <div className="text-[11px] text-primary mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {t("common.preview.open")}
+                </div>
               </button>
+              <div
+                className="max-h-80 overflow-y-auto cursor-pointer"
+                onClick={() => setPreviewOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") setPreviewOpen(true);
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                <ArtifactViewer art={selected} companyId={company.id} />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(true)}
+                  className="rounded-md border border-border-solid px-3 py-1 text-xs text-body hover:text-primary hover:border-primary transition-colors"
+                >
+                  {t("common.preview.open")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const r = downloadArtifact(selected);
+                    if (r === "started") toast.success(t("common.download-started", { name: selected.name }));
+                    else toast.info(t("common.download-empty"));
+                  }}
+                  className="rounded-md bg-primary text-bg px-3 py-1 text-xs font-medium hover:bg-accent transition-colors"
+                >
+                  {t("common.download")}
+                </button>
+              </div>
+              {previewOpen && (
+                <ArtifactPreviewModal
+                  art={selected}
+                  companyId={company.id}
+                  onClose={() => setPreviewOpen(false)}
+                />
+              )}
             </>
           )}
         </div>

@@ -135,3 +135,145 @@
 .chat-wait-pulse {
   animation: chat-wait-pulse 1.4s ease-in-out infinite;
 }
+
+/* Recruiter bubble entrance + thinking presence */
+@keyframes recruiter-bubble-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-10px, 8px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.recruiter-bubble-in {
+  animation: recruiter-bubble-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes recruiter-mark-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes recruiter-mark-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, theme("colors.primary.DEFAULT") 0%, transparent);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 6px color-mix(in srgb, theme("colors.primary.DEFAULT") 12%, transparent);
+  }
+}
+
+.recruiter-wait-mark {
+  position: relative;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, theme("colors.primary.DEFAULT") 14%, theme("colors.surface"));
+  color: theme("colors.primary.DEFAULT");
+  animation: recruiter-mark-breathe 2.2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.recruiter-wait-mark::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 62%,
+    color-mix(in srgb, theme("colors.primary.DEFAULT") 70%, transparent) 78%,
+    transparent 100%
+  );
+  animation: recruiter-mark-spin 1.8s linear infinite;
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+}
+
+@keyframes recruiter-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+
+.recruiter-label-shimmer {
+  background: linear-gradient(
+    105deg,
+    theme("colors.primary.DEFAULT") 0%,
+    theme("colors.primary.DEFAULT") 35%,
+    color-mix(in srgb, theme("colors.spark.mint") 90%, white) 50%,
+    theme("colors.primary.DEFAULT") 65%,
+    theme("colors.primary.DEFAULT") 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: recruiter-shimmer 2.4s ease-in-out infinite;
+}
+
+@keyframes recruiter-bar {
+  0% {
+    transform: translateX(-60%);
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(160%);
+    opacity: 0.35;
+  }
+}
+
+.recruiter-wait-bar {
+  position: relative;
+  height: 2px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: color-mix(in srgb, theme("colors.border-solid") 80%, transparent);
+}
+
+.recruiter-wait-bar > span {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    theme("colors.primary.DEFAULT"),
+    color-mix(in srgb, theme("colors.spark.mint") 80%, theme("colors.primary.DEFAULT")),
+    transparent
+  );
+  animation: recruiter-bar 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recruiter-bubble-in,
+  .recruiter-wait-mark,
+  .recruiter-wait-mark::before,
+  .recruiter-label-shimmer,
+  .recruiter-wait-bar > span {
+    animation: none !important;
+  }
+
+  .recruiter-label-shimmer {
+    color: theme("colors.primary.DEFAULT");
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+  }
+}

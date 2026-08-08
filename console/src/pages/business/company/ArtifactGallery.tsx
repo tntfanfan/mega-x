@@ -1,0 +1,163 @@
+/**
+ * Task / company artifact gallery.
+ *
+ * Used as the right pane of TasksList (filtered by selected task). Click a
+ * card to open ArtifactPreviewModal (markdown rendered, media playable).
+ */
+
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
+import { api, apiErrorMessage } from "../../../lib/api";
+import type { Artifact, ArtifactType } from "../../../lib/api";
+import { useToast } from "../../../components/ui/Toast";
+import { CardGridSkeleton } from "../../../components/ui/Skeleton";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { ArtifactPreviewModal } from "../../../components/ui/ArtifactPreviewModal";
+
+const TYPE_ICON: Record<ArtifactType, string> = {
+  markdown: "📄",
+  code: "📑",
+  json: "📑",
+  image: "🖼",
+  video: "🎬",
+  audio: "🎵",
+  table: "📊",
+  pdf: "📕",
+};
+
+function fmtSize(n: number): string {
+  if (n >= 1_048_576) return `${(n / 1_048_576).toFixed(1)} MB`;
+  if (n >= 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${n} B`;
+}
+
+export function ArtifactGallery({
+  companyId,
+  taskId,
+  emptyTitle,
+  emptyHint,
+  showTaskLink = false,
+  pollMs,
+}: {
+  companyId: string;
+  /** When set, only show artifacts for this task. */
+  taskId?: string | null;
+  emptyTitle?: string;
+  emptyHint?: string;
+  showTaskLink?: boolean;
+  /** Re-fetch cadence while a live task is selected (ms). */
+  pollMs?: number;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [items, setItems] = useState<Artifact[]>([]);
+  const [active, setActive] = useState<Artifact | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = (isPoll = false) => {
+      if (!isPoll) setLoading(true);
+      api
+        .get<{ items: Artifact[] }>(`/v1/companies/${companyId}/artifacts`)
+        .then((r) => {
+          if (cancelled) return;
+          setItems(r.items);
+          if (pollMs && pollMs > 0) {
+            timer = setTimeout(() => load(true), pollMs);
+          }
+        })
+        .catch((e) => {
+          if (cancelled || isPoll) return;
+          toast.error(apiErrorMessage(e, t("business.company.outputs.load-error")));
+        })
+        .finally(() => {
+          if (!cancelled && !isPoll) setLoading(false);
+        });
+    };
+
+    load(false);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [companyId, toast, t, pollMs]);
+
+  const filtered = useMemo(() => {
+    if (!taskId) return items;
+    return items.filter((a) => a.task_id === taskId);
+  }, [items, taskId]);
+
+  useEffect(() => {
+    if (active && !filtered.some((a) => a.id === active.id)) {
+      setActive(null);
+    }
+  }, [filtered, active]);
+
+  if (loading) {
+    return (
+      <div className="p-4">
+        <CardGridSkeleton count={4} />
+      </div>
+    );
+  }
+
+  if (filtered.length === 0) {
+    return (
+      <div className="p-4">
+        <EmptyState
+          icon="📁"
+          title={emptyTitle ?? t("business.company.outputs.empty")}
+          hint={emptyHint}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <div className="grid sm:grid-cols-2 gap-3">
+        {filtered.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => setActive(a)}
+            className="rounded-md border border-border-solid bg-surface p-4 text-start hover:border-primary transition-colors flex flex-col group"
+          >
+            <div className="text-3xl">{TYPE_ICON[a.type] ?? "📦"}</div>
+            <div className="mt-2 text-sm text-heading truncate group-hover:text-primary">
+              {a.name}
+            </div>
+            <div className="text-[11px] text-muted">
+              {t(`artifact.type.${a.type}`, { defaultValue: a.type })} ·{" "}
+              {fmtSize(a.size_bytes)}
+            </div>
+            <div className="mt-2 text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+              {t("common.preview.open")}
+            </div>
+            {showTaskLink && a.task_id && (
+              <Link
+                to={`/business/c/${companyId}/tasks/${a.task_id}`}
+                className="mt-1 text-[11px] text-muted hover:text-primary hover:underline truncate"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {t("business.company.outputs.task-link", { id: a.task_id })}
+              </Link>
+            )}
+          </button>
+        ))}
+      </div>
+      {active && (
+        <ArtifactPreviewModal
+          art={active}
+          companyId={companyId}
+          onClose={() => setActive(null)}
+        />
+      )}
+    </div>
+  );
+}

@@ -15,10 +15,13 @@ import {
 import "@xyflow/react/dist/style.css";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
-import type { BuilderDraft, DraftAgent, DraftFile, ChatMsg } from "../../lib/builderFixtures";
+import type {
+  BuilderDraft, DraftAgent, DraftFile, ChatMsg, SecurityReviewInfo,
+} from "../../lib/builderFixtures";
 import { estCostPerTask } from "../../lib/builderFixtures";
 import { RecruiterWs } from "../../lib/recruiterWs";
 import { AgentNode, type AgentNodeData } from "../../components/canvas/AgentNode";
+import { SecurityReviewOverlay } from "../../components/SecurityReviewOverlay";
 import { useToast } from "../../components/ui/Toast";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Markdown } from "../../components/ui/Markdown";
@@ -37,6 +40,7 @@ const STATUS_META: Record<RStatus, { icon: string; color: string }> = {
 
 const DRAFT_STATE_COLOR: Record<string, string> = {
   draft: "text-spark-flare",
+  ready: "text-spark-mint",
   in_review: "text-spark-blue",
   published: "text-spark-mint",
   publishing: "text-spark-blue",
@@ -154,8 +158,17 @@ function computeReadiness(draft: BuilderDraft, t: (k: string) => string): Check[
       status: hasWorkflow ? "pass" : hasWorkers ? "warn" : "fail",
       detail: hasWorkflow ? undefined : t("dev.studio.readiness.workflow-warn"),
     },
-    { key: "mcp", label: t("dev.studio.readiness.mcp"), status: draft.skills.length ? "warn" : "pass", detail: draft.skills.length ? t("dev.studio.readiness.mcp-warn") : undefined },
-    { key: "danger", label: t("dev.studio.readiness.danger"), status: "pass" },
+    { key: "mcp", label: t("dev.studio.readiness.mcp"), status: "pass", detail: t("dev.studio.readiness.mcp-relaxed") },
+    {
+      key: "danger",
+      label: t("dev.studio.readiness.danger"),
+      status: draft.security_review?.status === "passed" ? "pass"
+        : draft.security_review?.status === "failed" ? "fail"
+        : "warn",
+      detail: draft.security_review?.status === "passed"
+        ? t("dev.studio.review.badge-passed", { policy: draft.security_review.policy_version || "2" })
+        : t("dev.studio.review.badge-needed"),
+    },
     { key: "cost", label: t("dev.studio.readiness.cost"), status: "info", detail: `¥${cost.toFixed(2)}` },
   ];
 }
@@ -216,6 +229,10 @@ export default function DevStudio() {
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+  const [liveReview, setLiveReview] = useState<SecurityReviewInfo | null>(null);
+  /** Prefill chat composer when returning from a failed review. */
+  const [composeSeed, setComposeSeed] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState("");
   const wsRef = useRef<RecruiterWs | null>(null);
@@ -252,13 +269,13 @@ export default function DevStudio() {
     if (deptId !== "new" || creatingRef.current) return;
     creatingRef.current = true;
     api
-      .post<BuilderDraft>(`/v1/dev/depts?user_id=${encodeURIComponent(userId)}`)
+      .post<BuilderDraft>("/v1/dev/depts")
       .then((d) => navigate(`/dev/depts/${d.id}/studio`, { replace: true }))
       .catch((e) => {
         creatingRef.current = false;
         toast.error(apiErrorMessage(e, t("dev.studio.load-error")));
       });
-  }, [deptId, userId, navigate, toast, t]);
+  }, [deptId, navigate, toast, t]);
 
   // Reset view state when the bound draft changes (e.g. new-draft redirect).
   useEffect(() => {
@@ -271,11 +288,11 @@ export default function DevStudio() {
     if (!draftId) return;
     let cancelled = false;
     api
-      .get<BuilderDraft>(`/v1/dev/depts/${draftId}?user_id=${encodeURIComponent(userId)}`)
+      .get<BuilderDraft>(`/v1/dev/depts/${draftId}`)
       .then((d) => { if (!cancelled) { setDraft(d); } })
       .catch((e) => toast.error(apiErrorMessage(e, t("dev.studio.load-error"))));
     return () => { cancelled = true; };
-  }, [draftId, userId, toast, t]);
+  }, [draftId, toast, t]);
 
   useEffect(() => {
     if (!draftId || !userId) return;
@@ -347,10 +364,7 @@ export default function DevStudio() {
     setRenaming(false);
     if (!name || !draftId || name === draft?.name) return;
     try {
-      const d = await api.patch<BuilderDraft>(
-        `/v1/dev/depts/${draftId}?user_id=${encodeURIComponent(userId)}`,
-        { name },
-      );
+      const d = await api.patch<BuilderDraft>(`/v1/dev/depts/${draftId}`, { name });
       toast.info(t("dev.studio.renamed"));
       if (d.id !== draftId) {
         // ascii rename also changes the draft id — rebind URL/WS to the new id
@@ -361,27 +375,72 @@ export default function DevStudio() {
     } catch (e) {
       toast.error(apiErrorMessage(e, t("dev.studio.rename-failed")));
     }
-  }, [renameVal, draftId, draft?.name, userId, navigate, toast, t]);
+  }, [renameVal, draftId, draft?.name, navigate, toast, t]);
+
+  const pollReview = useCallback(async () => {
+    if (!draftId) return;
+    try {
+      const res = await api.get<{ security_review: SecurityReviewInfo | null }>(
+        `/v1/dev/depts/${draftId}/security_review`,
+      );
+      const sr = res.security_review;
+      setLiveReview(sr);
+      if (sr && ["passed", "failed", "error", "stale"].includes(sr.status)) {
+        setReviewing(false);
+        const d = await api.get<BuilderDraft>(`/v1/dev/depts/${draftId}`);
+        setDraft(d);
+        if (sr.status === "passed") {
+          if (sr.activated === false) {
+            toast.info(t("dev.studio.review.activate-failed"));
+          } else {
+            toast.info(t("dev.studio.review.toast-passed"));
+          }
+        }
+      }
+    } catch (e) {
+      setReviewing(false);
+      toast.error(apiErrorMessage(e, t("dev.studio.review.poll-failed")));
+    }
+  }, [draftId, toast, t]);
+
+  useEffect(() => {
+    if (!reviewing || !draftId) return;
+    const id = window.setInterval(() => { void pollReview(); }, 1500);
+    return () => window.clearInterval(id);
+  }, [reviewing, draftId, pollReview]);
 
   const onSubmit = useCallback(async () => {
     if (!draftId) return;
     setSubmitting(true);
+    setReviewing(true);
+    setLiveReview({
+      status: "queued",
+      steps: [
+        { key: "candidate", status: "running" },
+        { key: "political", status: "pending" },
+        { key: "static", status: "pending" },
+        { key: "secrets", status: "pending" },
+        { key: "mcp", status: "pending" },
+        { key: "llm", status: "pending" },
+        { key: "report", status: "pending" },
+      ],
+    });
     try {
-      await api.post(`/v1/dev/depts/${draftId}/submit?user_id=${encodeURIComponent(userId)}`);
-      toast.info("已上架");
-      const d = await api.get<BuilderDraft>(
-        `/v1/dev/depts/${draftId}?user_id=${encodeURIComponent(userId)}`,
+      const res = await api.post<{ security_review: SecurityReviewInfo }>(
+        `/v1/dev/depts/${draftId}/security_review`,
       );
-      setDraft(d);
+      setLiveReview(res.security_review || null);
     } catch (e) {
-      toast.error(apiErrorMessage(e, "Submit failed"));
+      setReviewing(false);
+      setLiveReview(null);
+      toast.error(apiErrorMessage(e, t("dev.studio.review.start-failed")));
     } finally {
       setSubmitting(false);
     }
-  }, [draftId, userId, toast]);
+  }, [draftId, toast, t]);
 
   const checks = useMemo(() => (draft ? computeReadiness(draft, t) : []), [draft, t]);
-  const blocked = checks.some((c) => c.status === "fail") || submitting;
+  const blocked = checks.some((c) => c.status === "fail") || submitting || reviewing;
   const passes = checks.filter((c) => c.status === "pass").length;
   const scoreTotal = checks.filter((c) => c.status !== "info").length;
 
@@ -476,6 +535,27 @@ export default function DevStudio() {
         </div>
       </header>
 
+      {(reviewing || (liveReview && ["failed", "error", "stale", "passed"].includes(liveReview.status))) && (
+        <SecurityReviewOverlay
+          review={liveReview || draft.security_review || null}
+          onRetry={() => { void onSubmit(); }}
+          onBack={() => {
+            const sr = liveReview || draft.security_review || null;
+            const { notice, prompt } = buildReviewRemediation(sr, t);
+            setLiveReview(null);
+            setView("develop");
+            if (notice) {
+              setMessages((cur) => [
+                ...cur,
+                { id: `sr-fail-${Date.now()}`, role: "copilot", text: notice },
+              ]);
+            }
+            if (prompt) setComposeSeed(prompt);
+          }}
+          onDone={() => { setLiveReview(null); }}
+        />
+      )}
+
       {view === "publish" ? (
         <PublishPage
           draft={draft}
@@ -483,7 +563,7 @@ export default function DevStudio() {
           passes={passes}
           scoreTotal={scoreTotal}
           blocked={blocked}
-          submitting={submitting}
+          submitting={submitting || reviewing}
           onSubmit={onSubmit}
         />
       ) : (
@@ -512,11 +592,61 @@ export default function DevStudio() {
             onCancel={onCancel}
             busy={busy}
             toolStatus={toolStatus}
+            composeSeed={composeSeed}
+            onComposeSeedConsumed={() => setComposeSeed(null)}
           />
         </div>
       )}
     </div>
   );
+}
+
+/** Build chat notice + sendable remediation prompt from a failed review. */
+function buildReviewRemediation(
+  review: SecurityReviewInfo | null,
+  t: (k: string, o?: Record<string, string | number>) => string,
+): { notice: string; prompt: string } {
+  if (!review) {
+    return {
+      notice: t("dev.studio.review.remediate-notice-empty"),
+      prompt: t("dev.studio.review.remediate-prompt-empty"),
+    };
+  }
+  const findings = review.findings || [];
+  const lines = findings.length
+    ? findings.map((f, i) => {
+        const loc = [f.file, f.line].filter((x) => x != null && x !== "").join(":");
+        const ev = f.evidence_redacted ? ` \`${f.evidence_redacted}\`` : "";
+        return `${i + 1}. **${f.severity || "info"}** \`${f.rule || "finding"}\`${loc ? ` @ ${loc}` : ""}\n   ${f.message || ""}${ev}`;
+      })
+    : [t("dev.studio.review.remediate-no-findings")];
+
+  const notice = [
+    t("dev.studio.review.remediate-notice-head"),
+    "",
+    ...lines,
+    "",
+    review.report_md ? review.report_md.slice(0, 1200) : "",
+    "",
+    t("dev.studio.review.remediate-notice-tail"),
+  ].filter((x, i, arr) => !(x === "" && arr[i - 1] === "")).join("\n").trim();
+
+  const bulletPlain = findings.length
+    ? findings.map((f, i) => {
+        const loc = [f.file, f.line].filter((x) => x != null && x !== "").join(":");
+        return `${i + 1}. [${f.severity || "info"}] ${f.rule || "finding"}${loc ? ` @ ${loc}` : ""} — ${f.message || ""}`;
+      }).join("\n")
+    : t("dev.studio.review.remediate-no-findings");
+
+  const prompt = [
+    t("dev.studio.review.remediate-prompt-head"),
+    "",
+    bulletPlain,
+    "",
+    t("dev.studio.review.remediate-prompt-tail"),
+  ].join("\n");
+
+  return { notice, prompt };
 }
 
 // ── right: vibe chat ────────────────────────────────────────────────────────
@@ -538,8 +668,45 @@ function TypingDots({ label }: { label?: string }) {
   );
 }
 
+/** Waiting / thinking presence for Recruiter — entrance + orbit mark + shimmer. */
+function RecruiterWaiting({ label }: { label?: string }) {
+  return (
+    <div
+      className="recruiter-bubble-in max-w-[85%] rounded-md px-3 py-2.5 text-xs leading-relaxed bg-surface border border-border-solid text-body shadow-[0_8px_24px_-16px_rgba(0,0,0,0.45)]"
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="recruiter-wait-mark" aria-hidden>
+          <span className="relative z-[1] text-[11px] font-semibold leading-none">R</span>
+        </span>
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="text-[10px] uppercase tracking-widest recruiter-label-shimmer">
+            Recruiter
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-end gap-[3px] h-3" aria-hidden>
+              <span className="chat-typing-dot block size-1.5 rounded-full bg-primary" />
+              <span className="chat-typing-dot block size-1.5 rounded-full bg-primary" />
+              <span className="chat-typing-dot block size-1.5 rounded-full bg-primary" />
+            </span>
+            {label ? (
+              <span className="chat-wait-pulse text-[11px] text-muted truncate">{label}</span>
+            ) : null}
+          </div>
+          <div className="recruiter-wait-bar" aria-hidden>
+            <span />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VibeChat({
   width, messages, onSend, onCancel, busy, toolStatus,
+  composeSeed, onComposeSeedConsumed,
 }: {
   width: number;
   messages: ChatMsg[];
@@ -547,18 +714,35 @@ function VibeChat({
   onCancel: () => void;
   busy: boolean;
   toolStatus: string | null;
+  composeSeed?: string | null;
+  onComposeSeedConsumed?: () => void;
 }) {
   const { t } = useTranslation();
   const [input, setInput] = useState("");
   // 只滚聊天容器自己 —— scrollIntoView 会把所有可滚祖先（包括页面）一起滚，
   // 右侧预览会被带着动。
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastMsg = messages[messages.length - 1];
   const waitingForReply = busy && (!lastMsg || lastMsg.role !== "copilot" || !lastMsg.text);
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages.length, lastMsg?.text, busy, toolStatus, waitingForReply]);
+
+  useEffect(() => {
+    if (!composeSeed) return;
+    setInput(composeSeed);
+    onComposeSeedConsumed?.();
+    // Focus after paint so the user can hit Send immediately.
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.selectionStart = el.value.length;
+      el.selectionEnd = el.value.length;
+    });
+  }, [composeSeed, onComposeSeedConsumed]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -588,21 +772,24 @@ function VibeChat({
       <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
         {messages.map((m) => {
           const emptyStreaming = m.role === "copilot" && !m.text && busy;
+          if (m.role === "copilot" && emptyStreaming) {
+            return (
+              <div key={m.id} className="flex justify-start">
+                <RecruiterWaiting label={waitingLabel} />
+              </div>
+            );
+          }
           return (
             <div key={m.id} className={m.role === "user" ? "flex justify-end" : "flex justify-start"}>
               <div className={`max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed ${
                 m.role === "user"
                   ? "bg-surface-2 text-body whitespace-pre-wrap"
-                  : "bg-surface border border-border-solid text-body"
+                  : "recruiter-bubble-in bg-surface border border-border-solid text-body"
               }`}>
                 {m.role === "copilot" ? (
                   <>
                     <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>
-                    {m.text ? (
-                      <Markdown text={m.text} />
-                    ) : emptyStreaming ? (
-                      <TypingDots />
-                    ) : null}
+                    {m.text ? <Markdown text={m.text} /> : null}
                   </>
                 ) : (
                   m.text
@@ -613,10 +800,7 @@ function VibeChat({
         })}
         {waitingForReply && lastMsg?.role === "user" && (
           <div className="flex justify-start">
-            <div className="max-w-[85%] rounded-md px-3 py-2 text-xs leading-relaxed bg-surface border border-border-solid text-body">
-              <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>
-              <TypingDots label={waitingLabel} />
-            </div>
+            <RecruiterWaiting label={waitingLabel} />
           </div>
         )}
         {busy && toolStatus && lastMsg?.role === "copilot" && lastMsg.text && (
@@ -627,20 +811,29 @@ function VibeChat({
         )}
       </div>
       <div className="border-t border-border-solid p-3 shrink-0">
-        <form onSubmit={submit} className="flex gap-2">
-          <input
+        <form onSubmit={submit} className="flex gap-2 items-end">
+          <textarea
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter sends; Shift+Enter inserts newline (remediation prompts are multi-line).
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                submit(e);
+              }
+            }}
             placeholder={t("dev.studio.chat.placeholder")}
             disabled={busy}
-            className="flex-1 bg-surface border border-border-solid rounded px-3 py-1.5 text-sm text-body placeholder:text-dim focus:border-primary outline-none disabled:opacity-60"
+            rows={input.includes("\n") || input.length > 80 ? 5 : 2}
+            className="flex-1 min-h-[2.5rem] max-h-40 resize-y bg-surface border border-border-solid rounded px-3 py-1.5 text-sm text-body placeholder:text-dim focus:border-primary outline-none disabled:opacity-60"
           />
           {busy ? (
-            <button type="button" onClick={onCancel} className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-fusion hover:text-fusion">
+            <button type="button" onClick={onCancel} className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-fusion hover:text-fusion shrink-0">
               {t("dev.studio.chat.cancel")}
             </button>
           ) : (
-            <button type="submit" className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition">
+            <button type="submit" className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition shrink-0">
               {t("dev.studio.chat.send")}
             </button>
           )}
@@ -921,7 +1114,14 @@ function PublishPage({
   onSubmit: () => void;
 }) {
   const { t } = useTranslation();
-  const published = draft.state === "published";
+  const sr = draft.security_review;
+  const needsReview = !sr || sr.status === "stale" || sr.status === "failed" || sr.status === "error";
+  const publishedClean = draft.state === "published" && sr?.status === "passed";
+  // Readiness fails still block; review badge warn does not (danger is warn until reviewed).
+  const readinessBlocked = checks.some((c) => c.status === "fail" && c.key !== "danger");
+  const btnLabel = needsReview && sr
+    ? t("dev.studio.action.resubmit-review")
+    : t("dev.studio.action.submit");
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-6">
@@ -934,10 +1134,17 @@ function PublishPage({
               {t("dev.studio.publish.hint")}
             </p>
           </div>
-          <div className={`rounded-full px-3 py-1 text-sm border shrink-0 ${
-            blocked ? "border-spark-flare/40 text-spark-flare" : "border-spark-mint/40 text-spark-mint"
-          }`}>
-            {passes}/{scoreTotal}
+          <div className="flex items-center gap-2 shrink-0">
+            {needsReview && (
+              <span className="rounded-full px-3 py-1 text-xs border border-spark-flare/40 text-spark-flare">
+                {t("dev.studio.review.badge-needed")}
+              </span>
+            )}
+            <div className={`rounded-full px-3 py-1 text-sm border ${
+              readinessBlocked ? "border-spark-flare/40 text-spark-flare" : "border-spark-mint/40 text-spark-mint"
+            }`}>
+              {passes}/{scoreTotal}
+            </div>
           </div>
         </div>
 
@@ -956,21 +1163,33 @@ function PublishPage({
           })}
         </div>
 
+        {publishedClean && (
+          <div className="rounded-md border border-spark-mint/30 bg-spark-mint/5 px-4 py-3 text-sm space-y-1">
+            <div className="text-spark-mint">
+              {t("dev.studio.review.badge-passed", { policy: sr?.policy_version || "1" })}
+            </div>
+            <div className="text-xs text-muted">
+              {t("dev.studio.review.listed")}
+              {" · "}
+              {sr?.activated === false
+                ? t("dev.studio.review.activate-failed")
+                : t("dev.studio.review.activated")}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 pt-2">
           <button
             type="button"
-            disabled={blocked || published}
-            title={blocked ? t("dev.studio.action.submit-blocked") : undefined}
+            disabled={readinessBlocked || submitting || (publishedClean && !needsReview)}
+            title={readinessBlocked ? t("dev.studio.action.submit-blocked") : undefined}
             onClick={onSubmit}
             className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {submitting ? "…" : t("dev.studio.action.submit")}
+            {submitting ? "…" : btnLabel}
           </button>
-          {blocked && (
+          {readinessBlocked && (
             <span className="text-xs text-spark-flare">{t("dev.studio.action.submit-blocked")}</span>
-          )}
-          {published && !blocked && (
-            <span className="text-xs text-spark-mint">{t("dev.dept.state.published")}</span>
           )}
         </div>
       </div>
