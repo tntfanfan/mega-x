@@ -33,6 +33,7 @@ import TeamView from "./pages/solo/line/TeamView";
 import SoloTasksList from "./pages/solo/line/TasksList";
 import SoloTaskNew from "./pages/solo/line/TaskNew";
 import SoloTaskDetail from "./pages/solo/line/TaskDetail";
+import SoloChatView from "./pages/solo/line/ChatView";
 import LineMarketplace from "./pages/solo/line/Marketplace";
 import PortfolioView from "./pages/solo/line/PortfolioView";
 import TimelineView from "./pages/solo/line/TimelineView";
@@ -159,10 +160,11 @@ export default function App() {
           </Route>
           <Route path="l/:lineId" element={<LineShell />}>
             <Route index element={<TeamView />} />
+            <Route path="chat" element={<SoloChatView />} />
             <Route path="tasks" element={<SoloTasksList />} />
             <Route path="tasks/new" element={<SoloTaskNew />} />
             <Route path="tasks/:taskId" element={<SoloTaskDetail />} />
-            <Route path="conversations" element={<Navigate to="../tasks" replace />} />
+            <Route path="conversations" element={<Navigate to="../chat" replace />} />
             <Route path="marketplace" element={<LineMarketplace />} />
             <Route path="portfolio" element={<PortfolioView />} />
             <Route path="timeline" element={<TimelineView />} />

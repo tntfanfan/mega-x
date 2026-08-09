@@ -1,8 +1,8 @@
 /**
- * Task / company artifact gallery.
+ * Task / owner artifact gallery.
  *
- * Used as the right pane of TasksList (filtered by selected task). Click a
- * card to open ArtifactPreviewModal (markdown rendered, media playable).
+ * Used as the right pane of TasksList (filtered by selected task) and solo
+ * Portfolio. Click a card to open ArtifactPreviewModal.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -11,6 +11,10 @@ import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Artifact, ArtifactType } from "../../../lib/api";
+import {
+  artifactCollectionPath,
+  type ArtifactOwner,
+} from "../../../lib/artifacts";
 import { useToast } from "../../../components/ui/Toast";
 import { CardGridSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
@@ -34,21 +38,28 @@ function fmtSize(n: number): string {
 }
 
 export function ArtifactGallery({
-  companyId,
+  owner,
   taskId,
+  taskBasePath,
   emptyTitle,
   emptyHint,
   showTaskLink = false,
   pollMs,
+  loadErrorKey = "business.company.outputs.load-error",
+  taskLinkKey = "business.company.outputs.task-link",
 }: {
-  companyId: string;
+  owner: ArtifactOwner;
   /** When set, only show artifacts for this task. */
   taskId?: string | null;
+  /** Base path for task detail links, e.g. `/business/c/:id/tasks`. */
+  taskBasePath?: string;
   emptyTitle?: string;
   emptyHint?: string;
   showTaskLink?: boolean;
   /** Re-fetch cadence while a live task is selected (ms). */
   pollMs?: number;
+  loadErrorKey?: string;
+  taskLinkKey?: string;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -63,7 +74,7 @@ export function ArtifactGallery({
     const load = (isPoll = false) => {
       if (!isPoll) setLoading(true);
       api
-        .get<{ items: Artifact[] }>(`/v1/companies/${companyId}/artifacts`)
+        .get<{ items: Artifact[] }>(artifactCollectionPath(owner))
         .then((r) => {
           if (cancelled) return;
           setItems(r.items);
@@ -73,7 +84,7 @@ export function ArtifactGallery({
         })
         .catch((e) => {
           if (cancelled || isPoll) return;
-          toast.error(apiErrorMessage(e, t("business.company.outputs.load-error")));
+          toast.error(apiErrorMessage(e, t(loadErrorKey)));
         })
         .finally(() => {
           if (!cancelled && !isPoll) setLoading(false);
@@ -85,7 +96,7 @@ export function ArtifactGallery({
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [companyId, toast, t, pollMs]);
+  }, [owner.kind, owner.id, toast, t, pollMs, loadErrorKey]);
 
   const filtered = useMemo(() => {
     if (!taskId) return items;
@@ -139,13 +150,13 @@ export function ArtifactGallery({
             <div className="mt-2 text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
               {t("common.preview.open")}
             </div>
-            {showTaskLink && a.task_id && (
+            {showTaskLink && taskBasePath && a.task_id && (
               <Link
-                to={`/business/c/${companyId}/tasks/${a.task_id}`}
+                to={`${taskBasePath}/${a.task_id}`}
                 className="mt-1 text-[11px] text-muted hover:text-primary hover:underline truncate"
                 onClick={(e) => e.stopPropagation()}
               >
-                {t("business.company.outputs.task-link", { id: a.task_id })}
+                {t(taskLinkKey, { id: a.task_id })}
               </Link>
             )}
           </button>
@@ -154,7 +165,7 @@ export function ArtifactGallery({
       {active && (
         <ArtifactPreviewModal
           art={active}
-          companyId={companyId}
+          owner={owner}
           onClose={() => setActive(null)}
         />
       )}

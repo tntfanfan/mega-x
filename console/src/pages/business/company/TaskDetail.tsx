@@ -185,7 +185,10 @@ export default function TaskDetail() {
                 role="button"
                 tabIndex={0}
               >
-                <ArtifactViewer art={selected} companyId={company.id} />
+                <ArtifactViewer
+                  art={selected}
+                  owner={{ kind: "companies", id: company.id }}
+                />
               </div>
               <div className="mt-3 flex gap-2">
                 <button
@@ -210,7 +213,7 @@ export default function TaskDetail() {
               {previewOpen && (
                 <ArtifactPreviewModal
                   art={selected}
-                  companyId={company.id}
+                  owner={{ kind: "companies", id: company.id }}
                   onClose={() => setPreviewOpen(false)}
                 />
               )}

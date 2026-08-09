@@ -486,20 +486,45 @@ const HANDLERS: Handler[] = [
       return { status: 405, body: { error: "method not allowed" } };
     },
   },
-  // POST /v1/lines/:id/chat
+  // POST /v1/lines/:id/chat — same auto-task heuristic as company chat
   {
     match: rx(/^\/v1\/lines\/([^/]+)\/chat$/),
     handle: (_p, _m, body, match) => {
       const cid = (match as RegExpMatchArray)[1];
       const b = (body ?? {}) as { message?: string; dept_id?: string; session_id?: string };
       const dept = DEPT_CATALOG.find((d) => d.id === b.dept_id);
+      const msg = (b.message ?? "").trim();
+      const sessionId = b.session_id ?? `mock-sess-${cid}`;
+      const isTask = MOCK_TASK_VERB_RE.test(msg);
+      if (isTask) {
+        const title = msg.split(/\r?\n/)[0]?.slice(0, 30) || msg.slice(0, 30) || "未命名任务";
+        const task = makeTask(cid, {
+          title,
+          brief: msg,
+          dept_id: b.dept_id ?? "dept-pub",
+          source: "chat",
+          chat_session_id: sessionId,
+        });
+        TASKS.push(task);
+        return {
+          body: {
+            ok: true,
+            reply:
+              `【演示 · ${dept ? dept.name : "团队"}】已理解这是一项交付任务「${title}」。` +
+              "我先立项确认目标与计划，具体产出会在任务会话中完成——可到「任务」页查看进度。",
+            session_id: sessionId,
+            task,
+            _mock: true,
+          },
+        };
+      }
       return {
         body: {
           ok: true,
           reply:
-            `【演示回复 · ${dept ? dept.name : "团队"}】已收到：「${b.message ?? ""}」。` +
-            "当前站点为纯前端演示（未接入后端），部署 FastAPI 后这里会由部门 Agent 真实作答。",
-          session_id: b.session_id ?? `mock-sess-${cid}`,
+            `【演示回复 · ${dept ? dept.name : "团队"}】已收到：「${msg}」。` +
+            "当前站点为纯前端演示（未接入后端），部署 FastAPI 后这里会由团队 Agent 真实作答。",
+          session_id: sessionId,
           _mock: true,
         },
       };
@@ -541,6 +566,15 @@ const HANDLERS: Handler[] = [
     handle: (_p, _m, _b, match) => {
       const id = (match as RegExpMatchArray)[1];
       return { body: { items: ARTIFACTS.filter((a) => a.company_id === id), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/lines\/([^/]+)\/artifacts\/([^/]+)$/),
+    handle: (_p, _m, _b, match) => {
+      const [, cid, aid] = match as RegExpMatchArray;
+      const art = ARTIFACTS.find((a) => a.company_id === cid && a.id === aid);
+      if (!art) return { status: 404, body: { error: "artifact not found" } };
+      return { body: art };
     },
   },
   // GET /v1/lines/:id/activity

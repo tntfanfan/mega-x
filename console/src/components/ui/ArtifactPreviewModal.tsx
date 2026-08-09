@@ -8,7 +8,13 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../../lib/api";
 import type { Artifact } from "../../lib/api";
-import { copyArtifactText, downloadArtifact, isTextArtifact } from "../../lib/artifacts";
+import {
+  artifactItemPath,
+  copyArtifactText,
+  downloadArtifact,
+  isTextArtifact,
+  type ArtifactOwner,
+} from "../../lib/artifacts";
 import { useToast } from "./Toast";
 import { ArtifactViewer } from "./ArtifactViewer";
 
@@ -20,11 +26,11 @@ function fmtSize(n: number): string {
 
 export function ArtifactPreviewModal({
   art,
-  companyId,
+  owner,
   onClose,
 }: {
   art: Artifact;
-  companyId: string;
+  owner: ArtifactOwner;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -49,7 +55,7 @@ export function ArtifactPreviewModal({
     setLoadingText(true);
     setFullText(art.preview_text ?? null);
     api
-      .get<Artifact>(`/v1/companies/${companyId}/artifacts/${art.id}`)
+      .get<Artifact>(artifactItemPath(owner, art.id))
       .then((full) => {
         if (cancelled) return;
         if (typeof full.preview_text === "string") {
@@ -65,7 +71,9 @@ export function ArtifactPreviewModal({
     return () => {
       cancelled = true;
     };
-  }, [art, companyId]);
+    // owner is an inline object at many call sites — key on kind/id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [art, owner.kind, owner.id]);
 
   const onDownload = () => {
     const withText = fullText != null ? { ...art, preview_text: fullText } : art;
@@ -120,7 +128,7 @@ export function ArtifactPreviewModal({
           </button>
         </header>
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 min-h-0">
-          <ArtifactViewer art={art} companyId={companyId} textOverride={fullText} />
+          <ArtifactViewer art={art} owner={owner} textOverride={fullText} />
         </div>
         <footer className="px-4 py-3 border-t border-border-solid flex flex-wrap gap-2 shrink-0">
           <button

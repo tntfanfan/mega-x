@@ -7,7 +7,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Artifact } from "../../lib/api";
-import { artifactMediaUrl, isTextArtifact } from "../../lib/artifacts";
+import {
+  artifactMediaUrl,
+  isTextArtifact,
+  type ArtifactOwner,
+} from "../../lib/artifacts";
 import { Markdown } from "./Markdown";
 
 /** Best-effort CSV/TSV → GFM table; returns null if it doesn't look tabular. */
@@ -35,12 +39,12 @@ function csvToMarkdownTable(raw: string): string | null {
 
 export function ArtifactViewer({
   art,
-  companyId,
+  owner,
   textOverride,
   className = "",
 }: {
   art: Artifact;
-  companyId: string;
+  owner: ArtifactOwner;
   /** Full text when modal has re-fetched beyond list preview truncation. */
   textOverride?: string | null;
   className?: string;
@@ -48,7 +52,7 @@ export function ArtifactViewer({
   const { t } = useTranslation();
   const [mediaError, setMediaError] = useState(false);
   const text = textOverride ?? art.preview_text ?? null;
-  const mediaSrc = artifactMediaUrl(companyId, art);
+  const mediaSrc = artifactMediaUrl(owner, art);
 
   if (art.type === "markdown" && text != null) {
     return (

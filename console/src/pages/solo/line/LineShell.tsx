@@ -1,8 +1,8 @@
 /**
  * /solo/l/:lineId/* — 单产线沉浸 Shell。
  *
- * 侧栏顺序与企业版对齐：集市 → 团队 → 任务 → 作品集 → 设置。
- * 「团队」= 节点图 + 列表；「任务」= 任务列表 + 对话（原 Conversations 已并入）。
+ * 侧栏顺序与企业版对齐：集市 → 团队 → 聊天 → 任务 → 作品集 → 设置。
+ * ChatProvider 挂在壳下，切页不丢会话；任务页左列表右产出。
  */
 
 import { useEffect, useState } from "react";
@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 
 import { api } from "../../../lib/api";
 import type { Company } from "../../../lib/api";
+import { ChatProvider } from "./ChatProvider";
 
 type State =
   | { kind: "loading" }
@@ -68,25 +69,27 @@ export default function LineShell() {
   }[line.state];
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col">
-      <header className="border-b border-border-solid bg-surface px-6 py-3">
-        <div className="flex items-center gap-3">
-          <Link to="/solo/overview" className="text-xs text-muted hover:text-primary shrink-0">
-            {t("solo.line.back-overview")}
-          </Link>
-          <span className="text-2xl shrink-0">{line.emoji}</span>
-          <h1 className="font-display text-lg text-heading truncate flex-1">{line.name}</h1>
-          <span className={`text-xs ${stateBadge.color} shrink-0`}>{stateBadge.label}</span>
-        </div>
-      </header>
+    <ChatProvider line={line}>
+      <div className="min-h-[calc(100vh-8rem)] flex flex-col">
+        <header className="border-b border-border-solid bg-surface px-6 py-3">
+          <div className="flex items-center gap-3">
+            <Link to="/solo/overview" className="text-xs text-muted hover:text-primary shrink-0">
+              {t("solo.line.back-overview")}
+            </Link>
+            <span className="text-2xl shrink-0">{line.emoji}</span>
+            <h1 className="font-display text-lg text-heading truncate flex-1">{line.name}</h1>
+            <span className={`text-xs ${stateBadge.color} shrink-0`}>{stateBadge.label}</span>
+          </div>
+        </header>
 
-      <div className="flex flex-1">
-        <LineSidebar lineId={line.id} />
-        <main className="flex-1 min-w-0">
-          <Outlet context={{ line }} />
-        </main>
+        <div className="flex flex-1">
+          <LineSidebar lineId={line.id} />
+          <main className="flex-1 min-w-0">
+            <Outlet context={{ line }} />
+          </main>
+        </div>
       </div>
-    </div>
+    </ChatProvider>
   );
 }
 
@@ -95,6 +98,7 @@ function LineSidebar({ lineId }: { lineId: string }) {
   const tabs: { key: string; to: string; end?: boolean; label: string }[] = [
     { key: "marketplace", to: "marketplace", label: t("solo.line.tab.marketplace") },
     { key: "team", to: "", end: true, label: t("solo.line.tab.team") },
+    { key: "chat", to: "chat", label: t("solo.line.tab.chat") },
     { key: "tasks", to: "tasks", label: t("solo.line.tab.tasks") },
     { key: "portfolio", to: "portfolio", label: t("solo.line.tab.portfolio") },
     { key: "settings", to: "settings", label: t("solo.line.tab.settings") },

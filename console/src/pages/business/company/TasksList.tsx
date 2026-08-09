@@ -247,8 +247,9 @@ export default function TasksList() {
             <div className="flex-1 overflow-y-auto min-h-0">
               {selectedTask ? (
                 <ArtifactGallery
-                  companyId={company.id}
+                  owner={{ kind: "companies", id: company.id }}
                   taskId={selectedTask.id}
+                  taskBasePath={`/business/c/${company.id}/tasks`}
                   emptyTitle={
                     selectedLive
                       ? t("business.company.tasks.pane.waiting-outputs")
