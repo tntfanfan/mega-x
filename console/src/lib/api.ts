@@ -109,17 +109,41 @@ export function apiErrorMessage(e: unknown, fallback = "请求失败，请稍后
     if (typeof b === "string" && b) return b;
     return e.message || fallback;
   }
-  if (e instanceof Error && e.message) return e.message;
+  if (e instanceof DOMException && e.name === "AbortError") {
+    return fallback;
+  }
+  if (e instanceof Error) {
+    if (e.name === "AbortError") return fallback;
+    if (e.message) return e.message;
+  }
   return fallback;
 }
 
 export const api = {
-  get: <T = unknown>(path: string) => request<T>(path),
-  post: <T = unknown>(path: string, body?: Json) =>
-    request<T>(path, { method: "POST", body: body == null ? undefined : JSON.stringify(body) }),
-  patch: <T = unknown>(path: string, body?: Json) =>
-    request<T>(path, { method: "PATCH", body: body == null ? undefined : JSON.stringify(body) }),
-  delete: <T = unknown>(path: string) => request<T>(path, { method: "DELETE" }),
+  get: <T = unknown>(path: string, init?: Omit<RequestInit, "method" | "body">) =>
+    request<T>(path, { ...init }),
+  post: <T = unknown>(
+    path: string,
+    body?: Json,
+    init?: Omit<RequestInit, "method" | "body">,
+  ) =>
+    request<T>(path, {
+      ...init,
+      method: "POST",
+      body: body == null ? undefined : JSON.stringify(body),
+    }),
+  patch: <T = unknown>(
+    path: string,
+    body?: Json,
+    init?: Omit<RequestInit, "method" | "body">,
+  ) =>
+    request<T>(path, {
+      ...init,
+      method: "PATCH",
+      body: body == null ? undefined : JSON.stringify(body),
+    }),
+  delete: <T = unknown>(path: string, init?: Omit<RequestInit, "method" | "body">) =>
+    request<T>(path, { ...init, method: "DELETE" }),
 };
 
 export type Me = {

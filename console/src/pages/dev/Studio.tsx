@@ -216,6 +216,21 @@ function usePaneResize(
   }, [width, setWidth, key, min, max, side]);
 }
 
+type ChatMode = "recruiter" | "try";
+
+function draftCanTry(d: BuilderDraft | null): boolean {
+  if (!d) return false;
+  const files = d.files ?? [];
+  const hasBootstrap = files.some(
+    (f) =>
+      (f.name === "SOUL.md" || f.name === "AGENTS.md")
+      && (f.content?.trim().length ?? 0) >= 40,
+  );
+  if (hasBootstrap) return true;
+  // agents listed even if file bodies weren't hydrated yet
+  return (d.agents?.length ?? 0) > 0;
+}
+
 export default function DevStudio() {
   const { deptId } = useParams<{ deptId: string }>();
   const navigate = useNavigate();
@@ -223,11 +238,15 @@ export default function DevStudio() {
   const toast = useToast();
   const [draft, setDraft] = useState<BuilderDraft | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [tryMessages, setTryMessages] = useState<ChatMsg[]>([]);
+  const [chatMode, setChatMode] = useState<ChatMode>("recruiter");
   // develop = 文件/预览/对话；publish = 整页发布（就绪度）
   const [view, setView] = useState<"develop" | "publish">("develop");
   const [userId, setUserId] = useState("user-dev-0001");
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tryBusy, setTryBusy] = useState(false);
+  const [trySessionId, setTrySessionId] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [liveReview, setLiveReview] = useState<SecurityReviewInfo | null>(null);
@@ -237,6 +256,7 @@ export default function DevStudio() {
   const [renameVal, setRenameVal] = useState("");
   const wsRef = useRef<RecruiterWs | null>(null);
   const streamingIdRef = useRef<string | null>(null);
+  const tryAbortRef = useRef<AbortController | null>(null);
   const [chatWidth, setChatWidth] = useState<number>(
     () => loadPaneWidth(CHAT_WIDTH_KEY, CHAT_MIN_W, CHAT_MAX_W, 420),
   );
@@ -281,6 +301,12 @@ export default function DevStudio() {
   useEffect(() => {
     setDraft(null);
     setMessages([]);
+    setTryMessages([]);
+    setTrySessionId(undefined);
+    setChatMode("recruiter");
+    setTryBusy(false);
+    tryAbortRef.current?.abort();
+    tryAbortRef.current = null;
     setView("develop");
   }, [draftId]);
 
@@ -350,8 +376,76 @@ export default function DevStudio() {
   }, []);
 
   const onCancel = useCallback(() => {
+    if (chatMode === "try") {
+      tryAbortRef.current?.abort();
+      tryAbortRef.current = null;
+      setTryBusy(false);
+      return;
+    }
     wsRef.current?.cancel();
-  }, []);
+  }, [chatMode]);
+
+  const onTrySend = useCallback(async (text: string) => {
+    if (!draftId || tryBusy) return;
+    const userMsg: ChatMsg = { id: `tu-${Date.now()}`, role: "user", text };
+    setTryMessages((cur) => [...cur, userMsg]);
+    setTryBusy(true);
+    const ac = new AbortController();
+    tryAbortRef.current = ac;
+    try {
+      const res = await api.post<{
+        ok: boolean;
+        reply: string;
+        session_id?: string;
+        error?: string;
+      }>(
+        `/v1/dev/depts/${draftId}/try_chat`,
+        { message: text, session_id: trySessionId },
+        { signal: ac.signal },
+      );
+      if (res.session_id) setTrySessionId(res.session_id);
+      setTryMessages((cur) => [
+        ...cur,
+        {
+          id: `tc-${Date.now()}`,
+          role: "copilot",
+          text: res.reply || res.error || "(空回复)",
+        },
+      ]);
+      if (!res.ok) {
+        toast.error(res.error || res.reply || t("dev.studio.chat.try-error"));
+      }
+    } catch (e) {
+      if (ac.signal.aborted) {
+        setTryMessages((cur) => [
+          ...cur,
+          {
+            id: `tc-cancel-${Date.now()}`,
+            role: "copilot",
+            text: t("dev.studio.chat.try-cancelled"),
+          },
+        ]);
+        return;
+      }
+      const err = apiErrorMessage(e, t("dev.studio.chat.try-error"));
+      setTryMessages((cur) => [
+        ...cur,
+        { id: `tc-err-${Date.now()}`, role: "copilot", text: err },
+      ]);
+      toast.error(err);
+    } finally {
+      if (tryAbortRef.current === ac) tryAbortRef.current = null;
+      setTryBusy(false);
+    }
+  }, [draftId, tryBusy, trySessionId, toast, t]);
+
+  const onSendToRecruiter = useCallback((snippet: string) => {
+    const prompt = t("dev.studio.chat.fix-prompt", {
+      text: snippet.trim().slice(0, 1200),
+    });
+    setChatMode("recruiter");
+    setComposeSeed(prompt);
+  }, [t]);
 
   const startRename = useCallback(() => {
     if (!draft) return;
@@ -524,9 +618,17 @@ export default function DevStudio() {
               </button>
               <button
                 type="button"
-                disabled
-                title={t("dev.studio.action.testdrive-soon")}
-                className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-muted opacity-50 cursor-not-allowed"
+                disabled={!draftCanTry(draft)}
+                title={
+                  draftCanTry(draft)
+                    ? t("dev.studio.chat.mode-try-hint")
+                    : t("dev.studio.chat.try-disabled")
+                }
+                onClick={() => {
+                  setView("develop");
+                  setChatMode("try");
+                }}
+                className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border-solid disabled:hover:text-body"
               >
                 {t("dev.studio.action.testdrive")}
               </button>
@@ -544,6 +646,7 @@ export default function DevStudio() {
             const { notice, prompt } = buildReviewRemediation(sr, t);
             setLiveReview(null);
             setView("develop");
+            setChatMode("recruiter");
             if (notice) {
               setMessages((cur) => [
                 ...cur,
@@ -587,13 +690,19 @@ export default function DevStudio() {
           />
           <VibeChat
             width={chatWidth}
-            messages={messages}
-            onSend={onSend}
+            mode={chatMode}
+            onModeChange={setChatMode}
+            canTry={draftCanTry(draft)}
+            tryDisabledReason={t("dev.studio.chat.try-disabled")}
+            deptLabel={draft ? `${draft.emoji || ""} ${draft.name}`.trim() : t("dev.studio.chat.mode-try")}
+            messages={chatMode === "try" ? tryMessages : messages}
+            onSend={chatMode === "try" ? (text) => { void onTrySend(text); } : onSend}
             onCancel={onCancel}
-            busy={busy}
-            toolStatus={toolStatus}
-            composeSeed={composeSeed}
+            busy={chatMode === "try" ? tryBusy : busy}
+            toolStatus={chatMode === "try" ? null : toolStatus}
+            composeSeed={chatMode === "recruiter" ? composeSeed : null}
             onComposeSeedConsumed={() => setComposeSeed(null)}
+            onSendToRecruiter={onSendToRecruiter}
           />
         </div>
       )}
@@ -705,10 +814,16 @@ function RecruiterWaiting({ label }: { label?: string }) {
 }
 
 function VibeChat({
-  width, messages, onSend, onCancel, busy, toolStatus,
-  composeSeed, onComposeSeedConsumed,
+  width, mode, onModeChange, canTry, tryDisabledReason, deptLabel,
+  messages, onSend, onCancel, busy, toolStatus,
+  composeSeed, onComposeSeedConsumed, onSendToRecruiter,
 }: {
   width: number;
+  mode: ChatMode;
+  onModeChange: (mode: ChatMode) => void;
+  canTry: boolean;
+  tryDisabledReason: string;
+  deptLabel: string;
   messages: ChatMsg[];
   onSend: (text: string) => void;
   onCancel: () => void;
@@ -716,23 +831,33 @@ function VibeChat({
   toolStatus: string | null;
   composeSeed?: string | null;
   onComposeSeedConsumed?: () => void;
+  onSendToRecruiter?: (snippet: string) => void;
 }) {
   const { t } = useTranslation();
-  const [input, setInput] = useState("");
+  // Keep each mode's draft input when switching tabs.
+  const [inputs, setInputs] = useState<Record<ChatMode, string>>({
+    recruiter: "",
+    try: "",
+  });
+  const input = inputs[mode];
+  const setInput = (value: string) =>
+    setInputs((cur) => (cur[mode] === value ? cur : { ...cur, [mode]: value }));
   // 只滚聊天容器自己 —— scrollIntoView 会把所有可滚祖先（包括页面）一起滚，
   // 右侧预览会被带着动。
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastMsg = messages[messages.length - 1];
   const waitingForReply = busy && (!lastMsg || lastMsg.role !== "copilot" || !lastMsg.text);
+  const isTry = mode === "try";
+  const assistantLabel = isTry ? deptLabel : "Recruiter";
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, lastMsg?.text, busy, toolStatus, waitingForReply]);
+  }, [messages.length, lastMsg?.text, busy, toolStatus, waitingForReply, mode]);
 
   useEffect(() => {
-    if (!composeSeed) return;
-    setInput(composeSeed);
+    if (!composeSeed || mode !== "recruiter") return;
+    setInputs((cur) => ({ ...cur, recruiter: composeSeed }));
     onComposeSeedConsumed?.();
     // Focus after paint so the user can hit Send immediately.
     requestAnimationFrame(() => {
@@ -742,40 +867,96 @@ function VibeChat({
       el.selectionStart = el.value.length;
       el.selectionEnd = el.value.length;
     });
-  }, [composeSeed, onComposeSeedConsumed]);
+  }, [composeSeed, onComposeSeedConsumed, mode]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = input.trim();
     if (!text || busy) return;
+    if (isTry && !canTry) return;
     onSend(text);
     setInput("");
   };
 
-  const waitingLabel = toolStatus
-    ? t("dev.studio.chat.tool-running", { tool: toolStatus })
-    : t("dev.studio.chat.waiting");
+  const waitingLabel = isTry
+    ? t("dev.studio.chat.try-waiting")
+    : toolStatus
+      ? t("dev.studio.chat.tool-running", { tool: toolStatus })
+      : t("dev.studio.chat.waiting");
+
+  const placeholder = isTry
+    ? t("dev.studio.chat.try-placeholder")
+    : t("dev.studio.chat.placeholder");
 
   return (
     <aside
       style={{ width }}
       className="shrink-0 border-s border-border-solid flex flex-col min-h-0 bg-surface/40"
     >
-      <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0 flex items-center gap-2">
-        <span>💬 {t("dev.studio.chat.title")}</span>
+      <div className="px-3 py-2 border-b border-border-solid shrink-0 flex items-center gap-2">
+        <div className="inline-flex rounded-md border border-border-solid p-0.5 text-[11px]">
+          <button
+            type="button"
+            onClick={() => onModeChange("recruiter")}
+            className={`rounded px-2.5 py-1 transition ${
+              !isTry
+                ? "bg-primary text-bg"
+                : "text-muted hover:text-body"
+            }`}
+          >
+            {t("dev.studio.chat.mode-recruiter")}
+          </button>
+          <button
+            type="button"
+            disabled={!canTry && !isTry}
+            title={canTry ? t("dev.studio.chat.mode-try-hint") : tryDisabledReason}
+            onClick={() => {
+              if (!canTry) return;
+              onModeChange("try");
+            }}
+            className={`rounded px-2.5 py-1 transition ${
+              isTry
+                ? "bg-primary text-bg"
+                : "text-muted hover:text-body disabled:opacity-40 disabled:cursor-not-allowed"
+            }`}
+          >
+            {t("dev.studio.chat.mode-try")}
+          </button>
+        </div>
         {busy && (
-          <span className="normal-case tracking-normal ms-auto">
+          <span className="ms-auto">
             <TypingDots label={waitingLabel} />
           </span>
         )}
       </div>
+      {isTry && (
+        <div className="px-4 py-1.5 border-b border-border-solid text-[11px] text-muted shrink-0">
+          {t("dev.studio.chat.try-banner")}
+        </div>
+      )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
+        {messages.length === 0 && !busy && (
+          <p className="text-[11px] text-muted leading-relaxed">
+            {isTry
+              ? t("dev.studio.chat.try-empty")
+              : t("dev.studio.chat.recruiter-empty")}
+          </p>
+        )}
         {messages.map((m) => {
           const emptyStreaming = m.role === "copilot" && !m.text && busy;
           if (m.role === "copilot" && emptyStreaming) {
             return (
               <div key={m.id} className="flex justify-start">
-                <RecruiterWaiting label={waitingLabel} />
+                {isTry ? (
+                  <div className="max-w-[85%] rounded-md px-3 py-2 text-xs bg-surface border border-border-solid">
+                    <div className="text-[10px] uppercase tracking-widest text-spark-mint mb-1">
+                      {assistantLabel}
+                    </div>
+                    <TypingDots label={waitingLabel} />
+                  </div>
+                ) : (
+                  <RecruiterWaiting label={waitingLabel} />
+                )}
               </div>
             );
           }
@@ -788,8 +969,21 @@ function VibeChat({
               }`}>
                 {m.role === "copilot" ? (
                   <>
-                    <div className="text-[10px] uppercase tracking-widest text-primary mb-1">Recruiter</div>
+                    <div className={`text-[10px] uppercase tracking-widest mb-1 ${
+                      isTry ? "text-spark-mint" : "text-primary"
+                    }`}>
+                      {assistantLabel}
+                    </div>
                     {m.text ? <Markdown text={m.text} /> : null}
+                    {isTry && m.text && onSendToRecruiter && (
+                      <button
+                        type="button"
+                        onClick={() => onSendToRecruiter(m.text)}
+                        className="mt-2 text-[10px] text-primary hover:underline"
+                      >
+                        {t("dev.studio.chat.send-to-recruiter")}
+                      </button>
+                    )}
                   </>
                 ) : (
                   m.text
@@ -800,7 +994,16 @@ function VibeChat({
         })}
         {waitingForReply && lastMsg?.role === "user" && (
           <div className="flex justify-start">
-            <RecruiterWaiting label={waitingLabel} />
+            {isTry ? (
+              <div className="max-w-[85%] rounded-md px-3 py-2 text-xs bg-surface border border-border-solid">
+                <div className="text-[10px] uppercase tracking-widest text-spark-mint mb-1">
+                  {assistantLabel}
+                </div>
+                <TypingDots label={waitingLabel} />
+              </div>
+            ) : (
+              <RecruiterWaiting label={waitingLabel} />
+            )}
           </div>
         )}
         {busy && toolStatus && lastMsg?.role === "copilot" && lastMsg.text && (
@@ -823,8 +1026,8 @@ function VibeChat({
                 submit(e);
               }
             }}
-            placeholder={t("dev.studio.chat.placeholder")}
-            disabled={busy}
+            placeholder={isTry && !canTry ? tryDisabledReason : placeholder}
+            disabled={busy || (isTry && !canTry)}
             rows={input.includes("\n") || input.length > 80 ? 5 : 2}
             className="flex-1 min-h-[2.5rem] max-h-40 resize-y bg-surface border border-border-solid rounded px-3 py-1.5 text-sm text-body placeholder:text-dim focus:border-primary outline-none disabled:opacity-60"
           />
@@ -833,7 +1036,11 @@ function VibeChat({
               {t("dev.studio.chat.cancel")}
             </button>
           ) : (
-            <button type="submit" className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition shrink-0">
+            <button
+              type="submit"
+              disabled={isTry && !canTry}
+              className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent transition shrink-0 disabled:opacity-50"
+            >
               {t("dev.studio.chat.send")}
             </button>
           )}
