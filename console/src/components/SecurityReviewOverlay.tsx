@@ -86,7 +86,9 @@ export function SecurityReviewOverlay({
             {passed
               ? t("dev.studio.review.passed-hint", {
                   policy: review?.policy_version || "1",
-                  listed: review?.listed ? t("dev.studio.review.listed") : "",
+                  listed: review?.listed
+                    ? t("dev.studio.review.listed")
+                    : t("dev.studio.review.pending-review"),
                   activated: review?.activated === false
                     ? t("dev.studio.review.activate-failed")
                     : t("dev.studio.review.activated"),

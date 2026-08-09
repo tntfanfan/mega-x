@@ -10,13 +10,16 @@ import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
-import type { Company, Task, TaskState } from "../../../lib/api";
+import type { Company, DeptCatalogItem, Task, TaskState } from "../../../lib/api";
+import { resolveDeptDisplay } from "../../../lib/depts";
 import { useToast } from "../../../components/ui/Toast";
 import { ListSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
+import { TaskPlanFlow } from "../../../components/ui/TaskPlanFlow";
 import { ArtifactGallery } from "./ArtifactGallery";
+import { useDeptChat } from "./ChatProvider";
 
 type Ctx = { company: Company };
 type StateFilter = TaskState | "all";
@@ -38,14 +41,17 @@ export default function TasksList() {
   const { company } = useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
+  const chat = useDeptChat();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const selectedId = searchParams.get("task");
+  const depts = chat.depts;
 
   useEffect(() => {
     let cancelled = false;
@@ -107,9 +113,30 @@ export default function TasksList() {
     return tasks.filter((tk) => {
       if (stateFilter !== "all" && tk.state !== stateFilter) return false;
       if (!q) return true;
-      return `${tk.title} ${tk.brief} ${tk.dept_id}`.toLowerCase().includes(q);
+      const deptLabel = resolveDeptDisplay(tk.dept_id, depts).label;
+      return `${tk.title} ${tk.brief} ${deptLabel} ${tk.dept_id}`.toLowerCase().includes(q);
     });
-  }, [tasks, query, stateFilter]);
+  }, [tasks, query, stateFilter, depts]);
+
+  const deleteTask = async (task: Task) => {
+    if (deletingId) return;
+    if (!window.confirm(t("task.delete.confirm", { title: task.title }))) return;
+    setDeletingId(task.id);
+    try {
+      await api.delete(`/v1/companies/${company.id}/tasks/${task.id}`);
+      setTasks((prev) => prev.filter((tk) => tk.id !== task.id));
+      if (selectedId === task.id) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("task");
+        setSearchParams(next, { replace: true });
+      }
+      toast.success(t("task.delete.success"));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("task.delete.error")));
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   // Keep selection in the filtered list; default to the first row.
   const selectedTask = useMemo(() => {
@@ -213,8 +240,11 @@ export default function TasksList() {
                       key={task.id}
                       task={task}
                       companyId={company.id}
+                      depts={depts}
                       active={task.id === selectedTask?.id}
+                      deleting={deletingId === task.id}
                       onSelect={() => selectTask(task.id)}
+                      onDelete={() => void deleteTask(task)}
                     />
                   ))}
                 </div>
@@ -246,22 +276,28 @@ export default function TasksList() {
             </div>
             <div className="flex-1 overflow-y-auto min-h-0">
               {selectedTask ? (
-                <ArtifactGallery
-                  owner={{ kind: "companies", id: company.id }}
-                  taskId={selectedTask.id}
-                  taskBasePath={`/business/c/${company.id}/tasks`}
-                  emptyTitle={
-                    selectedLive
-                      ? t("business.company.tasks.pane.waiting-outputs")
-                      : t("business.company.tasks.pane.no-outputs")
-                  }
-                  emptyHint={
-                    selectedLive
-                      ? t("business.company.tasks.detail.waiting-artifacts")
-                      : undefined
-                  }
-                  pollMs={selectedLive ? POLL_MS : undefined}
-                />
+                <div className="flex flex-col min-h-0">
+                  <div className="px-4 pt-3 pb-1 shrink-0">
+                    <TaskPlanFlow task={selectedTask} compact />
+                  </div>
+                  <ArtifactGallery
+                    owner={{ kind: "companies", id: company.id }}
+                    taskId={selectedTask.id}
+                    taskTitle={selectedTask.title}
+                    taskBasePath={`/business/c/${company.id}/tasks`}
+                    emptyTitle={
+                      selectedLive
+                        ? t("business.company.tasks.pane.waiting-outputs")
+                        : t("business.company.tasks.pane.no-outputs")
+                    }
+                    emptyHint={
+                      selectedLive
+                        ? t("business.company.tasks.detail.waiting-artifacts")
+                        : undefined
+                    }
+                    pollMs={selectedLive ? POLL_MS : undefined}
+                  />
+                </div>
               ) : (
                 <div className="p-4">
                   <EmptyState
@@ -281,13 +317,19 @@ export default function TasksList() {
 function TaskRow({
   task,
   companyId,
+  depts,
   active,
+  deleting,
   onSelect,
+  onDelete,
 }: {
   task: Task;
   companyId: string;
+  depts: DeptCatalogItem[];
   active: boolean;
+  deleting: boolean;
   onSelect: () => void;
+  onDelete: () => void;
 }) {
   const { t } = useTranslation();
   const meta = STATE_META[task.state];
@@ -319,7 +361,7 @@ function TaskRow({
         </span>
       </div>
       <div className="mt-2 flex items-center gap-3 text-[11px] text-muted">
-        <span className="font-mono">{task.dept_id}</span>
+        <span>{resolveDeptDisplay(task.dept_id, depts).label}</span>
         {task.source === "chat" && (
           <>
             <span>·</span>
@@ -345,6 +387,17 @@ function TaskRow({
         >
           {t("business.company.tasks.pane.detail-link")}
         </Link>
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="text-muted hover:text-fusion disabled:opacity-50 shrink-0"
+        >
+          {deleting ? "…" : t("task.delete.action")}
+        </button>
       </div>
     </div>
   );

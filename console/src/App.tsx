@@ -5,6 +5,7 @@ import { isMockMode } from "./lib/mocks";
 import { useAuth } from "./lib/auth";
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import RequireAuth from "./components/RequireAuth";
+import RequireAdmin from "./components/RequireAdmin";
 
 import LandingChoose from "./pages/Landing";
 import LoginPage from "./pages/Login";
@@ -76,6 +77,8 @@ function UserMenu() {
 
 function ConsoleShell() {
   const { t } = useTranslation();
+  const { me, status } = useAuth();
+  const isAdmin = status === "authenticated" && !!me?.roles?.includes("admin");
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border-solid bg-surface/80 backdrop-blur">
@@ -96,7 +99,9 @@ function ConsoleShell() {
               <Link to="/business/" className="hover:text-primary">{t("shell.nav.business")}</Link>
               <Link to="/solo/" className="hover:text-primary">{t("shell.nav.solo")}</Link>
               <Link to="/dev/" className="hover:text-primary">{t("shell.nav.builders")}</Link>
-              <Link to="/admin/" className="hover:text-primary">{t("shell.nav.admin")}</Link>
+              {isAdmin && (
+                <Link to="/admin/" className="hover:text-primary">{t("shell.nav.admin")}</Link>
+              )}
             </nav>
             <LanguageSwitcher />
             <UserMenu />
@@ -118,6 +123,14 @@ function AuthedOutlet() {
     <RequireAuth>
       <Outlet />
     </RequireAuth>
+  );
+}
+
+function AdminOutlet() {
+  return (
+    <RequireAdmin>
+      <Outlet />
+    </RequireAdmin>
   );
 }
 
@@ -179,7 +192,7 @@ export default function App() {
           <Route path="depts/:deptId/studio" element={<DevStudio />} />
         </Route>
 
-        <Route path="admin" element={<AuthedOutlet />}>
+        <Route path="admin" element={<AdminOutlet />}>
           <Route index element={<AdminLanding />} />
           <Route path="review-queue" element={<AdminQueue />} />
         </Route>

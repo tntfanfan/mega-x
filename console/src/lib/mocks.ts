@@ -27,7 +27,7 @@
 import {
   COMPANIES, DEPT_CATALOG, AGENTS, TASKS, ARTIFACTS, ACTIVITY, ME,
   LINE_TEMPLATES, GROUP_LABELS,
-  type Company, type Task, type Artifact,
+  type Company, type Task, type Artifact, type TaskPlanStepStatus,
 } from "./fixtures";
 
 /** Tasks created via makeTask in this tab — fixture rows are left alone. */
@@ -317,11 +317,20 @@ const HANDLERS: Handler[] = [
   },
   {
     match: rx(/^\/v1\/companies\/([^/]+)\/tasks\/([^/]+)$/),
-    handle: (_p, _m, _b, match) => {
+    handle: (_p, method, _b, match) => {
       const m = match as RegExpMatchArray;
       const [, cid, tid] = m;
-      const task = TASKS.find((t) => t.company_id === cid && t.id === tid);
-      if (!task) return { status: 404, body: { error: "task not found" } };
+      const idx = TASKS.findIndex((t) => t.company_id === cid && t.id === tid);
+      if (idx < 0) return { status: 404, body: { error: "task not found" } };
+      if (method === "DELETE") {
+        const [removed] = TASKS.splice(idx, 1);
+        SIMULATED_TASK_IDS.delete(removed.id);
+        for (let i = ARTIFACTS.length - 1; i >= 0; i--) {
+          if (ARTIFACTS[i].task_id === removed.id) ARTIFACTS.splice(i, 1);
+        }
+        return { body: { ok: true, id: tid } };
+      }
+      const task = TASKS[idx];
       advanceMockTask(task);
       const artifacts = ARTIFACTS.filter((a) => task.artifact_ids.includes(a.id));
       return { body: { ...task, artifacts } };
@@ -552,10 +561,20 @@ const HANDLERS: Handler[] = [
   },
   {
     match: rx(/^\/v1\/lines\/([^/]+)\/tasks\/([^/]+)$/),
-    handle: (_p, _m, _b, match) => {
+    handle: (_p, method, _b, match) => {
       const [, cid, tid] = match as RegExpMatchArray;
-      const task = TASKS.find((t) => t.company_id === cid && t.id === tid);
-      if (!task) return { status: 404, body: { error: "task not found" } };
+      const idx = TASKS.findIndex((t) => t.company_id === cid && t.id === tid);
+      if (idx < 0) return { status: 404, body: { error: "task not found" } };
+      if (method === "DELETE") {
+        const [removed] = TASKS.splice(idx, 1);
+        SIMULATED_TASK_IDS.delete(removed.id);
+        for (let i = ARTIFACTS.length - 1; i >= 0; i--) {
+          if (ARTIFACTS[i].task_id === removed.id) ARTIFACTS.splice(i, 1);
+        }
+        return { body: { ok: true, id: tid } };
+      }
+      const task = TASKS[idx];
+      advanceMockTask(task);
       const artifacts = ARTIFACTS.filter((a) => task.artifact_ids.includes(a.id));
       return { body: { ...task, artifacts } };
     },
@@ -608,14 +627,51 @@ const HANDLERS: Handler[] = [
   },
 ];
 
+function inferMockPlanLabels(title: string, brief: string): string[] {
+  const blob = `${title}\n${brief}`;
+  if (/广告|投放|买量|素材/.test(blob)) {
+    return ["明确投放目标与受众", "撰写广告文案", "设计素材规格", "整理投放建议"];
+  }
+  if (/博客|文章|稿|文案|脚本/.test(blob)) {
+    return ["梳理提纲与要点", "撰写初稿", "润色成终稿"];
+  }
+  if (/方案|报告|分析|调研/.test(blob)) {
+    return ["澄清目标与约束", "收集要点并分析", "输出可执行方案"];
+  }
+  const short = (title || "任务").slice(0, 16);
+  return [`理解「${short}」`, "完成核心产出", "整理交付物"];
+}
+
+function mockPlanFor(
+  title: string,
+  brief: string,
+  phase: "planning" | "running" | "mid" | "done",
+): NonNullable<Task["plan"]> {
+  if (phase === "planning") {
+    return [{ key: "planning", label: "制定执行计划", status: "running" }];
+  }
+  const labels = inferMockPlanLabels(title, brief);
+  return labels.map((label, i) => {
+    let status: TaskPlanStepStatus = "pending";
+    if (phase === "done") status = "done";
+    else if (phase === "mid") {
+      if (i < Math.floor(labels.length / 2)) status = "done";
+      else if (i === Math.floor(labels.length / 2)) status = "running";
+    } else if (i === 0) status = "running";
+    return { key: `s${i + 1}`, label, status };
+  });
+}
+
 function makeTask(companyId: string, b: Partial<Task>): Task {
   // Mirror real backend: create immediately lands in_progress/0.1.
+  const title = b.title ?? "未命名任务";
+  const brief = b.brief ?? "";
   const task: Task = {
     id: `t-${Date.now().toString(36)}`,
     company_id: companyId,
     dept_id: b.dept_id ?? "dept-pub",
-    title: b.title ?? "未命名任务",
-    brief: b.brief ?? "",
+    title,
+    brief,
     state: "in_progress",
     progress: 0.1,
     created_at: new Date().toISOString(),
@@ -624,6 +680,7 @@ function makeTask(companyId: string, b: Partial<Task>): Task {
     token_used: 0,
     cost_yuan: 0,
     artifact_ids: [],
+    plan: mockPlanFor(title, brief, "planning"),
     source: b.source ?? "console",
     chat_session_id: b.chat_session_id ?? null,
   };
@@ -633,7 +690,7 @@ function makeTask(companyId: string, b: Partial<Task>): Task {
 
 /**
  * Advance a mock-created task toward done based on wall-clock age.
- * Stages (~10s): 0.1 → 0.25 → 0.6 → done/1.0 + one markdown artifact.
+ * Stages (~10s): planning → custom plan running → mid → done + artifact.
  * Fixture rows are never mutated.
  */
 function advanceMockTask(task: Task): void {
@@ -646,16 +703,20 @@ function advanceMockTask(task: Task): void {
   if (ageMs >= 10_000) {
     task.state = "done";
     task.progress = 1;
+    task.plan = mockPlanFor(task.title, task.brief, "done");
     ensureMockArtifact(task);
   } else if (ageMs >= 6_000) {
     task.state = "in_progress";
     task.progress = 0.6;
+    task.plan = mockPlanFor(task.title, task.brief, "mid");
   } else if (ageMs >= 3_000) {
     task.state = "in_progress";
     task.progress = 0.25;
+    task.plan = mockPlanFor(task.title, task.brief, "running");
   } else {
     task.state = "in_progress";
     task.progress = Math.max(task.progress, 0.1);
+    task.plan = mockPlanFor(task.title, task.brief, "planning");
   }
 }
 

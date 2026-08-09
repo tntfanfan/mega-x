@@ -174,6 +174,8 @@ export type {
   AgentStatus,
   Task,
   TaskState,
+  TaskPlanStep,
+  TaskPlanStepStatus,
   Artifact,
   ArtifactType,
   ActivityEvent,

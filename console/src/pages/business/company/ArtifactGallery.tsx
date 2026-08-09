@@ -13,6 +13,7 @@ import { api, apiErrorMessage } from "../../../lib/api";
 import type { Artifact, ArtifactType } from "../../../lib/api";
 import {
   artifactCollectionPath,
+  artifactDisplayName,
   type ArtifactOwner,
 } from "../../../lib/artifacts";
 import { useToast } from "../../../components/ui/Toast";
@@ -40,6 +41,7 @@ function fmtSize(n: number): string {
 export function ArtifactGallery({
   owner,
   taskId,
+  taskTitle,
   taskBasePath,
   emptyTitle,
   emptyHint,
@@ -51,6 +53,8 @@ export function ArtifactGallery({
   owner: ArtifactOwner;
   /** When set, only show artifacts for this task. */
   taskId?: string | null;
+  /** Used to rename generic deliverable.md to a task-related label. */
+  taskTitle?: string | null;
   /** Base path for task detail links, e.g. `/business/c/:id/tasks`. */
   taskBasePath?: string;
   emptyTitle?: string;
@@ -141,7 +145,7 @@ export function ArtifactGallery({
           >
             <div className="text-3xl">{TYPE_ICON[a.type] ?? "📦"}</div>
             <div className="mt-2 text-sm text-heading truncate group-hover:text-primary">
-              {a.name}
+              {artifactDisplayName(a, taskTitle)}
             </div>
             <div className="text-[11px] text-muted">
               {t(`artifact.type.${a.type}`, { defaultValue: a.type })} ·{" "}
@@ -164,7 +168,10 @@ export function ArtifactGallery({
       </div>
       {active && (
         <ArtifactPreviewModal
-          art={active}
+          art={{
+            ...active,
+            name: artifactDisplayName(active, taskTitle),
+          }}
           owner={owner}
           onClose={() => setActive(null)}
         />

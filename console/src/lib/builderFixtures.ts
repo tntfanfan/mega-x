@@ -55,6 +55,8 @@ export interface SecurityReviewInfo {
   report_md?: string;
   steps?: SecurityReviewStep[];
   listed?: boolean;
+  pending_review?: boolean;
+  listing_status?: string;
   activated?: boolean;
   register_error?: string;
   error_message?: string;

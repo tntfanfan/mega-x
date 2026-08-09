@@ -39,6 +39,19 @@ export function isTextArtifact(art: Pick<Artifact, "type">): boolean {
   return TEXT_TYPES.has(art.type);
 }
 
+/** Prefer a task-related label when the stored file is still the generic deliverable. */
+export function artifactDisplayName(
+  art: Pick<Artifact, "name">,
+  taskTitle?: string | null,
+): string {
+  const name = (art.name || "").trim();
+  const title = (taskTitle || "").trim();
+  if (title && (!name || name === "deliverable.md" || name === "deliverable")) {
+    return title.endsWith(".md") ? title : `${title}.md`;
+  }
+  return name || title || "deliverable.md";
+}
+
 export function artifactCollectionPath(owner: ArtifactOwner): string {
   return `/v1/${owner.kind}/${owner.id}/artifacts`;
 }

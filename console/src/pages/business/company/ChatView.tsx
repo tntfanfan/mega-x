@@ -256,19 +256,21 @@ function TurnRow({
       ? "business.company.chat.local.auto-dispatched"
       : "business.company.chat.local.dispatched";
     return (
-      <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-        <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
-          {t("business.company.chat.local.record-label")}
+      <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[10px] uppercase tracking-widest text-muted">
+            {t("business.company.chat.local.record-label")}
+          </span>
+          <Link
+            to={`/business/c/${companyId}/tasks/${turn.taskId}`}
+            className="shrink-0 text-xs text-primary hover:underline"
+          >
+            {t("business.company.chat.local.view-task")}
+          </Link>
         </div>
-        <p className="text-heading">
+        <p className="mt-1.5 text-heading leading-snug">
           {t(copyKey, { title: turn.taskTitle })}
         </p>
-        <Link
-          to={`/business/c/${companyId}/tasks/${turn.taskId}`}
-          className="inline-block mt-1 text-xs text-primary hover:underline"
-        >
-          {t("business.company.chat.local.view-task")}
-        </Link>
       </div>
     );
   }
@@ -283,7 +285,7 @@ function TurnRow({
         : deptName || "Agent";
   return (
     <div
-      className={`group relative text-sm ${
+      className={`text-sm ${
         message.role === "user" ? "text-heading" : "text-body"
       }`}
     >
@@ -296,13 +298,15 @@ function TurnRow({
         <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
       )}
       {message.role === "assistant" && (
-        <button
-          type="button"
-          onClick={onConvert}
-          className="mt-1 text-[11px] text-muted opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"
-        >
-          {t("business.company.chat.convert.action")}
-        </button>
+        <div className="mt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={onConvert}
+            className="text-[11px] text-primary/80 hover:text-primary transition-colors"
+          >
+            {t("business.company.chat.convert.action")}
+          </button>
+        </div>
       )}
     </div>
   );

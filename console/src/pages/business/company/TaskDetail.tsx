@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, Task, Artifact, ActivityEvent, TaskState } from "../../../lib/api";
-import { downloadArtifact } from "../../../lib/artifacts";
+import { artifactDisplayName, downloadArtifact } from "../../../lib/artifacts";
+import { resolveDeptDisplay } from "../../../lib/depts";
 import { useToast } from "../../../components/ui/Toast";
 import { ArtifactViewer } from "../../../components/ui/ArtifactViewer";
 import { ArtifactPreviewModal } from "../../../components/ui/ArtifactPreviewModal";
+import { TaskPlanFlow } from "../../../components/ui/TaskPlanFlow";
+import { useDeptChat } from "./ChatProvider";
 
 type Ctx = { company: Company };
 
@@ -33,10 +36,13 @@ export default function TaskDetail() {
   const { taskId } = useParams<{ taskId: string }>();
   const { t, i18n } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
+  const chat = useDeptChat();
   const [task, setTask] = useState<(Task & { artifacts: Artifact[] }) | null>(null);
   const [timeline, setTimeline] = useState<ActivityEvent[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const backTo = taskId
     ? `/business/c/${company.id}/tasks?task=${taskId}`
     : `/business/c/${company.id}/tasks`;
@@ -76,6 +82,20 @@ export default function TaskDetail() {
     };
   }, [company.id, taskId, toast, t]);
 
+  const deleteTask = async () => {
+    if (!task || deleting) return;
+    if (!window.confirm(t("task.delete.confirm", { title: task.title }))) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/v1/companies/${company.id}/tasks/${task.id}`);
+      toast.success(t("task.delete.success"));
+      navigate(`/business/c/${company.id}/tasks`, { replace: true });
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("task.delete.error")));
+      setDeleting(false);
+    }
+  };
+
   if (!task) return <section className="p-6"><p className="text-body text-sm">{t("common.loading")}…</p></section>;
   const selected = task.artifacts.find((a) => a.id === selectedId) ?? task.artifacts[task.artifacts.length - 1];
   const stateMeta = STATE_META[task.state];
@@ -83,7 +103,17 @@ export default function TaskDetail() {
 
   return (
     <section className="p-6 space-y-6">
-      <Link to={backTo} className="text-xs text-muted hover:text-primary">{t("business.company.tasks.detail.back")}</Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link to={backTo} className="text-xs text-muted hover:text-primary">{t("business.company.tasks.detail.back")}</Link>
+        <button
+          type="button"
+          disabled={deleting}
+          onClick={() => void deleteTask()}
+          className="text-xs text-muted hover:text-fusion disabled:opacity-50"
+        >
+          {deleting ? "…" : t("task.delete.action")}
+        </button>
+      </div>
 
       <header>
         <div className="flex flex-wrap items-center gap-3">
@@ -100,7 +130,7 @@ export default function TaskDetail() {
         </div>
         <p className="text-sm text-muted mt-1">{task.brief}</p>
         <div className="mt-3 flex items-center gap-3 text-xs text-body">
-          <span className="font-mono">{task.dept_id}</span>
+          <span>{resolveDeptDisplay(task.dept_id, chat.depts).label}</span>
           <span>·</span>
           <span>{t("business.company.tasks.detail.progress", { percent: Math.round(task.progress * 100) })}</span>
           <span>·</span>
@@ -109,6 +139,8 @@ export default function TaskDetail() {
           <span>¥{task.cost_yuan.toFixed(2)}</span>
         </div>
       </header>
+
+      <TaskPlanFlow task={task} />
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Timeline */}
@@ -158,7 +190,7 @@ export default function TaskDetail() {
                             : "bg-surface border-border-solid text-body hover:border-primary"
                         }`}
                       >
-                        {TYPE_ICON[a.type] ?? "📦"} {a.name}
+                        {TYPE_ICON[a.type] ?? "📦"} {artifactDisplayName(a, task.title)}
                       </button>
                     );
                   })}
@@ -170,7 +202,7 @@ export default function TaskDetail() {
                 className="w-full text-start mb-2 group"
               >
                 <div className="text-sm text-heading group-hover:text-primary">
-                  {selected.name}
+                  {artifactDisplayName(selected, task.title)}
                 </div>
                 <div className="text-[11px] text-primary mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   {t("common.preview.open")}
@@ -201,9 +233,16 @@ export default function TaskDetail() {
                 <button
                   type="button"
                   onClick={() => {
-                    const r = downloadArtifact(selected);
-                    if (r === "started") toast.success(t("common.download-started", { name: selected.name }));
-                    else toast.info(t("common.download-empty"));
+                    const named = {
+                      ...selected,
+                      name: artifactDisplayName(selected, task.title),
+                    };
+                    const r = downloadArtifact(named);
+                    if (r === "started") {
+                      toast.success(
+                        t("common.download-started", { name: named.name }),
+                      );
+                    } else toast.info(t("common.download-empty"));
                   }}
                   className="rounded-md bg-primary text-bg px-3 py-1 text-xs font-medium hover:bg-accent transition-colors"
                 >
@@ -212,7 +251,10 @@ export default function TaskDetail() {
               </div>
               {previewOpen && (
                 <ArtifactPreviewModal
-                  art={selected}
+                  art={{
+                    ...selected,
+                    name: artifactDisplayName(selected, task.title),
+                  }}
                   owner={{ kind: "companies", id: company.id }}
                   onClose={() => setPreviewOpen(false)}
                 />

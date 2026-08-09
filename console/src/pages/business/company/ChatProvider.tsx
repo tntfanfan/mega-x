@@ -19,23 +19,10 @@ import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, DeptCatalogItem, Task } from "../../../lib/api";
-import { DEPT_CATALOG } from "../../../lib/fixtures";
+import { resolveDeptDisplay } from "../../../lib/depts";
 import { useToast } from "../../../components/ui/Toast";
 
-/** Resolve a human department name — never prefer raw `dept-*` ids when a name exists. */
-export function resolveDeptDisplay(
-  deptId: string,
-  depts: Array<Pick<DeptCatalogItem, "id" | "name" | "emoji">> = [],
-): { name: string; emoji: string; label: string } {
-  const fromApi = depts.find((d) => d.id === deptId);
-  const fromCatalog = DEPT_CATALOG.find((d) => d.id === deptId);
-  const apiName = fromApi?.name?.trim();
-  // Backend falls back to name===id when catalog misses; treat that as "no name".
-  const realApiName = apiName && apiName !== deptId ? apiName : undefined;
-  const name = realApiName || fromCatalog?.name || apiName || deptId;
-  const emoji = (fromApi?.emoji || fromCatalog?.emoji || "").trim();
-  return { name, emoji, label: `${emoji ? `${emoji} ` : ""}${name}` };
-}
+export { resolveDeptDisplay };
 
 export type ChatTurn =
   | {

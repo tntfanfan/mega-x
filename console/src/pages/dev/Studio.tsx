@@ -1376,7 +1376,9 @@ function PublishPage({
               {t("dev.studio.review.badge-passed", { policy: sr?.policy_version || "1" })}
             </div>
             <div className="text-xs text-muted">
-              {t("dev.studio.review.listed")}
+              {sr?.listed
+                ? t("dev.studio.review.listed")
+                : t("dev.studio.review.pending-review")}
               {" · "}
               {sr?.activated === false
                 ? t("dev.studio.review.activate-failed")

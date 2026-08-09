@@ -416,6 +416,14 @@ export const AGENTS: Agent[] = genAgents();
 
 export type TaskState = "pending" | "in_progress" | "review" | "done" | "cancelled" | "failed";
 export type ArtifactType = "markdown" | "image" | "video" | "audio" | "code" | "table" | "json" | "pdf";
+export type TaskPlanStepStatus = "pending" | "running" | "done" | "failed";
+
+export interface TaskPlanStep {
+  key: string;
+  status: TaskPlanStepStatus;
+  /** Optional human label; UI prefers i18n via `task.plan.step.<key>`. */
+  label?: string;
+}
 
 export interface Task {
   id: string;
@@ -431,6 +439,8 @@ export interface Task {
   token_used: number;
   cost_yuan: number;
   artifact_ids: string[];
+  /** Execution pipeline — intake → dispatch → execute → deliver. */
+  plan?: TaskPlanStep[];
   /** Where the task came from: console form vs chat auto-detect. */
   source?: "console" | "chat";
   chat_session_id?: string | null;
