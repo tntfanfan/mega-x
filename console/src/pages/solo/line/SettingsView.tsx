@@ -30,37 +30,50 @@ export default function SettingsView() {
 
   return (
     <section className="p-6 space-y-4 max-w-2xl">
-      <header>
-        <h2 className="font-display text-xl text-heading">{t("solo.line.settings.title")}</h2>
-      </header>
+      <h1 className="font-display text-2xl text-heading">{t("solo.line.settings.title")}</h1>
       <dl className="text-sm space-y-2">
-        <Row label={t("solo.line.settings.name")} value={line.name} />
-        <Row label={t("solo.line.settings.template")} value={line.template_slug} mono />
-        <Row label={t("solo.line.settings.state")} value={line.state} mono />
+        <div>
+          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.name")}</dt>
+          <dd className="text-body">{line.name}</dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.template")}</dt>
+          <dd className="text-body font-mono">{line.template_slug}</dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.state")}</dt>
+          <dd className="text-body font-mono">{line.state}</dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.gateway-port")}</dt>
+          <dd className="text-body font-mono">{line.gateway_port ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.team-count")}</dt>
+          <dd className="text-body">{line.dept_ids.length}</dd>
+        </div>
+        <div>
+          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.token-30d")}</dt>
+          <dd className="text-body">{line.token_usage_30d.toLocaleString()}</dd>
+        </div>
       </dl>
       <div className="pt-4 border-t border-border-solid space-y-2">
-        <h3 className="text-xs uppercase tracking-widest text-fusion">
+        <h2 className="text-xs uppercase tracking-widest text-fusion">
           {t("solo.line.settings.danger-title")}
-        </h3>
+        </h2>
         <p className="text-xs text-muted">{t("solo.line.settings.danger-hint")}</p>
         <button
           type="button"
-          onClick={onDelete}
+          onClick={() => void onDelete()}
           disabled={deleting}
           className="rounded-md border border-fusion/50 text-fusion px-4 py-1.5 text-sm hover:bg-fusion/10 transition disabled:opacity-50"
         >
           {deleting ? t("solo.line.settings.deleting") : t("solo.line.settings.delete")}
         </button>
       </div>
+      <p className="text-xs text-muted pt-4 border-t border-border-solid">
+        {t("solo.line.settings.footer")}
+      </p>
     </section>
-  );
-}
-
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex">
-      <dt className="text-muted text-xs uppercase tracking-widest w-32 shrink-0">{label}</dt>
-      <dd className={`text-body ${mono ? "font-mono" : ""}`}>{value}</dd>
-    </div>
   );
 }

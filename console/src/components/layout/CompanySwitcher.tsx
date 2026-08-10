@@ -1,13 +1,7 @@
 /**
- * Company switcher — dropdown used in two places:
- *  - CompanyHeader（公司沉浸视图顶栏）：当前公司名作触发，下拉切换
- *  - ConsoleShell TopBar 全局位（已登录但未进任何公司时显示"选公司"按钮）
+ * Tenant switcher — dropdown for company (business) or line (solo) shells.
  *
- * 行为：
- *  - 点公司 → 跳到 /business/c/:id/
- *  - "+ 创建新公司" → /business/companies/new
- *  - 点公司名（已激活）→ 关闭面板
- *  - Esc / click outside → 关闭
+ * Defaults keep the business paths/labels; solo passes itemBasePath=/solo/l etc.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -17,11 +11,28 @@ import { useTranslation } from "react-i18next";
 import type { Company } from "../../lib/api";
 
 interface Props {
-  current: Company | null;            // 当前公司（沉浸视图传入），全局 TopBar 传 null
+  current: Company | null;
   companies: Company[];
+  /** Prefix for item navigation, without trailing slash. Default: /business/c */
+  itemBasePath?: string;
+  /** Create CTA path. Default: /business/companies/new */
+  createPath?: string;
+  labelKey?: string;
+  createKey?: string;
+  emptyKey?: string;
+  countSuffixKey?: string;
 }
 
-export function CompanySwitcher({ current, companies }: Props) {
+export function CompanySwitcher({
+  current,
+  companies,
+  itemBasePath = "/business/c",
+  createPath = "/business/companies/new",
+  labelKey = "shell.switcher.label",
+  createKey = "shell.switcher.create",
+  emptyKey = "shell.switcher.empty",
+  countSuffixKey = "business.overview.company.depts-suffix",
+}: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -51,9 +62,14 @@ export function CompanySwitcher({ current, companies }: Props) {
         className="flex items-center gap-1.5 font-display text-lg text-heading hover:text-primary transition-colors min-w-0"
       >
         <span className="truncate max-w-[24ch]">
-          {current ? current.name : t("shell.switcher.label")}
+          {current ? current.name : t(labelKey)}
         </span>
-        <svg width="10" height="10" viewBox="0 0 10 10" className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        >
           <path d="M2 4l3 3 3-3" stroke="currentColor" strokeWidth="1.5" fill="none" />
         </svg>
       </button>
@@ -61,11 +77,11 @@ export function CompanySwitcher({ current, companies }: Props) {
       {open && (
         <div className="absolute start-0 top-full mt-2 w-72 rounded-md border border-border-solid bg-surface-2 shadow-glass z-50 overflow-hidden">
           <div className="px-3 py-2 text-[10px] tracking-widest uppercase text-muted border-b border-border-solid">
-            {t("shell.switcher.label")} · {companies.length}
+            {t(labelKey)} · {companies.length}
           </div>
           <ul className="max-h-80 overflow-y-auto">
             {companies.length === 0 ? (
-              <li className="px-3 py-3 text-xs text-muted">{t("shell.switcher.empty")}</li>
+              <li className="px-3 py-3 text-xs text-muted">{t(emptyKey)}</li>
             ) : (
               companies.map((c) => (
                 <li key={c.id}>
@@ -73,7 +89,7 @@ export function CompanySwitcher({ current, companies }: Props) {
                     type="button"
                     onClick={() => {
                       setOpen(false);
-                      if (c.id !== current?.id) navigate(`/business/c/${c.id}/`);
+                      if (c.id !== current?.id) navigate(`${itemBasePath}/${c.id}/`);
                     }}
                     className={`w-full text-start flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                       c.id === current?.id
@@ -84,7 +100,8 @@ export function CompanySwitcher({ current, companies }: Props) {
                     <span className="text-base shrink-0">{c.emoji}</span>
                     <span className="truncate flex-1">{c.name}</span>
                     <span className="text-[10px] text-muted shrink-0">
-                      {c.dept_ids.length}{t("business.overview.company.depts-suffix")}
+                      {c.dept_ids.length}
+                      {t(countSuffixKey)}
                     </span>
                   </button>
                 </li>
@@ -93,10 +110,13 @@ export function CompanySwitcher({ current, companies }: Props) {
           </ul>
           <button
             type="button"
-            onClick={() => { setOpen(false); navigate("/business/companies/new"); }}
+            onClick={() => {
+              setOpen(false);
+              navigate(createPath);
+            }}
             className="w-full px-3 py-2 text-start text-sm text-primary hover:bg-surface-3 border-t border-border-solid"
           >
-            {t("shell.switcher.create")}
+            {t(createKey)}
           </button>
         </div>
       )}

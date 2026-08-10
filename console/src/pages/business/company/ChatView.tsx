@@ -165,9 +165,6 @@ export default function ChatView() {
                     ? resolveDeptDisplay(selectedDept.id, depts).name
                     : resolveDeptDisplay(deptId, depts).name
                 }
-                onConvert={() => {
-                  if (turn.role === "assistant") openDispatch(turn.text);
-                }}
               />
             ))}
             <div ref={bottomRef} />
@@ -242,12 +239,10 @@ function TurnRow({
   turn,
   companyId,
   deptName,
-  onConvert,
 }: {
   turn: ChatTurn;
   companyId: string;
   deptName: string;
-  onConvert: () => void;
 }) {
   const { t } = useTranslation();
 
@@ -296,17 +291,6 @@ function TurnRow({
         <Markdown text={message.text} />
       ) : (
         <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
-      )}
-      {message.role === "assistant" && (
-        <div className="mt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={onConvert}
-            className="text-[11px] text-primary/80 hover:text-primary transition-colors"
-          >
-            {t("business.company.chat.convert.action")}
-          </button>
-        </div>
       )}
     </div>
   );
