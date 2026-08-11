@@ -18,6 +18,8 @@ export interface AgentNodeData extends Record<string, unknown> {
   action?: string;
   output?: string;
   gate?: string;
+  /** 泳道/分组名（多泳道工作流才传，如「搜集线（每日自动）」）。 */
+  lane?: string;
   /** 部长节点下方的说明（如"只编排不执行"）。 */
   leadNote?: string;
 }
@@ -38,7 +40,7 @@ const TIER_COLOR: Record<string, string> = {
 };
 
 export function AgentNode({ data, selected }: NodeProps<AgentNodeT>) {
-  const { agent, isLead, emoji, stepIndex, action, output, gate, leadNote } = data;
+  const { agent, isLead, emoji, stepIndex, action, output, gate, lane, leadNote } = data;
   const roleCls = TEAM_ROLE_COLOR[agent.team_role] ?? "bg-dim text-heading";
 
   return (
@@ -80,6 +82,14 @@ export function AgentNode({ data, selected }: NodeProps<AgentNodeT>) {
       {(agent.duty || action) && (
         <div className="mt-1.5 text-[10px] text-body leading-relaxed line-clamp-2" title={agent.duty || action}>
           {agent.duty || action}
+        </div>
+      )}
+
+      {lane && !isLead && (
+        <div className="mt-1.5">
+          <span className="text-[9px] px-1 py-px rounded bg-spark-mint/15 text-spark-mint truncate inline-block max-w-full" title={lane}>
+            ▤ {lane}
+          </span>
         </div>
       )}
 

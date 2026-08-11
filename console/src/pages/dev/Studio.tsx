@@ -16,7 +16,7 @@ import "@xyflow/react/dist/style.css";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
 import type {
-  BuilderDraft, DraftAgent, DraftFile, ChatMsg, SecurityReviewInfo,
+  BuilderDraft, DraftAgent, DraftFile, DraftWorkflowStep, ChatMsg, SecurityReviewInfo,
 } from "../../lib/builderFixtures";
 import { estCostPerTask } from "../../lib/builderFixtures";
 import { RecruiterWs } from "../../lib/recruiterWs";
@@ -49,14 +49,40 @@ const DRAFT_STATE_COLOR: Record<string, string> = {
 
 // ── canvas construction: 部长 → 子 Agent 工作流阶段图 ────────────────────────
 // 对应 AGENTS.md 的架构图：部长（Orchestrator，只编排不执行）在顶部，
-// workflow.steps 按序竖排成流水线（带门禁标注）；不在流水线里的子 Agent
-// 挂在右侧一列（虚线 = 部长按需 spawn）。无 workflow 时退化为扇出布局。
+// workflow.steps 按序竖排成流水线（带门禁标注）；步骤带不同 lane（泳道）时
+// 拆成并行分支列，上一条 lane 末步的 output（如情报库）作为衔接边连到下一条
+// lane 的头。不在流水线里的子 Agent 挂最右一列（虚线 = 部长按需 spawn）。
+// 无 workflow 时退化为扇出布局。
 const NODE_W = 224;   // AgentNode w-56
 const COL_GAP = 128;
 const ROW_H = 200;
 const FAN_GAP = 72;   // 无 workflow 时双列扇出的列间距
-const LEAD_POS = { x: 0, y: 0 };
 const STEP_Y0 = 240;
+
+const GATE_LABEL_PROPS = {
+  labelStyle: { fill: "var(--color-spark-flare, #e8a44a)", fontSize: 10 },
+  labelBgStyle: { fill: "rgba(20,18,14,0.85)" },
+  labelBgPadding: [4, 2] as [number, number],
+};
+
+interface CanvasLane { name: string; entries: { step: DraftWorkflowStep; index: number }[] }
+
+/** 按 step.lane 分组（保持首次出现顺序）；无 lane 的步骤归入 "" 泳道。 */
+function groupLanes(steps: DraftWorkflowStep[]): CanvasLane[] {
+  const lanes: CanvasLane[] = [];
+  const byName = new Map<string, CanvasLane>();
+  steps.forEach((step, index) => {
+    const name = (step.lane ?? "").trim();
+    let lane = byName.get(name);
+    if (!lane) {
+      lane = { name, entries: [] };
+      byName.set(name, lane);
+      lanes.push(lane);
+    }
+    lane.entries.push({ step, index });
+  });
+  return lanes;
+}
 
 function buildCanvas(draft: BuilderDraft, leadNote: string): { nodes: Node[]; edges: Edge[] } {
   const lead: DraftAgent = draft.agents.find((a) => a.team_role === "orchestrator")
@@ -65,55 +91,82 @@ function buildCanvas(draft: BuilderDraft, leadNote: string): { nodes: Node[]; ed
   const bySlug = new Map(subs.map((a) => [a.slug, a]));
   const byName = new Map(subs.map((a) => [a.display_name, a]));
   const steps = draft.workflow?.steps ?? [];
+  const lanes = groupLanes(steps);
+  const multiLane = lanes.length > 1;
+  const laneX = (j: number) => j * (NODE_W + COL_GAP);
 
   const nodes: Node[] = [
     {
-      id: "lead", type: "agent", position: LEAD_POS, draggable: true,
+      id: "lead", type: "agent", draggable: true,
+      // 多泳道时部长居中横跨所有泳道列
+      position: { x: multiLane ? laneX(lanes.length - 1) / 2 : 0, y: 0 },
       data: { agent: lead, isLead: true, emoji: draft.emoji, leadNote } as AgentNodeData,
     },
   ];
   const edges: Edge[] = [];
   const inPipeline = new Set<string>();
 
-  steps.forEach((step, i) => {
-    const agent: DraftAgent =
-      (step.slug && bySlug.get(step.slug))
-      || byName.get(step.agent)
-      || { slug: step.slug || `step-${i}`, display_name: step.agent, team_role: "builder", tier: "MEDIUM" };
-    inPipeline.add(agent.slug);
-    const id = `step-${i}`;
-    nodes.push({
-      id, type: "agent", draggable: true,
-      position: { x: 0, y: STEP_Y0 + i * ROW_H },
-      data: {
-        agent, stepIndex: i + 1,
-        action: step.action, output: step.output, gate: step.gate,
-      } as AgentNodeData,
+  lanes.forEach((lane, j) => {
+    lane.entries.forEach(({ step, index }, k) => {
+      const agent: DraftAgent =
+        (step.slug && bySlug.get(step.slug))
+        || byName.get(step.agent)
+        || { slug: step.slug || `step-${index}`, display_name: step.agent, team_role: "builder", tier: "MEDIUM" };
+      inPipeline.add(agent.slug);
+      const id = `step-${index}`;
+      nodes.push({
+        id, type: "agent", draggable: true,
+        position: { x: laneX(j), y: STEP_Y0 + k * ROW_H },
+        data: {
+          agent, stepIndex: index + 1,
+          action: step.action, output: step.output, gate: step.gate,
+          lane: multiLane ? lane.name : undefined,
+        } as AgentNodeData,
+      });
+      if (k === 0) {
+        // 泳道头：部长派发；多泳道时边上标泳道名（触发时机分组）
+        edges.push({
+          id: `e-lead-${id}`, source: "lead", target: id, type: "smoothstep", animated: true,
+          style: { stroke: "rgba(212,168,78,0.7)" },
+          label: multiLane && lane.name ? `▤ ${lane.name}` : undefined,
+          labelStyle: { fill: "var(--color-primary, #d4a84e)", fontSize: 10 },
+          labelBgStyle: { fill: "rgba(20,18,14,0.85)" },
+          labelBgPadding: [4, 2] as [number, number],
+        });
+        // 泳道衔接：上一条泳道末步有 output（如情报库）时画一条虚线交接边
+        const prevLast = j > 0 ? lanes[j - 1].entries[lanes[j - 1].entries.length - 1] : null;
+        const handoff = (prevLast?.step.output ?? "").trim();
+        if (prevLast && handoff) {
+          edges.push({
+            id: `e-handoff-${prevLast.index}-${index}`,
+            source: `step-${prevLast.index}`, target: id, type: "smoothstep",
+            style: { stroke: "rgba(96,211,168,0.6)", strokeDasharray: "6 4" },
+            label: `📦 ${handoff}`,
+            labelStyle: { fill: "var(--color-spark-mint, #60d3a8)", fontSize: 10 },
+            labelBgStyle: { fill: "rgba(20,18,14,0.85)" },
+            labelBgPadding: [4, 2] as [number, number],
+          });
+        }
+      } else {
+        const prevIndex = lane.entries[k - 1].index;
+        edges.push({
+          id: `e-${prevIndex}-${index}`, source: `step-${prevIndex}`, target: id,
+          type: "smoothstep", animated: true,
+          style: { stroke: "rgba(212,168,78,0.7)" },
+          label: step.gate ? `🚧 ${step.gate}` : undefined,
+          ...GATE_LABEL_PROPS,
+        });
+      }
     });
-    if (i === 0) {
-      edges.push({
-        id: `e-lead-${id}`, source: "lead", target: id, type: "smoothstep", animated: true,
-        style: { stroke: "rgba(212,168,78,0.7)" },
-      });
-    } else {
-      edges.push({
-        id: `e-${i - 1}-${i}`, source: `step-${i - 1}`, target: id, type: "smoothstep", animated: true,
-        style: { stroke: "rgba(212,168,78,0.7)" },
-        label: step.gate ? `🚧 ${step.gate}` : undefined,
-        labelStyle: { fill: "var(--color-spark-flare, #e8a44a)", fontSize: 10 },
-        labelBgStyle: { fill: "rgba(20,18,14,0.85)" },
-        labelBgPadding: [4, 2] as [number, number],
-      });
-    }
   });
 
-  // 不在流水线里的子 Agent（按需 spawn）：有流水线时挂右侧一列，
+  // 不在流水线里的子 Agent（按需 spawn）：有流水线时挂最右一列，
   // 没有流水线时双列扇出在部长下方。
   const rest = subs.filter((a) => !inPipeline.has(a.slug));
   rest.forEach((a, i) => {
     const id = `sub-${a.slug}`;
     const position = steps.length
-      ? { x: NODE_W + COL_GAP, y: STEP_Y0 + i * ROW_H }
+      ? { x: laneX(lanes.length), y: STEP_Y0 + i * ROW_H }
       : {
           x: (i % 2) * (NODE_W + FAN_GAP) - (rest.length > 1 ? (NODE_W + FAN_GAP) / 2 : 0),
           y: STEP_Y0 + Math.floor(i / 2) * ROW_H,
@@ -354,9 +407,14 @@ export default function DevStudio() {
         setBusy(false);
         setToolStatus(null);
         streamingIdRef.current = null;
+        // Drop empty streaming placeholders so they never linger / re-animate.
+        setMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
       },
       onError: (message) => {
         setBusy(false);
+        setToolStatus(null);
+        streamingIdRef.current = null;
+        setMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
         toast.error(message);
       },
     });
@@ -942,9 +1000,13 @@ function VibeChat({
               : t("dev.studio.chat.recruiter-empty")}
           </p>
         )}
-        {messages.map((m) => {
-          const emptyStreaming = m.role === "copilot" && !m.text && busy;
-          if (m.role === "copilot" && emptyStreaming) {
+        {messages.map((m, index) => {
+          // Empty assistant placeholders only animate while they are the
+          // current (last) in-flight bubble. Older empties are hidden so
+          // previous "正在回复" cards never keep pulsing.
+          if (m.role === "copilot" && !m.text) {
+            const isCurrentWait = busy && index === messages.length - 1;
+            if (!isCurrentWait) return null;
             return (
               <div key={m.id} className="flex justify-start">
                 {isTry ? (
@@ -992,6 +1054,8 @@ function VibeChat({
             </div>
           );
         })}
+        {/* Trailing wait only before the assistant bubble exists. Once an
+            empty streaming bubble is appended, that bubble owns the animation. */}
         {waitingForReply && lastMsg?.role === "user" && (
           <div className="flex justify-start">
             {isTry ? (

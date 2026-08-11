@@ -89,6 +89,8 @@ export interface DraftWorkflowStep {
   action?: string;
   output?: string;
   gate?: string;   // 串行门禁：上一步产物未通过校验前不得进入
+  /** 泳道/分组名（如「搜集线（每日自动）」）；多条 lane 在画布上画成并行分支。 */
+  lane?: string;
 }
 
 export interface DraftWorkflow {
