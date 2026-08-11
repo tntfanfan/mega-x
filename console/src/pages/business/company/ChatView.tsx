@@ -46,6 +46,7 @@ export default function ChatView() {
     canChat,
     selectedDept,
     selectedDeptLabel,
+    historyLoading,
     send,
     appendLocalTurn,
     resumeTask,
@@ -186,6 +187,11 @@ export default function ChatView() {
     () => deptTasks.filter((tk) => LIVE.includes(tk.state) || tk.state === "failed"),
     [deptTasks],
   );
+  const quickPrompts = [
+    t("business.company.chat.empty.prompt.plan"),
+    t("business.company.chat.empty.prompt.review"),
+    t("business.company.chat.empty.prompt.next"),
+  ];
 
   return (
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
@@ -199,7 +205,7 @@ export default function ChatView() {
       <div className="flex flex-1 min-h-0">
         {/* Left — department list */}
         <aside className="w-44 shrink-0 border-e border-border-solid bg-surface/40 overflow-y-auto py-2">
-          <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-muted">
+          <div className="px-3 py-1 text-xs uppercase tracking-widest text-muted">
             {t("business.company.conversations.dept-label")}
           </div>
           <nav className="flex flex-col">
@@ -230,14 +236,45 @@ export default function ChatView() {
 
         {/* Center — messages + input */}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
-            {turns.length === 0 && (
+          <div
+            role="log"
+            aria-label={t("business.company.chat.history-label")}
+            aria-live="polite"
+            tabIndex={0}
+            className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto focus:outline-none focus:ring-1 focus:ring-inset focus:ring-primary/50"
+          >
+            {turns.length === 0 && historyLoading && (
+              <div className="h-full grid place-items-center text-sm text-muted">
+                {t("business.company.chat.history-loading")}
+              </div>
+            )}
+            {turns.length === 0 && !historyLoading && selectedDept && (
+              <div className="mx-auto flex min-h-full max-w-xl flex-col items-center justify-center py-10 text-center">
+                <div className="text-4xl" aria-hidden>💬</div>
+                <h2 className="mt-3 font-display text-xl text-heading">
+                  {t("business.company.chat.empty.title", { name: selectedDeptLabel })}
+                </h2>
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
+                  {t("business.company.chat.empty.hint")}
+                </p>
+                <div className="mt-5 flex w-full flex-col gap-2">
+                  {quickPrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      disabled={!canChat}
+                      onClick={() => setDraft(prompt)}
+                      className="rounded-md border border-border-solid bg-surface px-4 py-2 text-start text-sm text-body transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {turns.length === 0 && !historyLoading && !selectedDept && (
               <p className="text-sm text-muted">
-                {selectedDept
-                  ? t("business.company.conversations.empty-with-dept", {
-                      name: selectedDeptLabel,
-                    })
-                  : t("business.company.conversations.empty")}
+                {t("business.company.conversations.empty")}
               </p>
             )}
             {turns.map((turn, i) => (
@@ -304,6 +341,9 @@ export default function ChatView() {
                 {sending ? "…" : t("business.company.conversations.send")}
               </button>
             </div>
+            <p className="text-xs text-muted">
+              {t("business.company.chat.composer-hint")}
+            </p>
             {company.state === "provisioning" ? (
               <p className="text-xs text-muted">
                 {t("business.company.conversations.provisioning")}
@@ -320,12 +360,12 @@ export default function ChatView() {
 
         {/* Right — department tasks */}
         <aside className="hidden xl:flex w-56 shrink-0 border-s border-border-solid bg-surface/30 flex-col min-h-0">
-          <div className="px-3 py-2 text-[10px] uppercase tracking-widest text-muted border-b border-border-solid">
+          <div className="px-3 py-2 text-xs uppercase tracking-widest text-muted border-b border-border-solid">
             {t("business.company.chat.rail.title")}
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
             {liveTasks.length === 0 ? (
-              <p className="px-1 py-2 text-[11px] text-muted">
+              <p className="px-1 py-2 text-xs text-muted">
                 {t("business.company.chat.rail.empty")}
               </p>
             ) : (
@@ -341,7 +381,9 @@ export default function ChatView() {
                         id: tk.id,
                         taskId: tk.id,
                         label: tk.title,
-                        detail: `状态: ${tk.state}`,
+                        detail: t("business.company.chat.ref.status", {
+                          state: t(`task.state.${tk.state}`),
+                        }),
                       },
                     ])
                   }
@@ -356,7 +398,9 @@ export default function ChatView() {
                                 id: tk.id,
                                 taskId: tk.id,
                                 label: tk.title,
-                                detail: "状态: failed",
+                                detail: t("business.company.chat.ref.status", {
+                                  state: t("task.state.failed"),
+                                }),
                               },
                             ],
                             {
@@ -404,8 +448,8 @@ function RefChip({
   const { t } = useTranslation();
   const typeKey = `business.company.chat.ref.${refItem.type}`;
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-[11px] text-heading max-w-full">
-      <span className="text-[9px] uppercase tracking-wider text-muted shrink-0">
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs text-heading max-w-full">
+      <span className="text-xs uppercase tracking-wider text-muted shrink-0">
         {t(typeKey)}
       </span>
       <span className="truncate">{refItem.label}</span>
@@ -414,7 +458,7 @@ function RefChip({
           type="button"
           onClick={onRemove}
           className="text-muted hover:text-fusion shrink-0"
-          aria-label="remove"
+          aria-label={t("business.company.chat.ref.remove")}
         >
           ✕
         </button>
@@ -512,17 +556,17 @@ function TurnRow({
   const message = turn;
   const speakerLabel =
     message.role === "user"
-      ? "你"
+      ? t("business.company.chat.speaker.you")
       : message.label && !message.label.startsWith("dept-")
         ? message.label
-        : deptName || "Agent";
+        : deptName || t("business.company.chat.speaker.agent");
   return (
     <div
       className={`text-sm ${
         message.role === "user" ? "text-heading" : "text-body"
       }`}
     >
-      <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
+      <div className="text-xs uppercase tracking-widest text-muted mb-1">
         {speakerLabel}
       </div>
       {message.refs && message.refs.length > 0 && (
@@ -567,7 +611,7 @@ function LocalCard({
   return (
     <div className={`rounded-md border ${border} px-3 py-2.5 text-sm`}>
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[10px] uppercase tracking-widest text-muted">
+        <span className="text-xs uppercase tracking-widest text-muted">
           {label}
         </span>
         <Link
@@ -597,7 +641,7 @@ function TaskRailCard({
   const step = (task.plan || []).find((s) => s.status === "running" || s.status === "failed")
     || (task.plan || [])[(task.plan || []).length - 1];
   return (
-    <div className="rounded-md border border-border-solid bg-surface px-2.5 py-2 text-[11px]">
+    <div className="rounded-md border border-border-solid bg-surface px-2.5 py-2 text-xs">
       <div className="flex items-start justify-between gap-1">
         <Link
           to={`/business/c/${companyId}/tasks/${task.id}`}
@@ -683,7 +727,7 @@ function DispatchConfirm({
             {t("business.company.chat.dispatch.dept", { dept: deptLabel })}
           </p>
           <label className="block space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted">
+            <span className="text-xs uppercase tracking-widest text-muted">
               {t("business.company.chat.dispatch.field-title")}
             </span>
             <input
@@ -694,7 +738,7 @@ function DispatchConfirm({
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted">
+            <span className="text-xs uppercase tracking-widest text-muted">
               {t("business.company.chat.dispatch.field-brief")}
             </span>
             <textarea

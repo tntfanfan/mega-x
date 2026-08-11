@@ -95,7 +95,10 @@ function ConsoleShell() {
             )}
           </Link>
           <div className="flex items-center gap-6">
-            <nav className="flex gap-6 text-sm text-body">
+            <nav
+              aria-label={t("shell.nav.primary")}
+              className="flex gap-6 text-sm text-body"
+            >
               <Link to="/business/" className="hover:text-primary">{t("shell.nav.business")}</Link>
               <Link to="/solo/" className="hover:text-primary">{t("shell.nav.solo")}</Link>
               <Link to="/dev/" className="hover:text-primary">{t("shell.nav.builders")}</Link>

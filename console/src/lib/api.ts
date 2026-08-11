@@ -176,6 +176,7 @@ export type {
   TaskState,
   TaskPlanStep,
   TaskPlanStepStatus,
+  TaskEvent,
   Artifact,
   ArtifactType,
   ActivityEvent,

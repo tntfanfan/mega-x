@@ -83,9 +83,9 @@ export default function CompanyShell() {
         <CompanyHeader company={company} companies={companies} />
         <div className="flex flex-1">
           <CompanySidebar companyId={company.id} />
-          <main className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
             <Outlet context={{ company, companies }} />
-          </main>
+          </div>
         </div>
       </div>
     </ChatProvider>
@@ -116,7 +116,7 @@ function CompanyHeader({ company, companies }: { company: Company; companies: Co
           <CompanySwitcher current={company} companies={companies} />
           <span className={`text-xs ${stateBadge.color} shrink-0`}>{stateBadge.label}</span>
         </div>
-        <div className="text-[11px] text-muted whitespace-nowrap">
+        <div className="text-xs text-muted whitespace-nowrap">
           {t("business.company.subtitle.token-usage", {
             tokens: company.token_usage_30d.toLocaleString(),
           })}
@@ -137,8 +137,11 @@ function CompanySidebar({ companyId }: { companyId: string }) {
   ];
 
   return (
-    <aside className="w-48 shrink-0 border-e border-border-solid bg-surface/60 py-4">
-      <nav className="flex flex-col">
+    <aside
+      aria-label={t("business.company.nav.label")}
+      className="w-48 shrink-0 border-e border-border-solid bg-surface/60 py-4"
+    >
+      <nav aria-label={t("business.company.nav.label")} className="flex flex-col">
         {tabs.map((tab) => (
           <NavLink
             key={tab.key}

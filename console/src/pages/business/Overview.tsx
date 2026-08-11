@@ -22,6 +22,10 @@ const TASK_STATE_META: Record<TaskState, { emoji: string; color: string }> = {
   failed: { emoji: "❌", color: "text-fusion" },
 };
 
+function isActiveTask(task: Task): boolean {
+  return task.state === "in_progress" || task.state === "review";
+}
+
 interface OverviewData {
   companies: Company[];
   activity: ActivityEvent[];
@@ -94,15 +98,33 @@ export default function Overview() {
 
   const kpis = useMemo(() => {
     const totalDepts = companies.reduce((sum, c) => sum + c.dept_ids.length, 0);
-    const activeTasks = tasks.filter((t) => t.state === "in_progress" || t.state === "review").length;
+    const activeTasks = tasks.filter(isActiveTask).length;
+    const failedTasks = tasks.filter((task) => task.state === "failed").length;
+    const doneTasks = tasks.filter((task) => task.state === "done").length;
     const token30d = companies.reduce((sum, c) => sum + c.token_usage_30d, 0);
     return {
       companies: companies.length,
       depts: totalDepts,
-      tasks: activeTasks,
+      activeTasks,
+      failedTasks,
+      doneTasks,
       token30d,
     };
   }, [companies, tasks]);
+
+  const taskCountsByCompany = useMemo(() => {
+    const counts = new Map<string, { active: number; failed: number }>();
+    for (const task of tasks) {
+      const current = counts.get(task.company_id) ?? { active: 0, failed: 0 };
+      if (isActiveTask(task)) {
+        current.active += 1;
+      } else if (task.state === "failed") {
+        current.failed += 1;
+      }
+      counts.set(task.company_id, current);
+    }
+    return counts;
+  }, [tasks]);
 
   if (loading) {
     return (
@@ -129,10 +151,12 @@ export default function Overview() {
       </header>
 
       {/* KPI bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <Kpi label={t("business.overview.kpi.companies")} value={String(kpis.companies)} />
         <Kpi label={t("business.overview.kpi.depts")} value={String(kpis.depts)} />
-        <Kpi label={t("business.overview.kpi.tasks")} value={String(kpis.tasks)} />
+        <Kpi label={t("business.overview.kpi.tasks")} value={String(kpis.activeTasks)} />
+        <Kpi label={t("business.overview.kpi.failed-tasks")} value={String(kpis.failedTasks)} tone="danger" />
+        <Kpi label={t("business.overview.kpi.done-tasks")} value={String(kpis.doneTasks)} />
         <Kpi label={t("business.overview.kpi.token-30d")} value={fmtNumber(kpis.token30d)} />
       </div>
 
@@ -140,12 +164,25 @@ export default function Overview() {
       {companies.length === 0 ? (
         <EmptyState />
       ) : (
+        <>
+        <h2 className="sr-only">{t("business.overview.companies-title")}</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {companies.map((c) => (
-            <CompanyCard key={c.id} company={c} locale={locale} activity={activity.filter((a) => a.company_id === c.id).slice(0, 3)} />
-          ))}
+          {companies.map((c) => {
+            const counts = taskCountsByCompany.get(c.id) ?? { active: 0, failed: 0 };
+            return (
+              <CompanyCard
+                key={c.id}
+                company={c}
+                locale={locale}
+                activity={activity.filter((a) => a.company_id === c.id).slice(0, 3)}
+                activeTaskCount={counts.active}
+                failedTaskCount={counts.failed}
+              />
+            );
+          })}
           <CreateCard />
         </div>
+        </>
       )}
 
       {/* Cross-company task feed */}
@@ -155,7 +192,7 @@ export default function Overview() {
           {tasks.length === 0 ? (
             <p className="p-4 text-muted text-sm">{t("business.overview.cross-task-feed.empty")}</p>
           ) : (
-            tasks
+            [...tasks]
               .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))
               .slice(0, 12)
               .map((task) => {
@@ -171,16 +208,30 @@ export default function Overview() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "danger" }) {
   return (
     <div className="rounded-md border border-border-solid bg-surface px-4 py-3">
-      <div className="text-[10px] tracking-widest uppercase text-muted">{label}</div>
-      <div className="font-display text-2xl text-heading mt-1">{value}</div>
+      <div className="text-xs tracking-widest uppercase text-muted">{label}</div>
+      <div className={`font-display text-2xl mt-1 ${tone === "danger" ? "text-fusion" : "text-heading"}`}>
+        {value}
+      </div>
     </div>
   );
 }
 
-function CompanyCard({ company, activity, locale }: { company: Company; activity: ActivityEvent[]; locale: string }) {
+function CompanyCard({
+  company,
+  activity,
+  locale,
+  activeTaskCount,
+  failedTaskCount,
+}: {
+  company: Company;
+  activity: ActivityEvent[];
+  locale: string;
+  activeTaskCount: number;
+  failedTaskCount: number;
+}) {
   const { t } = useTranslation();
   const stateLabel = {
     running: t("business.overview.company.state.running"),
@@ -198,25 +249,37 @@ function CompanyCard({ company, activity, locale }: { company: Company; activity
         <div className="flex items-center gap-2">
           <span className="text-2xl">{company.emoji}</span>
           <div>
-            <h3 className="font-display text-lg text-heading group-hover:text-primary">{company.name}</h3>
-            <p className="text-[11px] text-muted">{company.template_slug}</p>
+            <h2 className="font-display text-lg text-heading group-hover:text-primary">{company.name}</h2>
+            <p className="text-xs text-muted">
+              {t(`business.companies.new.tpl.${company.template_slug}.name`, {
+                defaultValue: company.template_slug,
+              })}
+            </p>
           </div>
         </div>
-        <span className="text-[10px] text-muted">{stateLabel}</span>
+        <span className="text-xs text-muted">{stateLabel}</span>
       </div>
 
       <div className="mt-3 flex items-center gap-3 text-xs text-body">
         <span>{company.dept_ids.length}{t("business.overview.company.depts-suffix")}</span>
         <span className="text-dim">·</span>
         <span>
-          {company.active_tasks > 0
-            ? t("business.overview.company.tasks-running", { count: company.active_tasks })
+          {activeTaskCount > 0
+            ? t("business.overview.company.tasks-running", { count: activeTaskCount })
             : t("business.overview.company.tasks-zero")}
         </span>
+        {failedTaskCount > 0 && (
+          <>
+            <span className="text-dim">·</span>
+            <span className="text-fusion">
+              {t("business.overview.company.tasks-failed", { count: failedTaskCount })}
+            </span>
+          </>
+        )}
       </div>
 
       <div className="mt-4 pt-3 border-t border-border-solid space-y-1">
-        <div className="text-[10px] tracking-widest uppercase text-muted">
+        <div className="text-xs tracking-widest uppercase text-muted">
           {t("business.overview.company.last-event")}
         </div>
         {activity.length === 0 ? (
@@ -225,7 +288,7 @@ function CompanyCard({ company, activity, locale }: { company: Company; activity
           <ul className="space-y-0.5">
             {activity.map((a) => (
               <li key={a.id} className="text-xs text-body truncate">
-                <span className="text-muted text-[10px]">{fmtTimeAgo(a.ts, locale)} · </span>
+                <span className="text-muted">{fmtTimeAgo(a.ts, locale)} · </span>
                 {a.text}
               </li>
             ))}
@@ -233,7 +296,7 @@ function CompanyCard({ company, activity, locale }: { company: Company; activity
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-[11px] text-muted">
+      <div className="mt-4 flex items-center justify-between text-xs text-muted">
         <span>{t("business.overview.company.token-30d", { tokens: fmtNumber(company.token_usage_30d) })}</span>
         <span className="text-primary group-hover:underline">
           {t("business.overview.company.enter")}
@@ -251,7 +314,7 @@ function CreateCard() {
       className="rounded-md border border-dashed border-border-solid bg-surface/40 p-5 flex flex-col items-center justify-center text-center hover:border-primary hover:bg-surface/80 transition-colors min-h-[200px]"
     >
       <div className="text-4xl text-primary opacity-70">＋</div>
-      <h3 className="font-display text-lg text-heading mt-2">{t("business.overview.create-card")}</h3>
+      <h2 className="font-display text-lg text-heading mt-2">{t("business.overview.create-card")}</h2>
       <p className="text-xs text-muted mt-1">{t("business.overview.create-card.subtitle")}</p>
     </Link>
   );
@@ -278,14 +341,14 @@ function TaskRow({ task, companyName, companyEmoji, locale }: { task: Task; comp
       to={`/business/c/${task.company_id}/tasks/${task.id}`}
       className="flex items-center gap-4 px-4 py-3 hover:bg-surface-2 transition-colors"
     >
-      <span className="text-[11px] text-muted shrink-0 w-16">{fmtTimeAgo(task.created_at, locale)}</span>
+      <span className="text-xs text-muted shrink-0 w-16">{fmtTimeAgo(task.created_at, locale)}</span>
       <span className="text-base shrink-0">{companyEmoji}</span>
       <span className="text-xs text-muted shrink-0 w-28 truncate">{companyName}</span>
       <span className="text-xs text-muted shrink-0 w-24 truncate font-mono">{task.dept_id}</span>
       <span className="text-sm text-body flex-1 truncate">{task.title}</span>
       <span className={`text-xs shrink-0 ${meta.color}`}>{meta.emoji} {t(`task.state.${task.state}`)}</span>
       {task.state === "in_progress" && (
-        <span className="text-[10px] text-muted shrink-0 w-8 text-end">{Math.round(task.progress * 100)}%</span>
+        <span className="text-xs text-muted shrink-0 w-8 text-end">{Math.round(task.progress * 100)}%</span>
       )}
     </Link>
   );

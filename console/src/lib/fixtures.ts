@@ -425,6 +425,12 @@ export interface TaskPlanStep {
   label?: string;
 }
 
+export interface TaskEvent {
+  ts: string;
+  type: string;
+  text: string;
+}
+
 export interface Task {
   id: string;
   company_id: string;
@@ -444,6 +450,9 @@ export interface Task {
   /** Where the task came from: console form vs chat auto-detect. */
   source?: "console" | "chat";
   chat_session_id?: string | null;
+  /** Detailed execution notes. Failed tasks use this for actionable diagnosis. */
+  events?: TaskEvent[];
+  updated_at?: string;
 }
 
 export const TASKS: Task[] = [
@@ -625,8 +634,19 @@ export interface ActivityEvent {
   company_id: string;
   dept_id: string;
   agent_id?: string;
-  type: "task_received" | "handoff" | "review_gate" | "task_done" | "artifact" | "info";
-  state?: AgentStatus;
+  type:
+    | "task_received"
+    | "task_planning"
+    | "task_started"
+    | "task_failed"
+    | "task_blocked"
+    | "task_resumed"
+    | "handoff"
+    | "review_gate"
+    | "task_done"
+    | "artifact"
+    | "info";
+  state?: AgentStatus | TaskState;
   text: string;
   task_id?: string;
 }

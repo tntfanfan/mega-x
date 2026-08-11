@@ -16,9 +16,11 @@ import { useToast } from "../../../components/ui/Toast";
 import { ListSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
+import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
 import { OrgCanvasPanel, type DeptWithMeta } from "./CanvasView";
 
 type Ctx = { company: Company };
+type ViewMode = "list" | "org";
 
 export default function DeptsView() {
   const { company } = useOutletContext<Ctx>();
@@ -29,6 +31,7 @@ export default function DeptsView() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -70,6 +73,13 @@ export default function DeptsView() {
     if (!q) return items;
     return items.filter((d) => `${d.name} ${d.id} ${d.short_desc}`.toLowerCase().includes(q));
   }, [items, query]);
+  const viewOptions = useMemo<SegmentedOption<ViewMode>[]>(
+    () => [
+      { value: "list", label: t("business.company.depts.view.list") },
+      { value: "org", label: t("business.company.depts.view.org") },
+    ],
+    [t],
+  );
 
   return (
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
@@ -78,17 +88,20 @@ export default function DeptsView() {
           <h1 className="font-display text-lg text-heading">{t("business.company.depts.title")}</h1>
           <p className="text-xs text-muted">{t("business.company.depts.subtitle", { count: items.length })}</p>
         </div>
-        <Link
-          to={`/business/c/${company.id}/marketplace`}
-          className="rounded-md bg-primary text-bg px-4 py-1.5 text-sm font-medium hover:bg-accent"
-        >
-          + {t("business.company.depts.add")}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Segmented options={viewOptions} value={viewMode} onChange={setViewMode} />
+          <Link
+            to={`/business/c/${company.id}/marketplace`}
+            className="rounded-md bg-primary text-bg px-4 py-1.5 text-sm font-medium hover:bg-accent"
+          >
+            + {t("business.company.depts.add")}
+          </Link>
+        </div>
       </header>
 
       <div className="flex flex-1 min-h-0">
         {/* Left — org node graph */}
-        <div className="flex-1 min-w-0 border-e border-border-solid">
+        <div className={`${viewMode === "org" ? "flex-1 min-w-0 border-e border-border-solid" : "hidden"}`}>
           {loading ? (
             <p className="p-6 text-sm text-body">{t("common.loading")}…</p>
           ) : (
@@ -102,12 +115,17 @@ export default function DeptsView() {
         </div>
 
         {/* Right — department list */}
-        <aside className="w-full max-w-md shrink-0 flex flex-col min-h-0 bg-surface/40">
+        <aside
+          aria-label={t("business.company.depts.list-label")}
+          className={`w-full shrink-0 flex flex-col min-h-0 bg-surface/40 ${
+            viewMode === "org" ? "max-w-md" : ""
+          }`}
+        >
           <div className="px-4 py-3 border-b border-border-solid shrink-0 space-y-2">
             <div className="text-xs text-muted">
               {t("business.company.depts.list-label")}
             </div>
-            {items.length > 6 && (
+            {items.length > 0 && (
               <SearchInput
                 value={query}
                 onChange={setQuery}
@@ -141,49 +159,52 @@ export default function DeptsView() {
                 <EmptyState icon="🔍" title={t("business.company.depts.no-match")} hint={t("common.keyword-hint")} />
               </div>
             ) : (
-              <div className="divide-y divide-border-solid">
+              <div className={viewMode === "org"
+                ? "divide-y divide-border-solid"
+                : "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 p-4"
+              }>
                 {filtered.map((d) => {
                   const selected = selectedDeptId === d.id;
                   return (
                     <div
                       key={d.id}
                       ref={(el) => { rowRefs.current[d.id] = el; }}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedDeptId(d.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setSelectedDeptId(d.id);
-                        }
-                      }}
-                      className={`px-4 py-3 flex items-center gap-3 cursor-pointer transition-colors ${
+                      className={`flex items-center transition-colors ${
+                        viewMode === "list" ? "rounded-md border border-border-solid bg-surface" : ""
+                      } ${
                         selected
                           ? "bg-surface-2 border-s-2 border-primary"
-                          : "border-s-2 border-transparent hover:bg-surface-2"
+                          : viewMode === "org"
+                            ? "border-s-2 border-transparent hover:bg-surface-2"
+                            : "hover:border-primary/50"
                       }`}
                     >
-                      <span className="text-2xl shrink-0">{d.emoji}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm text-heading truncate">{d.name}</div>
-                        <div className="text-[11px] text-muted font-mono truncate">{d.id} · {d.short_desc}</div>
-                        <div className="mt-1 flex gap-3 text-[11px]">
-                          <span className="text-muted">{t("business.company.depts.agents", { count: d.agent_count })}</span>
-                          {d.active_tasks > 0 ? (
-                            <span className="text-spark-blue">{t("business.company.depts.tasks-active", { count: d.active_tasks })}</span>
-                          ) : (
-                            <span className="text-dim">{t("business.company.depts.idle")}</span>
-                          )}
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => setSelectedDeptId(d.id)}
+                        className="min-w-0 flex flex-1 items-center gap-3 px-4 py-3 text-start"
+                      >
+                        <span className="text-2xl shrink-0">{d.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-heading truncate">{d.name}</div>
+                          <div className="text-xs text-muted truncate">{d.short_desc}</div>
+                          <div className="mt-1 text-xs font-mono text-dim truncate">{d.id}</div>
+                          <div className="mt-2 flex gap-3 text-xs">
+                            <span className="text-muted">{t("business.company.depts.agents", { count: d.agent_count })}</span>
+                            {d.active_tasks > 0 ? (
+                              <span className="text-spark-blue">{t("business.company.depts.tasks-active", { count: d.active_tasks })}</span>
+                            ) : (
+                              <span className="text-dim">{t("business.company.depts.idle")}</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      </button>
                       <button
                         type="button"
                         disabled={removing === d.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeDept(d);
-                        }}
-                        className="shrink-0 rounded text-xs py-1 px-3 border border-fusion/50 text-fusion hover:bg-fusion/10 transition-colors disabled:opacity-50"
+                        onClick={() => removeDept(d)}
+                        className="me-3 shrink-0 rounded text-xs py-1 px-3 border border-fusion/50 text-fusion hover:bg-fusion/10 transition-colors disabled:opacity-50"
                       >
                         {removing === d.id ? t("business.company.depts.removing") : t("business.company.depts.remove")}
                       </button>

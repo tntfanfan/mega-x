@@ -288,7 +288,7 @@ export default function TasksList() {
           <section className="flex-1 min-w-0 flex flex-col min-h-0">
             <div className="px-4 py-3 border-b border-border-solid flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-widest text-muted">
+                <div className="text-xs uppercase tracking-widest text-muted">
                   {t("business.company.tasks.pane.detail")}
                 </div>
                 <div className="text-sm text-heading truncate">
@@ -297,7 +297,7 @@ export default function TasksList() {
                     : t("business.company.tasks.pane.pick-task")}
                 </div>
                 {selectedTask && (
-                  <p className="text-[11px] text-muted mt-0.5 truncate">
+                  <p className="text-xs text-muted mt-0.5 truncate">
                     {selectedTask.brief}
                   </p>
                 )}
@@ -384,59 +384,54 @@ function TaskRow({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-      className={`block w-full text-start px-4 py-3 transition-colors cursor-pointer border-s-2 ${
+      className={`block w-full text-start transition-colors border-s-2 ${
         active
           ? "border-primary bg-surface-2"
           : "border-transparent hover:bg-surface-2"
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="text-sm text-heading truncate">{task.title}</div>
-          <div className="text-[11px] text-muted mt-0.5 flex flex-wrap items-center gap-x-2">
-            <span className={meta.color}>
-              {meta.emoji} {t(`task.state.${task.state}`)}
-            </span>
-            <span>·</span>
-            <span>{resolveDeptDisplay(task.dept_id, depts).label}</span>
-            {plan.length > 0 && (
-              <>
-                <span>·</span>
-                <span>
-                  {doneCount}/{plan.length}
-                  {focus ? ` · ${focus.label || focus.key}` : ""}
-                </span>
-              </>
-            )}
-            <span>·</span>
-            <span>
-              {t("business.company.tasks.pane.outputs-count", { count: artCount })}
-            </span>
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-pressed={active}
+        className="block w-full px-4 pt-3 text-start"
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-heading truncate">{task.title}</div>
+            <div className="text-xs text-muted mt-1 flex flex-wrap items-center gap-x-2">
+              <span className={meta.color}>
+                {meta.emoji} {t(`task.state.${task.state}`)}
+              </span>
+              <span>·</span>
+              <span>{resolveDeptDisplay(task.dept_id, depts).label}</span>
+              {plan.length > 0 && (
+                <>
+                  <span>·</span>
+                  <span>
+                    {doneCount}/{plan.length}
+                    {focus ? ` · ${focus.label || focus.key}` : ""}
+                  </span>
+                </>
+              )}
+              <span>·</span>
+              <span>
+                {t("business.company.tasks.pane.outputs-count", { count: artCount })}
+              </span>
+            </div>
           </div>
+          {LIVE_STATES.has(task.state) && (
+            <span className="text-xs text-muted shrink-0">
+              {Math.round(task.progress * 100)}%
+            </span>
+          )}
         </div>
-        {LIVE_STATES.has(task.state) && (
-          <span className="text-[11px] text-muted shrink-0">
-            {Math.round(task.progress * 100)}%
-          </span>
-        )}
-      </div>
+      </button>
 
-      <div className="mt-2 flex items-center gap-2 text-[11px]">
+      <div className="px-4 pb-3 pt-2 flex items-center gap-2 text-xs">
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDiscuss();
-          }}
+          onClick={onDiscuss}
           className="text-primary hover:underline"
         >
           {t("business.company.chat.bring")}
@@ -444,10 +439,7 @@ function TaskRow({
         {onSolve && (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSolve();
-            }}
+            onClick={onSolve}
             className="text-fusion hover:underline"
           >
             {t("business.company.chat.solve.action")}
@@ -455,7 +447,6 @@ function TaskRow({
         )}
         <Link
           to={`/business/c/${companyId}/tasks/${task.id}`}
-          onClick={(e) => e.stopPropagation()}
           className="ms-auto text-muted hover:text-primary"
         >
           {t("business.company.tasks.pane.detail-link")}
@@ -463,10 +454,7 @@ function TaskRow({
         <button
           type="button"
           disabled={deleting}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
+          onClick={onDelete}
           className="text-muted hover:text-fusion disabled:opacity-50"
         >
           {deleting ? "…" : t("task.delete.action")}

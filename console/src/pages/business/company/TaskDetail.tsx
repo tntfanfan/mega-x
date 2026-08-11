@@ -102,11 +102,23 @@ export default function TaskDetail() {
   const stateMeta = STATE_META[task.state];
   const working = LIVE_STATES.has(task.state);
   const failedStep = (task.plan || []).find((s) => s.status === "failed");
+  const failureEvent = [...(task.events || [])]
+    .reverse()
+    .find((event) => event.type === "failed" || event.type === "task_blocked");
+  const fallbackFailureEvent = [...timeline]
+    .reverse()
+    .find((event) => event.state === "failed" || /failed|blocked/i.test(event.type || ""));
+  const failureReason =
+    failureEvent?.text ||
+    fallbackFailureEvent?.text ||
+    t("business.company.tasks.detail.failure.unknown");
+  const failureAt = failureEvent?.ts || fallbackFailureEvent?.ts || task.updated_at;
+  const timelineEvents = task.events?.length ? task.events : timeline;
 
   const bringTask = () => chat.bringToChat(task.dept_id, [taskRef(task)]);
   const solveInChat = () => {
     const refs = failedStep
-      ? [stepRef(task, failedStep, t("business.company.chat.solve.step-detail"))]
+      ? [stepRef(task, failedStep, failureReason)]
       : [taskRef(task)];
     chat.bringToChat(task.dept_id, refs, {
       draft: t("business.company.chat.solve.draft", { title: task.title }),
@@ -126,25 +138,9 @@ export default function TaskDetail() {
             {t("business.company.chat.bring")}
           </button>
           {task.state === "failed" && (
-            <button
-              type="button"
-              onClick={solveInChat}
-              className="text-xs text-fusion hover:underline"
-            >
-              {t("business.company.chat.solve.action")}
-            </button>
-          )}
-          {task.state === "failed" && (
-            <button
-              type="button"
-              disabled={chat.resumingTaskId === task.id}
-              onClick={() => void chat.resumeTask(task.id, { stepKey: failedStep?.key })}
-              className="text-xs text-primary hover:underline disabled:opacity-50"
-            >
-              {chat.resumingTaskId === task.id
-                ? t("business.company.chat.resume.submitting")
-                : t("business.company.chat.resume.confirm")}
-            </button>
+            <span className="text-xs text-fusion">
+              {t("business.company.tasks.detail.failure.action-hint")}
+            </span>
           )}
           <button
             type="button"
@@ -176,11 +172,74 @@ export default function TaskDetail() {
           <span>·</span>
           <span>{t("business.company.tasks.detail.progress", { percent: Math.round(task.progress * 100) })}</span>
           <span>·</span>
-          <span>{task.token_used.toLocaleString()} tokens</span>
+          <span>
+            {t("business.usage.tokens", {
+              count: task.token_used.toLocaleString(),
+            })}
+          </span>
           <span>·</span>
           <span>¥{task.cost_yuan.toFixed(2)}</span>
         </div>
       </header>
+
+      {task.state === "failed" && (
+        <section
+          aria-labelledby="task-failure-title"
+          className="rounded-md border border-fusion/40 bg-fusion/5 p-4"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h2 id="task-failure-title" className="font-display text-lg text-heading">
+                {t("business.company.tasks.detail.failure.title")}
+              </h2>
+              <p className="mt-1 text-sm text-body">
+                <span className="text-muted">
+                  {t("business.company.tasks.detail.failure.step")}
+                  {" "}
+                </span>
+                {failedStep?.label || failedStep?.key || t("business.company.tasks.detail.failure.unknown-step")}
+              </p>
+              {failureAt && (
+                <p className="mt-1 text-xs text-muted">
+                  {t("business.company.tasks.detail.failure.time", {
+                    time: new Date(failureAt).toLocaleString(i18n.language),
+                  })}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={solveInChat}
+                className="rounded-md border border-fusion/50 px-3 py-1.5 text-sm text-fusion hover:bg-fusion/10"
+              >
+                {t("business.company.chat.solve.action")}
+              </button>
+              <button
+                type="button"
+                disabled={chat.resumingTaskId === task.id}
+                onClick={() => void chat.resumeTask(task.id, { stepKey: failedStep?.key })}
+                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-bg hover:bg-accent disabled:opacity-50"
+              >
+                {chat.resumingTaskId === task.id
+                  ? t("business.company.chat.resume.submitting")
+                  : t("business.company.chat.resume.confirm")}
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 rounded border border-border-solid bg-surface/70 px-3 py-2">
+            <div className="text-xs uppercase tracking-widest text-muted">
+              {t("business.company.tasks.detail.failure.reason")}
+            </div>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-body">
+              {failureReason}
+            </p>
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            {t("business.company.tasks.detail.failure.retry-scope")}
+          </p>
+        </section>
+      )}
 
       <TaskPlanFlow task={task} />
 
@@ -188,7 +247,7 @@ export default function TaskDetail() {
         {/* Timeline */}
         <div className="rounded-md border border-border-solid bg-surface p-4">
           <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("business.company.tasks.detail.timeline")}</h2>
-          {timeline.length === 0 ? (
+          {timelineEvents.length === 0 ? (
             <p className="text-sm text-muted">
               {working
                 ? t("business.company.tasks.detail.waiting")
@@ -196,8 +255,8 @@ export default function TaskDetail() {
             </p>
           ) : (
             <ul className="space-y-2 text-xs">
-              {timeline.map((evt) => (
-                <li key={evt.id} className="flex gap-2">
+              {timelineEvents.map((evt, index) => (
+                <li key={"id" in evt ? evt.id : `${evt.ts}-${index}`} className="flex gap-2">
                   <span className="text-muted shrink-0 w-12">{new Date(evt.ts).toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" })}</span>
                   <span className="text-body">{evt.text}</span>
                 </li>
@@ -246,7 +305,7 @@ export default function TaskDetail() {
                 <div className="text-sm text-heading group-hover:text-primary">
                   {artifactDisplayName(selected, task.title)}
                 </div>
-                <div className="text-[11px] text-primary mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-xs text-primary mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   {t("common.preview.open")}
                 </div>
               </button>

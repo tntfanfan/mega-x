@@ -52,15 +52,22 @@ function resolveInitialLocale(): Locale {
     window.localStorage.setItem(STORAGE_KEY, fromUrl);
     return fromUrl as Locale;
   }
-  // 2) localStorage — set ONLY when user explicitly picked a locale (URL param
-  //    or LanguageSwitcher click). We do NOT auto-detect from navigator.language
-  //    because the product requirement is "default = English regardless of
-  //    browser locale"; Chinese requires explicit opt-in.
+  // 2) localStorage — an explicit previous choice always wins.
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored && (ENABLED_LOCALES as readonly string[]).includes(stored)) {
     return stored as Locale;
   }
-  // 3) default = English (no browser-language auto-detect)
+  // 3) Match the browser's preferred languages by base tag (zh-CN → zh).
+  const browserLocales = window.navigator.languages?.length
+    ? window.navigator.languages
+    : [window.navigator.language];
+  for (const browserLocale of browserLocales) {
+    const base = browserLocale.toLowerCase().split("-")[0];
+    if ((ENABLED_LOCALES as readonly string[]).includes(base)) {
+      return base as Locale;
+    }
+  }
+  // 4) Unknown browser locale → English.
   return DEFAULT_LOCALE;
 }
 

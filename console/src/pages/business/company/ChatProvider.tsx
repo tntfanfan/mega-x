@@ -106,6 +106,7 @@ type ChatContextValue = {
   selectedDept: DeptCatalogItem | undefined;
   selectedDeptLabel: string;
   sessionId: string | undefined;
+  historyLoading: boolean;
   send: () => Promise<void>;
   appendLocalTurn: (turn: Extract<ChatTurn, { role: "local" }>) => void;
   resumeTask: (taskId: string, opts?: { guidance?: string; stepKey?: string }) => Promise<void>;
@@ -439,7 +440,7 @@ export function ChatProvider({
         {
           role: "user",
           text: msg,
-          label: "你",
+          label: t("business.company.chat.speaker.you"),
           refs: refs.length ? refs : undefined,
         },
       ],
@@ -460,7 +461,7 @@ export function ChatProvider({
       const nextTurns: ChatTurn[] = [
         {
           role: "assistant",
-          text: res.reply || res.error || "(空回复)",
+          text: res.reply || res.error || t("business.company.chat.empty-reply"),
           session_id: res.session_id,
           label: assistantLabel,
         },
@@ -589,6 +590,7 @@ export function ChatProvider({
       selectedDept,
       selectedDeptLabel,
       sessionId: bucket.sessionId,
+      historyLoading: !bucket.historyLoaded,
       send,
       appendLocalTurn,
       resumeTask,
@@ -604,6 +606,7 @@ export function ChatProvider({
       bucket.draft,
       bucket.pendingRefs,
       bucket.sessionId,
+      bucket.historyLoaded,
       setDraft,
       addPendingRefs,
       removePendingRef,

@@ -192,7 +192,7 @@ export function OrgCanvasPanel({
   return (
     <div className={`flex flex-col h-full min-h-0 ${className}`}>
       {showLegend && (
-        <div className="px-4 py-2 border-b border-border-solid bg-surface/60 flex items-center gap-3 text-[11px] text-muted flex-wrap shrink-0">
+        <div className="px-4 py-2 border-b border-border-solid bg-surface/60 flex items-center gap-3 text-xs text-muted flex-wrap shrink-0">
           {LEGEND.map((l) => (
             <span key={l.key} className="flex items-center gap-1.5">
               <span className={`inline-block h-2.5 w-2.5 rounded-full ${l.swatch}`} aria-hidden />

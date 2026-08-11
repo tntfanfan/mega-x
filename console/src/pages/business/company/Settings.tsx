@@ -28,18 +28,76 @@ export default function Settings() {
     }
   }, [company.id, company.name, t, toast, navigate]);
   return (
-    <section className="p-6 space-y-4">
-      <h1 className="font-display text-2xl text-heading">{t("business.company.settings.title")}</h1>
-      <dl className="text-sm space-y-2">
-        <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.name")}</dt><dd className="text-body">{company.name}</dd></div>
-        <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.template")}</dt><dd className="text-body font-mono">{company.template_slug}</dd></div>
-        <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.gateway-port")}</dt><dd className="text-body font-mono">{company.gateway_port ?? "—"}</dd></div>
-        <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.dept-count")}</dt><dd className="text-body">{company.dept_ids.length}</dd></div>
-        <div><dt className="text-muted text-xs uppercase tracking-widest">{t("business.company.settings.token-30d")}</dt><dd className="text-body">{company.token_usage_30d.toLocaleString()}</dd></div>
-      </dl>
-      <div className="pt-4 border-t border-border-solid space-y-2">
-        <h2 className="text-xs uppercase tracking-widest text-fusion">{t("business.company.settings.danger-title")}</h2>
-        <p className="text-xs text-muted">{t("business.company.settings.danger-hint")}</p>
+    <section className="p-6 space-y-6 max-w-5xl">
+      <header>
+        <h1 className="font-display text-2xl text-heading">{t("business.company.settings.title")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("business.company.settings.subtitle")}</p>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-md border border-border-solid bg-surface p-4">
+          <div className="text-xs uppercase tracking-widest text-muted">
+            {t("business.company.settings.status")}
+          </div>
+          <div className="mt-2 text-lg text-heading">
+            {t(`business.overview.company.state.${company.state}`)}
+          </div>
+        </div>
+        <div className="rounded-md border border-border-solid bg-surface p-4">
+          <div className="text-xs uppercase tracking-widest text-muted">
+            {t("business.company.settings.dept-count")}
+          </div>
+          <div className="mt-2 text-lg text-heading">{company.dept_ids.length}</div>
+        </div>
+        <div className="rounded-md border border-border-solid bg-surface p-4">
+          <div className="text-xs uppercase tracking-widest text-muted">
+            {t("business.company.settings.token-30d")}
+          </div>
+          <div className="mt-2 text-lg text-heading">
+            {company.token_usage_30d.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      <section className="rounded-md border border-border-solid bg-surface p-4">
+        <h2 className="font-display text-lg text-heading">
+          {t("business.company.settings.workspace-title")}
+        </h2>
+        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("business.company.settings.name")}</dt>
+            <dd className="mt-1 text-body">{company.name}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("business.company.settings.template")}</dt>
+            <dd className="mt-1 text-body">
+              {t(`business.companies.new.tpl.${company.template_slug}.name`, {
+                defaultValue: company.template_slug,
+              })}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <details className="rounded-md border border-border-solid bg-surface">
+        <summary className="cursor-pointer px-4 py-3 text-sm text-body hover:text-primary">
+          {t("business.company.settings.advanced-title")}
+        </summary>
+        <dl className="grid gap-4 border-t border-border-solid px-4 py-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("business.company.settings.company-id")}</dt>
+            <dd className="mt-1 break-all font-mono text-body">{company.id}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("business.company.settings.gateway-port")}</dt>
+            <dd className="mt-1 font-mono text-body">{company.gateway_port ?? "—"}</dd>
+          </div>
+        </dl>
+      </details>
+
+      <section className="rounded-md border border-fusion/40 bg-fusion/5 p-4 space-y-2">
+        <h2 className="text-sm font-medium text-fusion">{t("business.company.settings.danger-title")}</h2>
+        <p className="text-sm text-muted">{t("business.company.settings.danger-hint")}</p>
         <button
           type="button"
           onClick={onDelete}
@@ -48,8 +106,7 @@ export default function Settings() {
         >
           {t("business.company.settings.delete")}
         </button>
-      </div>
-      <p className="text-xs text-muted pt-4 border-t border-border-solid">{t("business.company.settings.footer")}</p>
+      </section>
     </section>
   );
 }

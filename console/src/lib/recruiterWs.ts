@@ -113,7 +113,9 @@ export class RecruiterWs {
     }
     this.busy = true;
     this.streaming = false;
-    this.handlers.onAssistantReset?.();
+    // Do not open an empty assistant bubble here — the first text delta
+    // calls onAssistantReset. Creating one early left a permanent empty
+    // placeholder that kept animating on every later turn.
     this.send({ type: "prompt", text });
   }
 

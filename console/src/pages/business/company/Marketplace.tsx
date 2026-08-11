@@ -110,15 +110,17 @@ export default function CompanyMarketplace() {
             <div key={d.id} className="rounded-md border border-border-solid bg-surface p-4">
               <div className="flex items-start justify-between">
                 <span className="text-2xl">{d.emoji}</span>
-                <span className={`text-[10px] tracking-widest uppercase px-1.5 py-0.5 rounded ${
+                <span className={`text-xs tracking-widest uppercase px-1.5 py-0.5 rounded ${
                   d.source_type === "builtin" ? "bg-primary/10 text-primary" : "bg-ai/10 text-ai"
                 }`}>
-                  {d.source_type === "builtin" ? "official" : "marketplace"}
+                  {d.source_type === "builtin"
+                    ? t("business.company.marketplace.source.official")
+                    : t("business.company.marketplace.source.thirdparty")}
                 </span>
               </div>
-              <h3 className="font-display text-sm text-heading mt-2 truncate">{d.name}</h3>
-              <p className="text-[11px] text-muted truncate">{d.short_desc}</p>
-              <div className="mt-2 text-[11px] text-body">
+              <h2 className="font-display text-base text-heading mt-2 truncate">{d.name}</h2>
+              <p className="text-xs text-muted truncate">{d.short_desc}</p>
+              <div className="mt-2 text-xs text-body">
                 {d.price_monthly === 0 ? t("common.free") : t("common.price-monthly", { price: d.price_monthly })}
               </div>
               {installed ? (
