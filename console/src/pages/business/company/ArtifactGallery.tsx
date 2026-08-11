@@ -46,6 +46,7 @@ export function ArtifactGallery({
   emptyTitle,
   emptyHint,
   showTaskLink = false,
+  onDiscuss,
   pollMs,
   loadErrorKey = "business.company.outputs.load-error",
   taskLinkKey = "business.company.outputs.task-link",
@@ -60,6 +61,8 @@ export function ArtifactGallery({
   emptyTitle?: string;
   emptyHint?: string;
   showTaskLink?: boolean;
+  /** Bring this artifact into department chat for Q&A. */
+  onDiscuss?: (art: Artifact) => void;
   /** Re-fetch cadence while a live task is selected (ms). */
   pollMs?: number;
   loadErrorKey?: string;
@@ -137,33 +140,47 @@ export function ArtifactGallery({
     <div className="p-4">
       <div className="grid sm:grid-cols-2 gap-3">
         {filtered.map((a) => (
-          <button
+          <div
             key={a.id}
-            type="button"
-            onClick={() => setActive(a)}
             className="rounded-md border border-border-solid bg-surface p-4 text-start hover:border-primary transition-colors flex flex-col group"
           >
-            <div className="text-3xl">{TYPE_ICON[a.type] ?? "📦"}</div>
-            <div className="mt-2 text-sm text-heading truncate group-hover:text-primary">
-              {artifactDisplayName(a, taskTitle)}
+            <button
+              type="button"
+              onClick={() => setActive(a)}
+              className="text-start"
+            >
+              <div className="text-3xl">{TYPE_ICON[a.type] ?? "📦"}</div>
+              <div className="mt-2 text-sm text-heading truncate group-hover:text-primary">
+                {artifactDisplayName(a, taskTitle)}
+              </div>
+              <div className="text-[11px] text-muted">
+                {t(`artifact.type.${a.type}`, { defaultValue: a.type })} ·{" "}
+                {fmtSize(a.size_bytes)}
+              </div>
+              <div className="mt-2 text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                {t("common.preview.open")}
+              </div>
+            </button>
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+              {onDiscuss && (
+                <button
+                  type="button"
+                  onClick={() => onDiscuss(a)}
+                  className="text-primary hover:underline"
+                >
+                  {t("business.company.chat.discuss-artifact")}
+                </button>
+              )}
+              {showTaskLink && taskBasePath && a.task_id && (
+                <Link
+                  to={`${taskBasePath}/${a.task_id}`}
+                  className="text-muted hover:text-primary hover:underline truncate"
+                >
+                  {t(taskLinkKey, { id: a.task_id })}
+                </Link>
+              )}
             </div>
-            <div className="text-[11px] text-muted">
-              {t(`artifact.type.${a.type}`, { defaultValue: a.type })} ·{" "}
-              {fmtSize(a.size_bytes)}
-            </div>
-            <div className="mt-2 text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-              {t("common.preview.open")}
-            </div>
-            {showTaskLink && taskBasePath && a.task_id && (
-              <Link
-                to={`${taskBasePath}/${a.task_id}`}
-                className="mt-1 text-[11px] text-muted hover:text-primary hover:underline truncate"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {t(taskLinkKey, { id: a.task_id })}
-              </Link>
-            )}
-          </button>
+          </div>
         ))}
       </div>
       {active && (

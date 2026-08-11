@@ -240,7 +240,10 @@ function TurnRow({
   const { t } = useTranslation();
 
   if (turn.role === "local") {
-    const copyKey = turn.auto
+    // Shared ChatTurn gained resume/event kinds for business chat; solo
+    // only creates task_dispatched today — ignore the rest safely.
+    if (turn.kind !== "task_dispatched") return null;
+    const copyKey = ("auto" in turn && turn.auto)
       ? "solo.line.chat.local.auto-dispatched"
       : "solo.line.chat.local.dispatched";
     return (

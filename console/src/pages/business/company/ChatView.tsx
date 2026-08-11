@@ -1,21 +1,25 @@
 /**
- * /business/c/:companyId/chat — full-page department chat.
+ * /business/c/:companyId/chat — department chat + live task rail.
  *
- * State lives in ChatProvider; this view only renders the dept list, message
- * stream, input, and the "dispatch as task" confirm layer.
+ * State lives in ChatProvider; this view renders dept list, message stream
+ * (with refs / local cards), pending-ref chips, and "dispatch as task".
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
-import type { Company } from "../../../lib/api";
+import type { Company, Task, TaskState } from "../../../lib/api";
+import type { ChatRef } from "../../../lib/chatRefs";
 import { Markdown } from "../../../components/ui/Markdown";
 import { useToast } from "../../../components/ui/Toast";
 import { useDeptChat, resolveDeptDisplay, type ChatTurn } from "./ChatProvider";
 
 type Ctx = { company: Company };
+
+const LIVE: TaskState[] = ["pending", "in_progress"];
+const POLL_MS = 4000;
 
 function titleFromBrief(brief: string): string {
   const line = brief.trim().split(/\r?\n/)[0] ?? "";
@@ -23,7 +27,6 @@ function titleFromBrief(brief: string): string {
 }
 
 export default function ChatView() {
-  // company from outlet keeps the shell contract; chat data comes from Provider.
   useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
@@ -37,23 +40,104 @@ export default function ChatView() {
     turns,
     draft,
     setDraft,
+    pendingRefs,
+    removePendingRef,
     sending,
     canChat,
     selectedDept,
     selectedDeptLabel,
     send,
     appendLocalTurn,
+    resumeTask,
+    resumingTaskId,
   } = chat;
 
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [dispatchBrief, setDispatchBrief] = useState("");
   const [dispatchTitle, setDispatchTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deptTasks, setDeptTasks] = useState<Task[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const seenEvents = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns.length, sending]);
+
+  // Live tasks for the selected department (right rail + event cards).
+  useEffect(() => {
+    if (!deptId) {
+      setDeptTasks([]);
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = (isPoll = false) => {
+      api
+        .get<{ items: Task[] }>(`/v1/companies/${company.id}/tasks`)
+        .then((r) => {
+          if (cancelled) return;
+          const mine = r.items.filter((tk) => tk.dept_id === deptId);
+          setDeptTasks(mine);
+
+          // Insert local event cards for state transitions we haven't shown.
+          for (const tk of mine) {
+            if (tk.state === "failed") {
+              const key = `failed:${tk.id}:${tk.progress}`;
+              if (!seenEvents.current.has(key)) {
+                seenEvents.current.add(key);
+                if (isPoll) {
+                  appendLocalTurn({
+                    role: "local",
+                    kind: "task_event",
+                    taskId: tk.id,
+                    taskTitle: tk.title,
+                    event: "failed",
+                  });
+                  appendLocalTurn({
+                    role: "local",
+                    kind: "resume_prompt",
+                    taskId: tk.id,
+                    taskTitle: tk.title,
+                  });
+                }
+              }
+            } else if (tk.state === "done") {
+              const key = `done:${tk.id}`;
+              if (!seenEvents.current.has(key)) {
+                seenEvents.current.add(key);
+                if (isPoll) {
+                  appendLocalTurn({
+                    role: "local",
+                    kind: "task_event",
+                    taskId: tk.id,
+                    taskTitle: tk.title,
+                    event: "done",
+                    detail: t("business.company.chat.local.artifacts-count", {
+                      count: tk.artifact_ids?.length ?? 0,
+                    }),
+                  });
+                }
+              }
+            }
+          }
+
+          if (mine.some((tk) => LIVE.includes(tk.state))) {
+            timer = setTimeout(() => load(true), POLL_MS);
+          }
+        })
+        .catch(() => {
+          /* rail is best-effort */
+        });
+    };
+
+    load(false);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [company.id, deptId, appendLocalTurn, t]);
 
   const openDispatch = (brief: string) => {
     const text = brief.trim();
@@ -84,8 +168,6 @@ export default function ChatView() {
         taskId: task.id,
         taskTitle: task.title || title,
       });
-      // If we dispatched from the input draft, clear it so the brief isn't
-      // left sitting there after a successful create.
       if (draft.trim() === brief) setDraft("");
       setDispatchOpen(false);
     } catch (e) {
@@ -95,12 +177,15 @@ export default function ChatView() {
     }
   };
 
-  // Prefer API list; while loading / empty, still show installed ids but with
-  // catalog-resolved display names (never raw `dept-*` as the visible label).
   const deptIds =
     depts.length > 0
       ? depts.map((d) => d.id)
       : company.dept_ids;
+
+  const liveTasks = useMemo(
+    () => deptTasks.filter((tk) => LIVE.includes(tk.state) || tk.state === "failed"),
+    [deptTasks],
+  );
 
   return (
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
@@ -113,7 +198,7 @@ export default function ChatView() {
 
       <div className="flex flex-1 min-h-0">
         {/* Left — department list */}
-        <aside className="w-48 shrink-0 border-e border-border-solid bg-surface/40 overflow-y-auto py-2">
+        <aside className="w-44 shrink-0 border-e border-border-solid bg-surface/40 overflow-y-auto py-2">
           <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-muted">
             {t("business.company.conversations.dept-label")}
           </div>
@@ -143,7 +228,7 @@ export default function ChatView() {
           </nav>
         </aside>
 
-        {/* Right — messages + input */}
+        {/* Center — messages + input */}
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
           <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
             {turns.length === 0 && (
@@ -165,12 +250,25 @@ export default function ChatView() {
                     ? resolveDeptDisplay(selectedDept.id, depts).name
                     : resolveDeptDisplay(deptId, depts).name
                 }
+                onResume={(taskId) => void resumeTask(taskId)}
+                resuming={resumingTaskId === (turn.role === "local" && "taskId" in turn ? turn.taskId : "")}
               />
             ))}
             <div ref={bottomRef} />
           </div>
 
           <div className="px-4 py-3 border-t border-border-solid shrink-0 space-y-2">
+            {pendingRefs.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {pendingRefs.map((ref) => (
+                  <RefChip
+                    key={`${ref.type}:${ref.id}:${ref.taskId ?? ""}`}
+                    refItem={ref}
+                    onRemove={() => removePendingRef(ref)}
+                  />
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
               <input
                 value={draft}
@@ -181,7 +279,11 @@ export default function ChatView() {
                     void send();
                   }
                 }}
-                placeholder={t("business.company.conversations.placeholder")}
+                placeholder={
+                  pendingRefs.length
+                    ? t("business.company.chat.placeholder-with-refs")
+                    : t("business.company.conversations.placeholder")
+                }
                 disabled={sending || !canChat}
                 className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
               />
@@ -215,6 +317,61 @@ export default function ChatView() {
             ) : null}
           </div>
         </div>
+
+        {/* Right — department tasks */}
+        <aside className="hidden xl:flex w-56 shrink-0 border-s border-border-solid bg-surface/30 flex-col min-h-0">
+          <div className="px-3 py-2 text-[10px] uppercase tracking-widest text-muted border-b border-border-solid">
+            {t("business.company.chat.rail.title")}
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {liveTasks.length === 0 ? (
+              <p className="px-1 py-2 text-[11px] text-muted">
+                {t("business.company.chat.rail.empty")}
+              </p>
+            ) : (
+              liveTasks.map((tk) => (
+                <TaskRailCard
+                  key={tk.id}
+                  task={tk}
+                  companyId={company.id}
+                  onDiscuss={() =>
+                    chat.bringToChat(deptId, [
+                      {
+                        type: "task",
+                        id: tk.id,
+                        taskId: tk.id,
+                        label: tk.title,
+                        detail: `状态: ${tk.state}`,
+                      },
+                    ])
+                  }
+                  onSolve={
+                    tk.state === "failed"
+                      ? () =>
+                          chat.bringToChat(
+                            deptId,
+                            [
+                              {
+                                type: "task",
+                                id: tk.id,
+                                taskId: tk.id,
+                                label: tk.title,
+                                detail: "状态: failed",
+                              },
+                            ],
+                            {
+                              draft: t("business.company.chat.solve.draft", {
+                                title: tk.title,
+                              }),
+                            },
+                          )
+                      : undefined
+                  }
+                />
+              ))
+            )}
+          </div>
+        </aside>
       </div>
 
       {dispatchOpen && (
@@ -235,43 +392,124 @@ export default function ChatView() {
   );
 }
 
+function RefChip({
+  refItem,
+  onRemove,
+  readonly,
+}: {
+  refItem: ChatRef;
+  onRemove?: () => void;
+  readonly?: boolean;
+}) {
+  const { t } = useTranslation();
+  const typeKey = `business.company.chat.ref.${refItem.type}`;
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-[11px] text-heading max-w-full">
+      <span className="text-[9px] uppercase tracking-wider text-muted shrink-0">
+        {t(typeKey)}
+      </span>
+      <span className="truncate">{refItem.label}</span>
+      {!readonly && onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-muted hover:text-fusion shrink-0"
+          aria-label="remove"
+        >
+          ✕
+        </button>
+      )}
+    </span>
+  );
+}
+
 function TurnRow({
   turn,
   companyId,
   deptName,
+  onResume,
+  resuming,
 }: {
   turn: ChatTurn;
   companyId: string;
   deptName: string;
+  onResume: (taskId: string) => void;
+  resuming: boolean;
 }) {
   const { t } = useTranslation();
 
   if (turn.role === "local") {
-    const copyKey = turn.auto
-      ? "business.company.chat.local.auto-dispatched"
-      : "business.company.chat.local.dispatched";
-    return (
-      <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] uppercase tracking-widest text-muted">
-            {t("business.company.chat.local.record-label")}
-          </span>
-          <Link
-            to={`/business/c/${companyId}/tasks/${turn.taskId}`}
-            className="shrink-0 text-xs text-primary hover:underline"
-          >
-            {t("business.company.chat.local.view-task")}
-          </Link>
+    if (turn.kind === "task_dispatched") {
+      const copyKey = turn.auto
+        ? "business.company.chat.local.auto-dispatched"
+        : "business.company.chat.local.dispatched";
+      return (
+        <LocalCard
+          label={t("business.company.chat.local.record-label")}
+          body={t(copyKey, { title: turn.taskTitle })}
+          link={`/business/c/${companyId}/tasks/${turn.taskId}`}
+          linkLabel={t("business.company.chat.local.view-task")}
+        />
+      );
+    }
+    if (turn.kind === "task_resumed") {
+      return (
+        <LocalCard
+          label={t("business.company.chat.local.record-label")}
+          body={t("business.company.chat.local.resumed", { title: turn.taskTitle })}
+          link={`/business/c/${companyId}/tasks/${turn.taskId}`}
+          linkLabel={t("business.company.chat.local.view-task")}
+        />
+      );
+    }
+    if (turn.kind === "task_event") {
+      const copyKey =
+        turn.event === "failed"
+          ? "business.company.chat.local.event-failed"
+          : turn.event === "done"
+            ? "business.company.chat.local.event-done"
+            : "business.company.chat.local.event-artifact";
+      return (
+        <LocalCard
+          label={t("business.company.chat.local.record-label")}
+          body={t(copyKey, { title: turn.taskTitle, detail: turn.detail || "" })}
+          link={`/business/c/${companyId}/tasks/${turn.taskId}`}
+          linkLabel={t("business.company.chat.local.view-task")}
+          tone={turn.event === "failed" ? "danger" : "ok"}
+        />
+      );
+    }
+    if (turn.kind === "resume_prompt") {
+      return (
+        <div className="rounded-md border border-fusion/30 bg-fusion/5 px-3 py-2.5 text-sm">
+          <p className="text-heading leading-snug">
+            {t("business.company.chat.resume.prompt", { title: turn.taskTitle })}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={resuming}
+              onClick={() => onResume(turn.taskId)}
+              className="rounded-md bg-primary text-bg px-3 py-1 text-xs font-medium disabled:opacity-50"
+            >
+              {resuming
+                ? t("business.company.chat.resume.submitting")
+                : t("business.company.chat.resume.confirm")}
+            </button>
+            <Link
+              to={`/business/c/${companyId}/tasks/${turn.taskId}`}
+              className="rounded-md border border-border-solid px-3 py-1 text-xs text-body hover:text-primary"
+            >
+              {t("business.company.chat.local.view-task")}
+            </Link>
+          </div>
         </div>
-        <p className="mt-1.5 text-heading leading-snug">
-          {t(copyKey, { title: turn.taskTitle })}
-        </p>
-      </div>
-    );
+      );
+    }
+    return null;
   }
 
   const message = turn;
-  // Prefer a human name: stored label may be a leftover raw dept id.
   const speakerLabel =
     message.role === "user"
       ? "你"
@@ -287,11 +525,113 @@ function TurnRow({
       <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
         {speakerLabel}
       </div>
+      {message.refs && message.refs.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-1.5">
+          {message.refs.map((ref) => (
+            <RefChip
+              key={`${ref.type}:${ref.id}`}
+              refItem={ref}
+              readonly
+            />
+          ))}
+        </div>
+      )}
       {message.role === "assistant" ? (
         <Markdown text={message.text} />
       ) : (
         <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
       )}
+    </div>
+  );
+}
+
+function LocalCard({
+  label,
+  body,
+  link,
+  linkLabel,
+  tone = "primary",
+}: {
+  label: string;
+  body: string;
+  link: string;
+  linkLabel: string;
+  tone?: "primary" | "danger" | "ok";
+}) {
+  const border =
+    tone === "danger"
+      ? "border-fusion/30 bg-fusion/5"
+      : tone === "ok"
+        ? "border-spark-mint/30 bg-spark-mint/5"
+        : "border-primary/30 bg-primary/5";
+  return (
+    <div className={`rounded-md border ${border} px-3 py-2.5 text-sm`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[10px] uppercase tracking-widest text-muted">
+          {label}
+        </span>
+        <Link
+          to={link}
+          className="shrink-0 text-xs text-primary hover:underline"
+        >
+          {linkLabel}
+        </Link>
+      </div>
+      <p className="mt-1.5 text-heading leading-snug">{body}</p>
+    </div>
+  );
+}
+
+function TaskRailCard({
+  task,
+  companyId,
+  onDiscuss,
+  onSolve,
+}: {
+  task: Task;
+  companyId: string;
+  onDiscuss: () => void;
+  onSolve?: () => void;
+}) {
+  const { t } = useTranslation();
+  const step = (task.plan || []).find((s) => s.status === "running" || s.status === "failed")
+    || (task.plan || [])[(task.plan || []).length - 1];
+  return (
+    <div className="rounded-md border border-border-solid bg-surface px-2.5 py-2 text-[11px]">
+      <div className="flex items-start justify-between gap-1">
+        <Link
+          to={`/business/c/${companyId}/tasks/${task.id}`}
+          className="text-heading hover:text-primary truncate font-medium"
+        >
+          {task.title}
+        </Link>
+        <span className={task.state === "failed" ? "text-fusion shrink-0" : "text-muted shrink-0"}>
+          {t(`task.state.${task.state}`)}
+        </span>
+      </div>
+      {step && (
+        <div className="mt-1 text-muted truncate">
+          {step.label || step.key}
+        </div>
+      )}
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        <button
+          type="button"
+          onClick={onDiscuss}
+          className="text-primary hover:underline"
+        >
+          {t("business.company.chat.bring")}
+        </button>
+        {onSolve && (
+          <button
+            type="button"
+            onClick={onSolve}
+            className="text-fusion hover:underline"
+          >
+            {t("business.company.chat.solve.action")}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

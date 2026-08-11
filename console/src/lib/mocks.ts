@@ -201,8 +201,11 @@ const HANDLERS: Handler[] = [
   // ── company chat ──
   {
     match: rx(/^\/v1\/companies\/([^/]+)\/chat$/),
-    handle: (_p, _m, body, match) => {
+    handle: (_p, method, body, match) => {
       const cid = (match as RegExpMatchArray)[1];
+      if (method === "GET") {
+        return { body: { items: [], dept_id: "", _mock: true } };
+      }
       const b = (body ?? {}) as { message?: string; dept_id?: string; session_id?: string };
       const dept = DEPT_CATALOG.find((d) => d.id === b.dept_id);
       const msg = (b.message ?? "").trim();
@@ -342,6 +345,31 @@ const HANDLERS: Handler[] = [
       const m = match as RegExpMatchArray;
       const [, cid, tid] = m;
       return { body: { items: ACTIVITY.filter((a) => a.company_id === cid && a.task_id === tid), _mock: true } };
+    },
+  },
+  {
+    match: rx(/^\/v1\/companies\/([^/]+)\/tasks\/([^/]+)\/resume$/),
+    handle: (_p, method, _b, match) => {
+      if (method !== "POST") return { status: 405, body: { error: "method not allowed" } };
+      const m = match as RegExpMatchArray;
+      const [, cid, tid] = m;
+      const task = TASKS.find((t) => t.company_id === cid && t.id === tid);
+      if (!task) return { status: 404, body: { error: "task not found" } };
+      if (task.state !== "failed" && task.state !== "cancelled") {
+        return { status: 409, body: { detail: `task state is ${task.state}` } };
+      }
+      task.state = "in_progress";
+      task.progress = 0.4;
+      if (task.plan) {
+        const failedIdx = task.plan.findIndex((s) => s.status === "failed");
+        const at = failedIdx >= 0 ? failedIdx : Math.floor(task.plan.length / 2);
+        task.plan = task.plan.map((s, i) => ({
+          ...s,
+          status: i < at ? "done" : i === at ? "running" : "pending",
+        }));
+      }
+      SIMULATED_TASK_IDS.add(task.id);
+      return { body: task };
     },
   },
 

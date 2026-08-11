@@ -524,6 +524,8 @@ export interface Artifact {
   preview_text?: string;        // 用于 markdown / code / json 的预览
   thumbnail_url?: string;       // 用于 image / video
   url?: string;                  // 下载链接（mock 用 data: 或 placeholder）
+  /** Plan step this output belongs to (Console groups by node). */
+  step_key?: string | null;
 }
 
 const MOCK_BLOG_MD = `# 当 AI Agent 长成一家公司：Phyntom X8 发布

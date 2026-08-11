@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, Task, Artifact, ActivityEvent, TaskState } from "../../../lib/api";
 import { artifactDisplayName, downloadArtifact } from "../../../lib/artifacts";
+import { artifactRef, stepRef, taskRef } from "../../../lib/chatRefs";
 import { resolveDeptDisplay } from "../../../lib/depts";
 import { useToast } from "../../../components/ui/Toast";
 import { ArtifactViewer } from "../../../components/ui/ArtifactViewer";
@@ -100,19 +101,60 @@ export default function TaskDetail() {
   const selected = task.artifacts.find((a) => a.id === selectedId) ?? task.artifacts[task.artifacts.length - 1];
   const stateMeta = STATE_META[task.state];
   const working = LIVE_STATES.has(task.state);
+  const failedStep = (task.plan || []).find((s) => s.status === "failed");
+
+  const bringTask = () => chat.bringToChat(task.dept_id, [taskRef(task)]);
+  const solveInChat = () => {
+    const refs = failedStep
+      ? [stepRef(task, failedStep, t("business.company.chat.solve.step-detail"))]
+      : [taskRef(task)];
+    chat.bringToChat(task.dept_id, refs, {
+      draft: t("business.company.chat.solve.draft", { title: task.title }),
+    });
+  };
 
   return (
     <section className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-3">
         <Link to={backTo} className="text-xs text-muted hover:text-primary">{t("business.company.tasks.detail.back")}</Link>
-        <button
-          type="button"
-          disabled={deleting}
-          onClick={() => void deleteTask()}
-          className="text-xs text-muted hover:text-fusion disabled:opacity-50"
-        >
-          {deleting ? "…" : t("task.delete.action")}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={bringTask}
+            className="text-xs text-primary hover:underline"
+          >
+            {t("business.company.chat.bring")}
+          </button>
+          {task.state === "failed" && (
+            <button
+              type="button"
+              onClick={solveInChat}
+              className="text-xs text-fusion hover:underline"
+            >
+              {t("business.company.chat.solve.action")}
+            </button>
+          )}
+          {task.state === "failed" && (
+            <button
+              type="button"
+              disabled={chat.resumingTaskId === task.id}
+              onClick={() => void chat.resumeTask(task.id, { stepKey: failedStep?.key })}
+              className="text-xs text-primary hover:underline disabled:opacity-50"
+            >
+              {chat.resumingTaskId === task.id
+                ? t("business.company.chat.resume.submitting")
+                : t("business.company.chat.resume.confirm")}
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={() => void deleteTask()}
+            className="text-xs text-muted hover:text-fusion disabled:opacity-50"
+          >
+            {deleting ? "…" : t("task.delete.action")}
+          </button>
+        </div>
       </div>
 
       <header>
@@ -222,13 +264,24 @@ export default function TaskDetail() {
                   owner={{ kind: "companies", id: company.id }}
                 />
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
                   className="rounded-md border border-border-solid px-3 py-1 text-xs text-body hover:text-primary hover:border-primary transition-colors"
                 >
                   {t("common.preview.open")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    chat.bringToChat(task.dept_id, [
+                      artifactRef(selected, task.title),
+                    ])
+                  }
+                  className="rounded-md border border-border-solid px-3 py-1 text-xs text-body hover:text-primary hover:border-primary transition-colors"
+                >
+                  {t("business.company.chat.discuss-artifact")}
                 </button>
                 <button
                   type="button"
