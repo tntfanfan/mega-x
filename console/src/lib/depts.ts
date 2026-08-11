@@ -1,5 +1,9 @@
 /**
  * Department display helpers — never show raw `dept-*` ids when a name exists.
+ *
+ * Chinese Studio titles keep the draft id as `dept-untitled` (non-ASCII can't
+ * slugify the directory). Prefer the API / catalog display name in that case;
+ * only fall back to「未命名部门」when the name is still a placeholder.
  */
 
 import type { DeptCatalogItem } from "./api";
@@ -13,7 +17,7 @@ export function resolveDeptDisplay(
   depts: Array<Pick<DeptCatalogItem, "id" | "name" | "emoji">> = [],
 ): { name: string; emoji: string; label: string } {
   const id = (deptId || "").trim();
-  if (!id || UNTITLED_ID_RE.test(id)) {
+  if (!id) {
     return { name: "未命名部门", emoji: "📁", label: "📁 未命名部门" };
   }
 
@@ -25,7 +29,7 @@ export function resolveDeptDisplay(
   let name = realApiName || fromCatalog?.name || apiName || id;
   const emoji = (fromApi?.emoji || fromCatalog?.emoji || "").trim();
 
-  if (UNTITLED_NAME_RE.test(name) || name === id && UNTITLED_ID_RE.test(id)) {
+  if (UNTITLED_NAME_RE.test(name) || (name === id && UNTITLED_ID_RE.test(id))) {
     return { name: "未命名部门", emoji: emoji || "📁", label: `${emoji || "📁"} 未命名部门` };
   }
 
