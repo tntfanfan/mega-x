@@ -19,6 +19,7 @@ import type {
   BuilderDraft, DraftAgent, DraftFile, DraftWorkflowStep, ChatMsg, SecurityReviewInfo,
 } from "../../lib/builderFixtures";
 import { estCostPerTask } from "../../lib/builderFixtures";
+import { needsDeptSlug, sanitizeDeptShort } from "../../lib/depts";
 import { RecruiterWs } from "../../lib/recruiterWs";
 import { AgentNode, type AgentNodeData } from "../../components/canvas/AgentNode";
 import { SecurityReviewOverlay } from "../../components/SecurityReviewOverlay";
@@ -307,6 +308,7 @@ export default function DevStudio() {
   const [composeSeed, setComposeSeed] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState("");
+  const [renameSlug, setRenameSlug] = useState("");
   const wsRef = useRef<RecruiterWs | null>(null);
   const streamingIdRef = useRef<string | null>(null);
   const tryAbortRef = useRef<AbortController | null>(null);
@@ -375,9 +377,23 @@ export default function DevStudio() {
 
   useEffect(() => {
     if (!draftId || !userId) return;
+    // Clear before (re)connect so userId resolution / remount doesn't stack
+    // a second history replay on top of the first.
+    setMessages([]);
+    streamingIdRef.current = null;
     const client = new RecruiterWs(userId, draftId, {
       onUserText: (text) => {
         setMessages((cur) => [...cur, { id: `hu-${cur.length}`, role: "user", text }]);
+      },
+      onAssistantText: (text) => {
+        // Session replay — full turn, not streamed. Must not go through
+        // reset+delta (React 18 batches those against the same prev state and
+        // the empty bubble gets hidden by the renderer).
+        streamingIdRef.current = null;
+        setMessages((cur) => [
+          ...cur,
+          { id: `ha-${cur.length}`, role: "copilot", text },
+        ]);
       },
       onAssistantReset: () => {
         const id = `c-${Date.now()}`;
@@ -392,7 +408,15 @@ export default function DevStudio() {
           setMessages((cur) => [...cur, { id: nid, role: "copilot", text }]);
           return;
         }
-        setMessages((cur) => cur.map((m) => (m.id === id ? { ...m, text: m.text + text } : m)));
+        // If reset+first-delta land in the same React batch, the empty bubble
+        // is not in `cur` yet — create-with-text instead of a no-op map.
+        setMessages((cur) => {
+          const idx = cur.findIndex((m) => m.id === id);
+          if (idx === -1) {
+            return [...cur, { id, role: "copilot", text }];
+          }
+          return cur.map((m) => (m.id === id ? { ...m, text: m.text + text } : m));
+        });
       },
       onToolUse: (name) => {
         setToolStatus(name.replace(/^mcp__recruiter__/, ""));
@@ -508,15 +532,38 @@ export default function DevStudio() {
   const startRename = useCallback(() => {
     if (!draft) return;
     setRenameVal(draft.name);
+    // Prefill slug from current id when still untitled / non-ascii display.
+    const fromId = draft.id.replace(/^dept-/i, "");
+    const prefill = sanitizeDeptShort(draft.name)
+      || (fromId && !/^untitled(?:-\d+)?$/i.test(fromId) ? fromId : "");
+    setRenameSlug(prefill);
     setRenaming(true);
   }, [draft]);
 
+  const renameNeedsSlug = needsDeptSlug(renameVal);
+
   const onRename = useCallback(async () => {
     const name = renameVal.trim();
+    if (!name || !draftId) {
+      setRenaming(false);
+      return;
+    }
+    const slug = sanitizeDeptShort(renameSlug || name);
+    if (needsDeptSlug(name) && !slug) {
+      toast.error(t("dev.studio.rename-slug-required"));
+      return;
+    }
+    const sameName = name === draft?.name;
+    const sameId = !slug || `dept-${slug}` === draftId;
+    if (sameName && sameId) {
+      setRenaming(false);
+      return;
+    }
     setRenaming(false);
-    if (!name || !draftId || name === draft?.name) return;
     try {
-      const d = await api.patch<BuilderDraft>(`/v1/dev/depts/${draftId}`, { name });
+      const body: { name: string; slug?: string } = { name };
+      if (slug) body.slug = slug;
+      const d = await api.patch<BuilderDraft>(`/v1/dev/depts/${draftId}`, body);
       toast.info(t("dev.studio.renamed"));
       if (d.id !== draftId) {
         // ascii rename also changes the draft id — rebind URL/WS to the new id
@@ -527,7 +574,7 @@ export default function DevStudio() {
     } catch (e) {
       toast.error(apiErrorMessage(e, t("dev.studio.rename-failed")));
     }
-  }, [renameVal, draftId, draft?.name, navigate, toast, t]);
+  }, [renameVal, renameSlug, draftId, draft?.name, navigate, toast, t]);
 
   const pollReview = useCallback(async () => {
     if (!draftId) return;
@@ -610,17 +657,40 @@ export default function DevStudio() {
           <span className="text-2xl shrink-0">{draft.emoji}</span>
           <div className="min-w-0">
             {renaming ? (
-              <input
-                autoFocus
-                value={renameVal}
-                onChange={(e) => setRenameVal(e.target.value)}
-                onBlur={onRename}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") onRename();
-                  if (e.key === "Escape") setRenaming(false);
-                }}
-                className="font-display text-lg text-heading bg-surface border border-primary rounded px-2 py-0.5 outline-none w-56"
-              />
+              <div className="flex flex-col gap-1.5">
+                <input
+                  autoFocus
+                  value={renameVal}
+                  onChange={(e) => setRenameVal(e.target.value)}
+                  onBlur={() => {
+                    if (!renameNeedsSlug) onRename();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !renameNeedsSlug) onRename();
+                    if (e.key === "Escape") setRenaming(false);
+                  }}
+                  placeholder={t("dev.studio.rename")}
+                  className="font-display text-lg text-heading bg-surface border border-primary rounded px-2 py-0.5 outline-none w-56"
+                />
+                {renameNeedsSlug && (
+                  <div className="flex flex-col gap-0.5">
+                    <input
+                      value={renameSlug}
+                      onChange={(e) => setRenameSlug(e.target.value)}
+                      onBlur={onRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") onRename();
+                        if (e.key === "Escape") setRenaming(false);
+                      }}
+                      placeholder={t("dev.studio.rename-slug")}
+                      className="font-mono text-xs text-body bg-surface border border-border-solid rounded px-2 py-1 outline-none w-56 focus:border-primary"
+                    />
+                    <span className="text-[10px] text-muted leading-snug max-w-xs">
+                      {t("dev.studio.rename-slug-hint")}
+                    </span>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="flex items-center gap-1.5 min-w-0">
                 <h1

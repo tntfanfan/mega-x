@@ -1,9 +1,9 @@
 /**
  * Department display helpers — never show raw `dept-*` ids when a name exists.
  *
- * Chinese Studio titles keep the draft id as `dept-untitled` (non-ASCII can't
- * slugify the directory). Prefer the API / catalog display name in that case;
- * only fall back to「未命名部门」when the name is still a placeholder.
+ * Display name may be Chinese; directory id must be dept-{ascii-slug}. Prefer
+ * the API / catalog display name; only fall back to「未命名部门」when the name
+ * is still a literal untitled placeholder.
  */
 
 import type { DeptCatalogItem } from "./api";
@@ -11,6 +11,18 @@ import { DEPT_CATALOG } from "./fixtures";
 
 const UNTITLED_ID_RE = /^dept-untitled(?:-\d+)?$/i;
 const UNTITLED_NAME_RE = /^untitled(?:-\d+)?$/i;
+
+/** Mirror backend sanitize_short: lowercase ascii slug or "". */
+export function sanitizeDeptShort(name: string): string {
+  let s = name.trim().toLowerCase().replace(/[\s_]+/g, "-");
+  s = s.replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  if (s.startsWith("dept-")) s = s.slice("dept-".length);
+  return s;
+}
+
+export function needsDeptSlug(displayName: string): boolean {
+  return !sanitizeDeptShort(displayName);
+}
 
 export function resolveDeptDisplay(
   deptId: string,
@@ -29,7 +41,18 @@ export function resolveDeptDisplay(
   let name = realApiName || fromCatalog?.name || apiName || id;
   const emoji = (fromApi?.emoji || fromCatalog?.emoji || "").trim();
 
-  if (UNTITLED_NAME_RE.test(name) || (name === id && UNTITLED_ID_RE.test(id))) {
+  // Only the literal placeholder name "untitled" means unnamed.
+  // Transient dept-untitled-* ids (before slug rename) should still prefer API name;
+  // if API hasn't enriched yet, don't flash「未命名部门」— show a neutral label.
+  if (UNTITLED_NAME_RE.test(name)) {
+    return { name: "未命名部门", emoji: emoji || "📁", label: `${emoji || "📁"} 未命名部门` };
+  }
+
+  if (name === id && UNTITLED_ID_RE.test(id)) {
+    if (!fromApi) {
+      // Still loading company /depts — avoid lying about the title.
+      return { name: "…", emoji: emoji || "📁", label: `${emoji || "📁"} …` };
+    }
     return { name: "未命名部门", emoji: emoji || "📁", label: `${emoji || "📁"} 未命名部门` };
   }
 

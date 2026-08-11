@@ -4,13 +4,16 @@
  * Protocol (subset of rh_vc_cc + draft_update):
  *   C→S: init | prompt | cancel | new_session | ping
  *   S→C: ready | claude_event | session_info | draft_update |
- *         history_start | history_user | history_end | done | error | pong
+ *         history_start | history_user | history_assistant | history_end |
+ *         done | error | pong
  */
 
 export type RecruiterWsHandlers = {
   onReady?: (info: { draft_id: string; cwd: string; user_id: string }) => void;
   onSessionInfo?: (sessionId: string | null) => void;
   onUserText?: (text: string) => void;
+  /** Complete assistant turn from session replay (not streamed). */
+  onAssistantText?: (text: string) => void;
   onAssistantDelta?: (text: string) => void;
   onAssistantReset?: () => void;
   onToolUse?: (name: string) => void;
@@ -150,7 +153,21 @@ export class RecruiterWs {
       this.handlers.onUserText?.(String(msg.text ?? ""));
       return;
     }
-    if (t === "history_start" || t === "history_end" || t === "run_status" || t === "pong") {
+    if (t === "history_assistant") {
+      const text = String(msg.text ?? "").trim();
+      if (text) this.handlers.onAssistantText?.(text);
+      return;
+    }
+    if (t === "history_start") {
+      this.streaming = false;
+      return;
+    }
+    if (t === "history_end") {
+      // Leave stream state clean so the next live turn opens a new bubble.
+      this.streaming = false;
+      return;
+    }
+    if (t === "run_status" || t === "pong") {
       return;
     }
     if (t === "draft_update") {
