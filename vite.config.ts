@@ -4,11 +4,9 @@ import { resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 
 /**
- * FastAPI (:8001) runs on the Docker host, but this dev server may run either
- * on the host or inside the `lgh` container (host :7333 → container :5173).
- * Inside the container 127.0.0.1:8001 is dead — proxy to the container's
- * default gateway (the host) instead. Gateway is parsed from /proc/net/route
- * so we never hardcode a docker network IP. Override with VITE_API_TARGET.
+ * FastAPI (:8001) is reached only via the nginx edge in compose stacks.
+ * Prefer VITE_API_TARGET (compose sets http://nginx:80). Fallbacks:
+ * inside Docker without override → host gateway :8001; bare host → localhost.
  */
 function apiTarget(): string {
   if (process.env.VITE_API_TARGET) return process.env.VITE_API_TARGET;
