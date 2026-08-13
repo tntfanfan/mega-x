@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company } from "../../../lib/api";
 import { Markdown } from "../../../components/ui/Markdown";
+import { ChatWaitingBubble, TypingDots, waitingMark } from "../../../components/ui/ChatWaiting";
 import { useToast } from "../../../components/ui/Toast";
 import { useTeamChat, resolveDeptDisplay, type ChatTurn } from "./ChatProvider";
 
@@ -49,6 +50,10 @@ export default function ChatView() {
   const [dispatchTitle, setDispatchTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const deptDisplay = resolveDeptDisplay(selectedDept?.id || deptId, depts);
+  const waitingLabel = t("solo.line.chat.waiting", {
+    name: deptDisplay.name || selectedDeptLabel,
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -138,7 +143,10 @@ export default function ChatView() {
         </aside>
 
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto">
+          <div
+            className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto"
+            aria-busy={sending}
+          >
             {turns.length === 0 && (
               <p className="text-sm text-muted">
                 {selectedDept
@@ -160,6 +168,13 @@ export default function ChatView() {
                 }
               />
             ))}
+            {sending && (
+              <ChatWaitingBubble
+                mark={waitingMark(deptDisplay.emoji, deptDisplay.name)}
+                speaker={deptDisplay.name || selectedDeptLabel}
+                label={waitingLabel}
+              />
+            )}
             <div ref={bottomRef} />
           </div>
 
@@ -190,9 +205,10 @@ export default function ChatView() {
                 type="button"
                 onClick={() => void send()}
                 disabled={sending || !draft.trim() || !canChat}
-                className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50"
+                aria-label={sending ? waitingLabel : undefined}
+                className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50 min-w-[4.5rem] inline-flex items-center justify-center"
               >
-                {sending ? "…" : t("solo.line.conversations.send")}
+                {sending ? <TypingDots dotClassName="bg-bg" /> : t("solo.line.conversations.send")}
               </button>
             </div>
             {line.state === "provisioning" ? (

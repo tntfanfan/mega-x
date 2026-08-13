@@ -227,6 +227,7 @@
   "solo.line.chat.local.dispatched": "Converted to task: {{title}}",
   "solo.line.chat.local.auto-dispatched": "Converted to task: {{title}}",
   "solo.line.chat.local.view-task": "View task →",
+  "solo.line.chat.waiting": "{{name}} is replying…",
   "solo.line.conversations.title": "Team chat",
   "solo.line.conversations.subtitle": "Pick an installed team and talk through the real Gateway",
   "solo.line.conversations.team-label": "Team",
@@ -856,6 +857,7 @@
   "business.company.chat.speaker.you": "You",
   "business.company.chat.speaker.agent": "Department assistant",
   "business.company.chat.empty-reply": "The department returned no content. Please try again.",
+  "business.company.chat.waiting": "{{name}} is replying…",
   "business.company.tasks.pane.no-outputs-short": "No outputs yet",
   "business.company.tasks.detail.source-chat": "From chat"
 }

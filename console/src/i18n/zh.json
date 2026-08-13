@@ -227,6 +227,7 @@
   "solo.line.chat.local.dispatched": "已转为任务：{{title}}",
   "solo.line.chat.local.auto-dispatched": "已转为任务：{{title}}",
   "solo.line.chat.local.view-task": "查看任务 →",
+  "solo.line.chat.waiting": "{{name}} 正在回复…",
   "solo.line.conversations.title": "团队对话",
   "solo.line.conversations.subtitle": "选择一个已安装的团队，走真实 Gateway 对话",
   "solo.line.conversations.team-label": "团队",
@@ -856,6 +857,7 @@
   "business.company.chat.speaker.you": "你",
   "business.company.chat.speaker.agent": "部门助手",
   "business.company.chat.empty-reply": "部门没有返回内容，请重试。",
+  "business.company.chat.waiting": "{{name}} 正在回复…",
   "business.company.tasks.pane.no-outputs-short": "暂无产出",
   "business.company.tasks.detail.source-chat": "来自聊天"
 }

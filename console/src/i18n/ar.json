@@ -487,5 +487,6 @@
   "business.company.chat.speaker.you": "أنت",
   "business.company.chat.speaker.agent": "مساعد القسم",
   "business.company.chat.empty-reply": "لم يُرجع القسم محتوى. حاول مرة أخرى.",
+  "business.company.chat.waiting": "{{name}} يردّ…",
   "business.usage.tokens": "{{count}} رمز"
 }

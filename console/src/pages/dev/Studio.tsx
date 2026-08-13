@@ -26,6 +26,7 @@ import { SecurityReviewOverlay } from "../../components/SecurityReviewOverlay";
 import { useToast } from "../../components/ui/Toast";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Markdown } from "../../components/ui/Markdown";
+import { RecruiterWaiting, TypingDots } from "../../components/ui/ChatWaiting";
 
 const NODE_TYPES = { agent: AgentNode };
 
@@ -887,60 +888,6 @@ function buildReviewRemediation(
 }
 
 // ── right: vibe chat ────────────────────────────────────────────────────────
-function TypingDots({ label }: { label?: string }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-muted"
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-    >
-      <span className="inline-flex items-end gap-[3px] h-3" aria-hidden>
-        <span className="chat-typing-dot block size-1 rounded-full bg-primary" />
-        <span className="chat-typing-dot block size-1 rounded-full bg-primary" />
-        <span className="chat-typing-dot block size-1 rounded-full bg-primary" />
-      </span>
-      {label ? <span className="chat-wait-pulse text-[11px]">{label}</span> : null}
-    </span>
-  );
-}
-
-/** Waiting / thinking presence for Recruiter — entrance + orbit mark + shimmer. */
-function RecruiterWaiting({ label }: { label?: string }) {
-  return (
-    <div
-      className="recruiter-bubble-in max-w-[85%] rounded-md px-3 py-2.5 text-xs leading-relaxed bg-surface border border-border-solid text-body shadow-[0_8px_24px_-16px_rgba(0,0,0,0.45)]"
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-    >
-      <div className="flex items-center gap-2.5">
-        <span className="recruiter-wait-mark" aria-hidden>
-          <span className="relative z-[1] text-[11px] font-semibold leading-none">R</span>
-        </span>
-        <div className="min-w-0 flex-1 space-y-1.5">
-          <div className="text-[10px] uppercase tracking-widest recruiter-label-shimmer">
-            Recruiter
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-end gap-[3px] h-3" aria-hidden>
-              <span className="chat-typing-dot block size-1.5 rounded-full bg-primary" />
-              <span className="chat-typing-dot block size-1.5 rounded-full bg-primary" />
-              <span className="chat-typing-dot block size-1.5 rounded-full bg-primary" />
-            </span>
-            {label ? (
-              <span className="chat-wait-pulse text-[11px] text-muted truncate">{label}</span>
-            ) : null}
-          </div>
-          <div className="recruiter-wait-bar" aria-hidden>
-            <span />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function VibeChat({
   width, mode, onModeChange, canTry, tryDisabledReason, deptLabel,
   messages, onSend, onCancel, busy, toolStatus,
