@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
@@ -27,7 +27,10 @@ type EditMeta = {
   applied_commit?: string | null;
 };
 
-type TemplateDraft = BuilderDraft & { edit?: EditMeta };
+type TemplateDraft = BuilderDraft & {
+  edit?: EditMeta;
+  pending?: { count: number; uncommitted: boolean; has_changes?: boolean };
+};
 
 type DiffFile = {
   path: string;
@@ -64,6 +67,7 @@ export default function AdminTemplateStudio() {
   const { deptId } = useParams<{ deptId: string }>();
   const { t } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
   const [draft, setDraft] = useState<TemplateDraft | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [tryMessages, setTryMessages] = useState<ChatMsg[]>([]);
@@ -262,7 +266,10 @@ export default function AdminTemplateStudio() {
       setConfirmOpen(false);
       if (res.ok) {
         toast.info(t("admin.templates.apply-ok"));
-      } else if (res.code === "push_failed") {
+        navigate("/admin/templates");
+        return;
+      }
+      if (res.code === "push_failed") {
         toast.error(t("admin.templates.push-failed"));
       } else {
         toast.error(String(res.push_error || res.store_sync_error || t("admin.templates.apply-failed")));
@@ -306,7 +313,13 @@ export default function AdminTemplateStudio() {
   };
   const selected = diffs.find((d) => d.path === openPath);
   const emptyDiff = diffs.length === 0;
-  const canApply = diffs.length > 0 || uncommitted;
+  const canApply = Boolean(
+    draft.pending?.has_changes
+    || (draft.pending?.count ?? 0) > 0
+    || draft.pending?.uncommitted
+    || diffs.length > 0
+    || uncommitted,
+  );
   const editState = draft.edit?.state || "editing";
 
   return (
@@ -322,7 +335,7 @@ export default function AdminTemplateStudio() {
             <p className="text-[11px] text-muted font-mono">
               {draft.id}
               {draft.edit?.base_commit ? ` · ${String(draft.edit.base_commit).slice(0, 8)}` : ""}
-              {` · ${t(`admin.templates.state.${editState}`, { defaultValue: editState })}`}
+              {editState !== "applied" ? ` · ${t(`admin.templates.state.${editState}`, { defaultValue: editState })}` : ""}
             </p>
           </div>
         </div>
@@ -338,8 +351,9 @@ export default function AdminTemplateStudio() {
           )}
           <button
             type="button"
+            disabled={!canApply}
             onClick={() => { void openDiff(); }}
-            className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-40 disabled:pointer-events-none"
           >
             {t("admin.templates.confirm")}
           </button>

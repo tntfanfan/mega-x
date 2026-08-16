@@ -12,6 +12,7 @@ type EditBadge = {
   updated_at?: string;
   base_commit?: string | null;
   applied_commit?: string | null;
+  has_changes?: boolean;
 };
 
 type TemplateCard = {
@@ -96,8 +97,12 @@ export default function AdminTemplates() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((card) => {
-            const mine = card.edit && card.edit.editor_user_id === uid;
-            const badge = card.edit?.state;
+            const session = card.edit && card.edit.state !== "applied" ? card.edit : null;
+            const mine = Boolean(session && session.editor_user_id === uid);
+            const pending = Boolean(
+              session && (session.has_changes || session.state === "apply_failed"),
+            );
+            const badge = pending ? session?.state : null;
             return (
               <article
                 key={card.id}
@@ -120,13 +125,13 @@ export default function AdminTemplates() {
                 <div className="mt-auto flex flex-wrap gap-2">
                   <button
                     type="button"
-                    disabled={busyId === card.id || (!!card.edit && !mine)}
+                    disabled={busyId === card.id || (!!session && !mine)}
                     onClick={() => { void openStudio(card); }}
                     className="rounded-md bg-primary text-bg px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
                   >
                     {mine ? t("admin.templates.continue") : t("admin.templates.edit")}
                   </button>
-                  {mine && (
+                  {mine && pending && (
                     <button
                       type="button"
                       disabled={busyId === card.id}
