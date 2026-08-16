@@ -23,19 +23,19 @@ export type RecruiterWsHandlers = {
   onStatus?: (text: string) => void;
 };
 
-function wsUrl(): string {
+function wsUrl(wsPath: string): string {
   const base = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
   if (base.startsWith("http://") || base.startsWith("https://")) {
     const u = new URL(base);
     u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
-    u.pathname = "/v1/dev/recruiter/ws";
+    u.pathname = wsPath;
     u.search = "";
     u.hash = "";
     return u.toString();
   }
   // Same-origin (vite proxy or mega-x / nginx)
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${location.host}/v1/dev/recruiter/ws`;
+  return `${proto}//${location.host}${wsPath}`;
 }
 
 export class RecruiterWs {
@@ -43,15 +43,22 @@ export class RecruiterWs {
   private handlers: RecruiterWsHandlers;
   private userId: string;
   private draftId: string;
+  private wsPath: string;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private intentionalClose = false;
   private streaming = false;
   busy = false;
 
-  constructor(userId: string, draftId: string, handlers: RecruiterWsHandlers) {
+  constructor(
+    userId: string,
+    draftId: string,
+    handlers: RecruiterWsHandlers,
+    opts?: { wsPath?: string },
+  ) {
     this.userId = userId;
     this.draftId = draftId;
     this.handlers = handlers;
+    this.wsPath = opts?.wsPath ?? "/v1/dev/recruiter/ws";
   }
 
   connect(replay = true): void {
@@ -59,7 +66,7 @@ export class RecruiterWs {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
-    const url = wsUrl();
+    const url = wsUrl(this.wsPath);
     this.handlers.onStatus?.(`connecting ${url}`);
     const ws = new WebSocket(url);
     this.ws = ws;
