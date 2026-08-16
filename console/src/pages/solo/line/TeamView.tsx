@@ -17,10 +17,10 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { OrgCanvasPanel, type DeptWithMeta } from "../../business/company/CanvasView";
 
-type Ctx = { line: Company };
+type Ctx = { line: Company; refreshLine?: () => Promise<void> };
 
 export default function TeamView() {
-  const { line } = useOutletContext<Ctx>();
+  const { line, refreshLine } = useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
   const [items, setItems] = useState<DeptWithMeta[]>([]);
@@ -40,7 +40,7 @@ export default function TeamView() {
       .catch((e) => { if (!cancelled) toast.error(apiErrorMessage(e, t("solo.line.team.load-error"))); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [apiRoot, toast, t]);
+  }, [apiRoot, (line.dept_ids || []).join(","), toast, t]);
 
   useEffect(() => {
     if (!selectedDeptId) return;
@@ -54,7 +54,7 @@ export default function TeamView() {
     try {
       await api.delete(`${apiRoot}/depts/${d.id}`);
       setItems((cur) => cur.filter((x) => x.id !== d.id));
-      line.dept_ids = line.dept_ids.filter((x) => x !== d.id);
+      await refreshLine?.();
       if (selectedDeptId === d.id) setSelectedDeptId(null);
       toast.success(t("solo.line.team.remove-success", { name: d.name }));
     } catch (e) {

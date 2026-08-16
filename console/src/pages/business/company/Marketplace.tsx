@@ -10,17 +10,21 @@ import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
 
-type Ctx = { company: Company };
+type Ctx = { company: Company; refreshCompany?: () => Promise<void> };
 type SourceFilter = "all" | "builtin" | "marketplace";
 
 export default function CompanyMarketplace() {
-  const { company } = useOutletContext<Ctx>();
+  const { company, refreshCompany } = useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
   const [items, setItems] = useState<DeptCatalogItem[]>([]);
   // Locally tracked enabled set, seeded from the company so installs reflect
   // immediately without a full company refetch through the outlet context.
   const [enabled, setEnabled] = useState<Set<string>>(new Set(company.dept_ids));
+
+  useEffect(() => {
+    setEnabled(new Set(company.dept_ids));
+  }, [company.dept_ids]);
   const [installing, setInstalling] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -42,7 +46,7 @@ export default function CompanyMarketplace() {
     try {
       await api.post(`/v1/companies/${company.id}/depts`, { dept_id: d.id });
       setEnabled((cur) => new Set(cur).add(d.id));
-      company.dept_ids = Array.from(new Set([...company.dept_ids, d.id]));
+      await refreshCompany?.();
       toast.success(t("business.company.marketplace.install-success", { name: d.name }));
     } catch (e) {
       toast.error(apiErrorMessage(e, t("business.company.marketplace.install-error", { name: d.name })));
@@ -61,7 +65,7 @@ export default function CompanyMarketplace() {
         next.delete(d.id);
         return next;
       });
-      company.dept_ids = company.dept_ids.filter((x) => x !== d.id);
+      await refreshCompany?.();
       toast.success(t("business.company.marketplace.uninstall-success", { name: d.name }));
     } catch (e) {
       toast.error(apiErrorMessage(e, t("business.company.marketplace.uninstall-error", { name: d.name })));

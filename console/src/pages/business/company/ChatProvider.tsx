@@ -87,6 +87,7 @@ type ChatContextValue = {
   company: Company;
   depts: DeptCatalogItem[];
   deptsLoading: boolean;
+  reloadDepts: () => Promise<void>;
   deptId: string;
   setDeptId: (id: string) => void;
   turns: ChatTurn[];
@@ -334,38 +335,39 @@ export function ChatProvider({
     [deptId, updateBucket],
   );
 
-  // Load departments whenever the company changes.
-  useEffect(() => {
-    let cancelled = false;
-    setDeptsLoading(true);
+  const deptIdsKey = (company.dept_ids || []).join(",");
+
+  const reloadDepts = useCallback(async () => {
     if (storeRef.current[company.id] === undefined) {
       storeRef.current[company.id] = loadCompanyMap(company.id);
     }
-    setDeptIdState(company.dept_ids[0] ?? "");
-    api
-      .get<{ items: DeptCatalogItem[] }>(`/v1/companies/${company.id}/depts`)
-      .then((r) => {
-        if (cancelled) return;
-        setDepts(r.items);
-        if (r.items.length === 0) return;
-        setDeptIdState((cur) =>
-          r.items.some((d) => d.id === cur) ? cur : r.items[0].id,
-        );
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        toast.error(
-          apiErrorMessage(e, t("business.company.conversations.depts-error")),
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setDeptsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [company.id, toast, t]);
+    setDeptsLoading(true);
+    try {
+      const r = await api.get<{ items: DeptCatalogItem[] }>(
+        `/v1/companies/${company.id}/depts`,
+      );
+      setDepts(r.items);
+      if (r.items.length === 0) {
+        setDeptIdState("");
+        return;
+      }
+      setDeptIdState((cur) =>
+        r.items.some((d) => d.id === cur) ? cur : r.items[0].id,
+      );
+    } catch (e) {
+      toast.error(
+        apiErrorMessage(e, t("business.company.conversations.depts-error")),
+      );
+    } finally {
+      setDeptsLoading(false);
+    }
+  }, [company.id, t, toast]);
+
+  // Reload when the company or its installed depts change (install/remove
+  // used to mutate dept_ids in place, so ChatProvider never saw the update).
+  useEffect(() => {
+    void reloadDepts();
+  }, [company.id, deptIdsKey, reloadDepts]);
 
   // Hydrate history from server when switching depts (once per dept per mount).
   useEffect(() => {
@@ -575,6 +577,7 @@ export function ChatProvider({
       company,
       depts,
       deptsLoading,
+      reloadDepts,
       deptId,
       setDeptId,
       turns: bucket.turns,
@@ -600,6 +603,7 @@ export function ChatProvider({
       company,
       depts,
       deptsLoading,
+      reloadDepts,
       deptId,
       setDeptId,
       bucket.turns,

@@ -36,6 +36,7 @@ export default function ChatView() {
     company,
     depts,
     deptsLoading,
+    reloadDepts,
     deptId,
     setDeptId,
     turns,
@@ -53,6 +54,10 @@ export default function ChatView() {
     resumeTask,
     resumingTaskId,
   } = chat;
+
+  useEffect(() => {
+    void reloadDepts();
+  }, [reloadDepts]);
 
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [dispatchBrief, setDispatchBrief] = useState("");

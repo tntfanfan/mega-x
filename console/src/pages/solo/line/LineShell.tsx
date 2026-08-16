@@ -5,7 +5,7 @@
  * Sidebar: 集市 → 团队 → 聊天 → 任务 → 作品集 → 设置.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useParams, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -14,59 +14,78 @@ import type { Company } from "../../../lib/api";
 import { CompanySwitcher } from "../../../components/layout/CompanySwitcher";
 import { ChatProvider } from "./ChatProvider";
 
+export type LineOutlet = {
+  line: Company;
+  lines: Company[];
+  refreshLine: () => Promise<void>;
+};
+
 type State =
   | { kind: "loading" }
   | { kind: "ok"; line: Company; lines: Company[] }
   | { kind: "not-found" }
   | { kind: "error"; error: string };
 
-function useLine(id: string | undefined): State {
+function useLine(id: string | undefined): {
+  state: State;
+  refresh: () => Promise<void>;
+} {
   const [s, setS] = useState<State>({ kind: "loading" });
+  const cancelledRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const linesCacheRef = useRef<Company[]>([]);
+  const idRef = useRef(id);
+  idRef.current = id;
+
+  const load = useCallback(async (includeList = false) => {
+    const lineId = idRef.current;
+    if (!lineId) return;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = undefined;
+    }
+    const lineReq = api.get<Company>(`/v1/lines/${lineId}`);
+    const listReq =
+      includeList || linesCacheRef.current.length === 0
+        ? api.get<{ items: Company[] }>("/v1/lines")
+        : Promise.resolve({ items: linesCacheRef.current });
+    try {
+      const [line, all] = await Promise.all([lineReq, listReq]);
+      if (cancelledRef.current || idRef.current !== lineId) return;
+      linesCacheRef.current = all.items;
+      setS({ kind: "ok", line, lines: all.items });
+      if (line.state === "provisioning") {
+        timerRef.current = setTimeout(() => {
+          void load(false);
+        }, 3000);
+      }
+    } catch (e) {
+      if (cancelledRef.current || idRef.current !== lineId) return;
+      const status =
+        e && typeof e === "object" && "status" in e
+          ? (e as { status: number }).status
+          : 0;
+      setS(status === 404 ? { kind: "not-found" } : { kind: "error", error: String(e) });
+    }
+  }, []);
+
   useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let linesCache: Company[] = [];
-
-    const load = (includeList = false) => {
-      const lineReq = api.get<Company>(`/v1/lines/${id}`);
-      const listReq =
-        includeList || linesCache.length === 0
-          ? api.get<{ items: Company[] }>("/v1/lines")
-          : Promise.resolve({ items: linesCache });
-
-      Promise.all([lineReq, listReq])
-        .then(([line, all]) => {
-          if (cancelled) return;
-          linesCache = all.items;
-          setS({ kind: "ok", line, lines: all.items });
-          if (line.state === "provisioning") {
-            timer = setTimeout(() => load(false), 3000);
-          }
-        })
-        .catch((e) => {
-          if (cancelled) return;
-          const status =
-            e && typeof e === "object" && "status" in e
-              ? (e as { status: number }).status
-              : 0;
-          setS(status === 404 ? { kind: "not-found" } : { kind: "error", error: String(e) });
-        });
-    };
-
-    load(true);
+    cancelledRef.current = false;
+    void load(true);
     return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
+      cancelledRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [id]);
-  return s;
+  }, [id, load]);
+
+  const refresh = useCallback(() => load(false), [load]);
+  return { state: s, refresh };
 }
 
 export default function LineShell() {
   const { lineId } = useParams<{ lineId: string }>();
   const { t } = useTranslation();
-  const state = useLine(lineId);
+  const { state, refresh } = useLine(lineId);
 
   if (state.kind === "loading") {
     return (
@@ -92,7 +111,7 @@ export default function LineShell() {
         <div className="flex flex-1">
           <LineSidebar lineId={line.id} />
           <main className="flex-1 min-w-0">
-            <Outlet context={{ line, lines }} />
+            <Outlet context={{ line, lines, refreshLine: refresh } satisfies LineOutlet} />
           </main>
         </div>
       </div>

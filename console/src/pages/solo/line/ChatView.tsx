@@ -32,6 +32,7 @@ export default function ChatView() {
     line,
     depts,
     deptsLoading,
+    reloadDepts,
     deptId,
     setDeptId,
     turns,
@@ -44,6 +45,10 @@ export default function ChatView() {
     send,
     appendLocalTurn,
   } = chat;
+
+  useEffect(() => {
+    void reloadDepts();
+  }, [reloadDepts]);
 
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [dispatchBrief, setDispatchBrief] = useState("");

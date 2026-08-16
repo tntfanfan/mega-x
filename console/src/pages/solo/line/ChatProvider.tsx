@@ -43,6 +43,7 @@ type ChatContextValue = {
   line: Company;
   depts: DeptCatalogItem[];
   deptsLoading: boolean;
+  reloadDepts: () => Promise<void>;
   deptId: string;
   setDeptId: (id: string) => void;
   turns: ChatTurn[];
@@ -155,37 +156,37 @@ export function ChatProvider({
     [deptId, updateBucket],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    setDeptsLoading(true);
+  const deptIdsKey = (line.dept_ids || []).join(",");
+
+  const reloadDepts = useCallback(async () => {
     if (storeRef.current[line.id] === undefined) {
       storeRef.current[line.id] = loadLineMap(line.id);
     }
-    setDeptIdState(line.dept_ids[0] ?? "");
-    api
-      .get<{ items: DeptCatalogItem[] }>(`/v1/lines/${line.id}/depts`)
-      .then((r) => {
-        if (cancelled) return;
-        setDepts(r.items);
-        if (r.items.length === 0) return;
-        setDeptIdState((cur) =>
-          r.items.some((d) => d.id === cur) ? cur : r.items[0].id,
-        );
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        toast.error(
-          apiErrorMessage(e, t("solo.line.conversations.depts-error")),
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setDeptsLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [line.id, toast, t]);
+    setDeptsLoading(true);
+    try {
+      const r = await api.get<{ items: DeptCatalogItem[] }>(
+        `/v1/lines/${line.id}/depts`,
+      );
+      setDepts(r.items);
+      if (r.items.length === 0) {
+        setDeptIdState("");
+        return;
+      }
+      setDeptIdState((cur) =>
+        r.items.some((d) => d.id === cur) ? cur : r.items[0].id,
+      );
+    } catch (e) {
+      toast.error(
+        apiErrorMessage(e, t("solo.line.conversations.depts-error")),
+      );
+    } finally {
+      setDeptsLoading(false);
+    }
+  }, [line.id, t, toast]);
+
+  useEffect(() => {
+    void reloadDepts();
+  }, [line.id, deptIdsKey, reloadDepts]);
 
   const selectedDept = useMemo(
     () => depts.find((d) => d.id === deptId),
@@ -277,6 +278,7 @@ export function ChatProvider({
       line,
       depts,
       deptsLoading,
+      reloadDepts,
       deptId,
       setDeptId,
       turns: bucket.turns,
@@ -294,6 +296,7 @@ export function ChatProvider({
       line,
       depts,
       deptsLoading,
+      reloadDepts,
       deptId,
       setDeptId,
       bucket.turns,
