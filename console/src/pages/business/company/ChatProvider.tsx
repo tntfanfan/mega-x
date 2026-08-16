@@ -167,7 +167,7 @@ function emptyBucket(): DeptChatBucket {
   return { turns: [], draft: "", pendingRefs: [] };
 }
 
-function serverRowToTurn(row: Record<string, unknown>): ChatTurn | null {
+export function serverRowToTurn(row: Record<string, unknown>): ChatTurn | null {
   const role = row.role;
   if (role === "local") {
     const kind = String(row.kind || "");

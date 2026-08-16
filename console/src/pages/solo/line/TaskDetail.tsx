@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, Task, Artifact, ActivityEvent, TaskState } from "../../../lib/api";
 import { artifactDisplayName, downloadArtifact } from "../../../lib/artifacts";
+import { artifactRef, stepRef, taskRef } from "../../../lib/chatRefs";
 import { resolveDeptDisplay } from "../../../lib/depts";
 import { useToast } from "../../../components/ui/Toast";
 import { ArtifactViewer } from "../../../components/ui/ArtifactViewer";
@@ -105,19 +106,56 @@ export default function TaskDetail() {
   const selected = task.artifacts.find((a) => a.id === selectedId) ?? task.artifacts[task.artifacts.length - 1];
   const stateMeta = STATE_META[task.state];
   const working = LIVE_STATES.has(task.state);
+  const failedStep = (task.plan || []).find((s) => s.status === "failed");
+  const failureEvent = [...(task.events || [])]
+    .reverse()
+    .find((event) => event.type === "failed" || event.type === "task_blocked");
+  const fallbackFailureEvent = [...timeline]
+    .reverse()
+    .find((event) => event.state === "failed" || /failed|blocked/i.test(event.type || ""));
+  const failureReason =
+    failureEvent?.text ||
+    fallbackFailureEvent?.text ||
+    t("solo.line.tasks.detail.failure.unknown");
+  const failureAt = failureEvent?.ts || fallbackFailureEvent?.ts || task.updated_at;
+  const timelineEvents = task.events?.length ? task.events : timeline;
+
+  const bringTask = () => chat.bringToChat(task.dept_id, [taskRef(task)]);
+  const solveInChat = () => {
+    const refs = failedStep
+      ? [stepRef(task, failedStep, failureReason)]
+      : [taskRef(task)];
+    chat.bringToChat(task.dept_id, refs, {
+      draft: t("solo.line.chat.solve.draft", { title: task.title }),
+    });
+  };
 
   return (
     <section className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-3">
         <Link to={backTo} className="text-xs text-muted hover:text-primary">{t("solo.line.tasks.detail.back")}</Link>
-        <button
-          type="button"
-          disabled={deleting}
-          onClick={() => void deleteTask()}
-          className="text-xs text-muted hover:text-fusion disabled:opacity-50"
-        >
-          {deleting ? "…" : t("task.delete.action")}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={bringTask}
+            className="text-xs text-primary hover:underline"
+          >
+            {t("solo.line.chat.bring")}
+          </button>
+          {task.state === "failed" && (
+            <span className="text-xs text-fusion">
+              {t("solo.line.tasks.detail.failure.action-hint")}
+            </span>
+          )}
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={() => void deleteTask()}
+            className="text-xs text-muted hover:text-fusion disabled:opacity-50"
+          >
+            {deleting ? "…" : t("task.delete.action")}
+          </button>
+        </div>
       </div>
 
       <header>
@@ -139,18 +177,81 @@ export default function TaskDetail() {
           <span>·</span>
           <span>{t("solo.line.tasks.detail.progress", { percent: Math.round(task.progress * 100) })}</span>
           <span>·</span>
-          <span>{task.token_used.toLocaleString()} tokens</span>
+          <span>
+            {t("business.usage.tokens", {
+              count: task.token_used.toLocaleString(),
+            })}
+          </span>
           <span>·</span>
           <span>¥{task.cost_yuan.toFixed(2)}</span>
         </div>
       </header>
+
+      {task.state === "failed" && (
+        <section
+          aria-labelledby="task-failure-title"
+          className="rounded-md border border-fusion/40 bg-fusion/5 p-4"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h2 id="task-failure-title" className="font-display text-lg text-heading">
+                {t("solo.line.tasks.detail.failure.title")}
+              </h2>
+              <p className="mt-1 text-sm text-body">
+                <span className="text-muted">
+                  {t("solo.line.tasks.detail.failure.step")}
+                  {" "}
+                </span>
+                {failedStep?.label || failedStep?.key || t("solo.line.tasks.detail.failure.unknown-step")}
+              </p>
+              {failureAt && (
+                <p className="mt-1 text-xs text-muted">
+                  {t("solo.line.tasks.detail.failure.time", {
+                    time: new Date(failureAt).toLocaleString(i18n.language),
+                  })}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={solveInChat}
+                className="rounded-md border border-fusion/50 px-3 py-1.5 text-sm text-fusion hover:bg-fusion/10"
+              >
+                {t("solo.line.chat.solve.action")}
+              </button>
+              <button
+                type="button"
+                disabled={chat.resumingTaskId === task.id}
+                onClick={() => void chat.resumeTask(task.id, { stepKey: failedStep?.key })}
+                className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-bg hover:bg-accent disabled:opacity-50"
+              >
+                {chat.resumingTaskId === task.id
+                  ? t("solo.line.chat.resume.submitting")
+                  : t("solo.line.chat.resume.confirm")}
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 rounded border border-border-solid bg-surface/70 px-3 py-2">
+            <div className="text-xs uppercase tracking-widest text-muted">
+              {t("solo.line.tasks.detail.failure.reason")}
+            </div>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-body">
+              {failureReason}
+            </p>
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            {t("solo.line.tasks.detail.failure.retry-scope")}
+          </p>
+        </section>
+      )}
 
       <TaskPlanFlow task={task} />
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="rounded-md border border-border-solid bg-surface p-4">
           <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("solo.line.tasks.detail.timeline")}</h2>
-          {timeline.length === 0 ? (
+          {timelineEvents.length === 0 ? (
             <p className="text-sm text-muted">
               {working
                 ? t("solo.line.tasks.detail.waiting")
@@ -158,8 +259,8 @@ export default function TaskDetail() {
             </p>
           ) : (
             <ul className="space-y-2 text-xs">
-              {timeline.map((evt) => (
-                <li key={evt.id} className="flex gap-2">
+              {timelineEvents.map((evt, index) => (
+                <li key={"id" in evt ? evt.id : `${evt.ts}-${index}`} className="flex gap-2">
                   <span className="text-muted shrink-0 w-12">{new Date(evt.ts).toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" })}</span>
                   <span className="text-body">{evt.text}</span>
                 </li>
@@ -222,13 +323,24 @@ export default function TaskDetail() {
               >
                 <ArtifactViewer art={selected} owner={owner} />
               </div>
-              <div className="mt-3 flex gap-2">
+              <div className="mt-3 flex gap-2 flex-wrap">
                 <button
                   type="button"
                   onClick={() => setPreviewOpen(true)}
                   className="rounded-md border border-border-solid px-3 py-1 text-xs text-body hover:text-primary hover:border-primary transition-colors"
                 >
                   {t("common.preview.open")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    chat.bringToChat(task.dept_id, [
+                      artifactRef(selected, task.title),
+                    ])
+                  }
+                  className="rounded-md border border-border-solid px-3 py-1 text-xs text-body hover:text-primary hover:border-primary transition-colors"
+                >
+                  {t("solo.line.chat.discuss-artifact")}
                 </button>
                 <button
                   type="button"

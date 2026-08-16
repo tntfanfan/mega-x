@@ -177,7 +177,9 @@ export default function LineMarketplace() {
                             : "bg-ai/10 text-ai"
                         }`}
                       >
-                        {d.source_type === "builtin" ? "official" : "marketplace"}
+                        {d.source_type === "builtin"
+                          ? t("solo.line.marketplace.source.official")
+                          : t("solo.line.marketplace.source.thirdparty")}
                       </span>
                     </div>
                     <h3 className="font-display text-sm text-heading mt-2 truncate">
