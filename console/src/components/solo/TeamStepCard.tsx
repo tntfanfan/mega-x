@@ -42,7 +42,7 @@ export function TeamStepCard({ task, steps, onClick }: Props) {
     <button
       type="button"
       onClick={onClick}
-      className="block w-full text-left rounded-md border border-border-solid bg-surface p-4 hover:border-primary transition-colors"
+      className="block w-full text-start rounded-md border border-border-solid bg-surface p-4 hover:border-primary transition-colors"
     >
       <header className="flex items-start gap-2 mb-3">
         <span className="shrink-0 mt-0.5">📋</span>
@@ -62,7 +62,7 @@ export function TeamStepCard({ task, steps, onClick }: Props) {
             </span>
             <span className={s.state === "done" ? "text-muted line-through" : s.state === "active" ? "text-spark-blue" : "text-dim"}>
               {s.label}
-              {s.meta && <span className="text-muted ml-1.5">({s.meta})</span>}
+              {s.meta && <span className="text-muted ms-1.5">({s.meta})</span>}
             </span>
           </li>
         ))}

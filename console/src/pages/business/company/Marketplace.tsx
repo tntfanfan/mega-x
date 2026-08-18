@@ -9,6 +9,7 @@ import { CardGridSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
+import { resolveDeptDisplay, resolveDeptDesc } from "../../../lib/depts";
 
 type Ctx = { company: Company };
 type SourceFilter = "all" | "builtin" | "marketplace";
@@ -70,20 +71,30 @@ export default function CompanyMarketplace() {
     }
   };
 
+  // Internal-only depts arrive tagged `hidden` rather than dropped, so a
+  // company that already installed one keeps its uninstall affordance.
+  const visible = useMemo(
+    () => items.filter((d) => !d.hidden || enabled.has(d.id)),
+    [items, enabled],
+  );
+
   const sourceOptions = useMemo<SegmentedOption<SourceFilter>[]>(() => [
-    { value: "all", label: t("business.company.marketplace.source.all"), count: items.length },
-    { value: "builtin", label: t("business.company.marketplace.source.official"), count: items.filter((d) => d.source_type === "builtin").length },
-    { value: "marketplace", label: t("business.company.marketplace.source.thirdparty"), count: items.filter((d) => d.source_type === "marketplace").length },
-  ], [items, t]);
+    { value: "all", label: t("business.company.marketplace.source.all"), count: visible.length },
+    { value: "builtin", label: t("business.company.marketplace.source.official"), count: visible.filter((d) => d.source_type === "builtin").length },
+    { value: "marketplace", label: t("business.company.marketplace.source.thirdparty"), count: visible.filter((d) => d.source_type === "marketplace").length },
+  ], [visible, t]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((d) => {
+    return visible.filter((d) => {
       if (source !== "all" && d.source_type !== source) return false;
       if (!q) return true;
-      return `${d.name} ${d.short_desc} ${d.id}`.toLowerCase().includes(q);
+      // Search the *localized* strings too, so typing what you see matches.
+      return `${d.name} ${resolveDeptDisplay(d.id, [d], t).name} ${d.short_desc} ${resolveDeptDesc(d, t)} ${d.id}`
+        .toLowerCase()
+        .includes(q);
     });
-  }, [items, query, source]);
+  }, [visible, query, source, t]);
 
   return (
     <section className="p-6 space-y-6">
@@ -118,8 +129,8 @@ export default function CompanyMarketplace() {
                     : t("business.company.marketplace.source.thirdparty")}
                 </span>
               </div>
-              <h2 className="font-display text-base text-heading mt-2 truncate">{d.name}</h2>
-              <p className="text-xs text-muted truncate">{d.short_desc}</p>
+              <h2 className="font-display text-base text-heading mt-2 truncate" title={resolveDeptDisplay(d.id, [d], t).name}>{resolveDeptDisplay(d.id, [d], t).name}</h2>
+              <p className="text-xs text-muted truncate">{resolveDeptDesc(d, t)}</p>
               <div className="mt-2 text-xs text-body">
                 {d.price_monthly === 0 ? t("common.free") : t("common.price-monthly", { price: d.price_monthly })}
               </div>

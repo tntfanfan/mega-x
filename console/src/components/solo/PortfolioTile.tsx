@@ -43,7 +43,7 @@ export function PortfolioTile({ artifact, groupLabel, onClick }: Props) {
     <button
       type="button"
       onClick={onClick}
-      className="rounded-md border border-border-solid bg-surface p-4 text-left hover:border-primary transition-colors w-full"
+      className="rounded-md border border-border-solid bg-surface p-4 text-start hover:border-primary transition-colors w-full"
     >
       {artifact.thumbnail_url ? (
         <div className="aspect-video bg-surface-2 rounded mb-3 overflow-hidden">

@@ -12,8 +12,11 @@
 import type { Agent, AgentStatus, AgentTeamRole } from "../../lib/api";
 
 export interface TeammateView extends Agent {
-  /** i18n key for the human-friendly title (e.g. "solo.group.content.lead") */
+  /** i18n key for the human-friendly title (e.g. "dept.dept-ops.member.data-analyst").
+   *  `display_name` (the raw roster name) is the i18n defaultValue. */
   title_key?: string;
+  /** i18n key for the status bubble; `bubble` is the defaultValue. */
+  bubble_key?: string;
   is_lead: boolean;
 }
 
@@ -42,11 +45,12 @@ const ROLE_EMOJI: Record<AgentTeamRole, string> = {
 interface Props {
   teammate: TeammateView;
   title?: string;          // 已翻译的标题文字（由父组件 t(teammate.title_key)）
+  bubble?: string;         // 已翻译的气泡文案（由父组件 t(teammate.bubble_key)）
   size?: "sm" | "md" | "lg";
   onClick?: () => void;
 }
 
-export function TeammateAvatar({ teammate, title, size = "md", onClick }: Props) {
+export function TeammateAvatar({ teammate, title, bubble, size = "md", onClick }: Props) {
   const sizeCls = size === "sm" ? "w-12 h-12 text-xl" : size === "lg" ? "w-20 h-20 text-3xl" : "w-16 h-16 text-2xl";
   const labelCls = size === "sm" ? "text-[10px]" : "text-xs";
   const working = teammate.status === "working";
@@ -61,23 +65,26 @@ export function TeammateAvatar({ teammate, title, size = "md", onClick }: Props)
           className={`${sizeCls} rounded-full bg-surface-2 border border-border-solid flex items-center justify-center transition-all
             ${working ? `ring-2 ${ROLE_RING[teammate.team_role]} animate-pulse` : ""}
             group-hover:border-primary`}
-          title={`${title ?? teammate.display_name}\n${teammate.soul_summary}\n\n${teammate.bubble}`}
+          title={`${title ?? teammate.display_name}\n${teammate.soul_summary}\n\n${bubble ?? teammate.bubble}`}
         >
           {ROLE_EMOJI[teammate.team_role]}
         </div>
         {/* lead crown */}
         {teammate.is_lead && (
-          <div className="absolute -top-1 -right-1 text-base leading-none" aria-label="lead">
+          <div className="absolute -top-1 -end-1 text-base leading-none" aria-label="lead">
             👑
           </div>
         )}
         {/* status dot */}
         <div
-          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-bg ${STATUS_DOT[teammate.status]}`}
+          className={`absolute bottom-0 end-0 w-3 h-3 rounded-full border-2 border-bg ${STATUS_DOT[teammate.status]}`}
           aria-label={teammate.status}
         />
       </div>
-      <div className={`${labelCls} text-body group-hover:text-primary truncate max-w-[80px] leading-tight text-center`}>
+      <div
+        className={`${labelCls} text-body group-hover:text-primary leading-tight text-center line-clamp-2 max-w-[7rem]`}
+        title={title ?? teammate.display_name}
+      >
         {title ?? teammate.display_name}
       </div>
     </button>

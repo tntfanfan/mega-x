@@ -36,7 +36,8 @@ export function RoleGroupCard({ group, onClickTeammate, onRemove, removing }: Pr
         <span className="text-xl">{group.group_emoji}</span>
         <h3 className="font-display text-sm text-heading truncate">{label}</h3>
         <span className="text-[10px] text-muted shrink-0">
-          {group.teammates.length}人 · {leadCount} {t("solo.line.team.lead-badge")}
+          {t("solo.line.team.agents", { count: group.teammates.length })}
+          {leadCount > 0 ? ` · ${leadCount} ${t("solo.line.team.lead-badge")}` : ""}
         </span>
         {onRemove ? (
           <button
@@ -56,7 +57,11 @@ export function RoleGroupCard({ group, onClickTeammate, onRemove, removing }: Pr
           <TeammateAvatar
             key={tm.id}
             teammate={tm}
-            title={tm.title_key ? t(tm.title_key) : tm.display_name}
+            // Roster name is the i18n defaultValue: a member with no translation
+            // entry (third-party depts, dept-template) shows its raw roster name
+            // rather than a literal key.
+            title={tm.title_key ? t(tm.title_key, { defaultValue: tm.display_name }) : tm.display_name}
+            bubble={tm.bubble_key ? t(tm.bubble_key, { defaultValue: tm.bubble }) : tm.bubble}
             onClick={onClickTeammate ? () => onClickTeammate(tm) : undefined}
           />
         ))}

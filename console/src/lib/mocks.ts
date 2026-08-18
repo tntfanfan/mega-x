@@ -26,7 +26,7 @@
 
 import {
   COMPANIES, DEPT_CATALOG, AGENTS, TASKS, ARTIFACTS, ACTIVITY, ME,
-  LINE_TEMPLATES, GROUP_LABELS,
+  COMPANY_TEMPLATES, LINE_TEMPLATES, GROUP_LABELS,
   type Company, type Task, type Artifact, type TaskPlanStepStatus,
 } from "./fixtures";
 
@@ -102,21 +102,10 @@ function makeCompany(b: Partial<Company>, audience: "business" | "solo"): Compan
 // ─── session-scoped mutable stores ────────────────────────────────────────
 // COMPANIES / TASKS are mutated in place so every handler sees creations.
 
-/** Company templates for GET /v1/templates. Slugs must have i18n entries
- *  under `business.companies.new.tpl.<slug>.{name,desc}` (see zh/en/ar.json). */
-const COMPANY_TEMPLATES = [
-  { slug: "blank",              emoji: "📄", dept_ids: [] as string[] },
-  { slug: "mega-x-default",     emoji: "🏢", dept_ids: DEPT_CATALOG.map((d) => d.id) },
-  { slug: "game-studio",        emoji: "🎮", dept_ids: ["dept-ceo", "dept-game", "dept-dev", "dept-cinematic", "dept-pub", "dept-production"] },
-  { slug: "mcn-content-machine", emoji: "🎬", dept_ids: ["dept-ceo", "dept-drama", "dept-cinematic", "dept-organic", "dept-ad", "dept-growth"] },
-  { slug: "fintech-research",   emoji: "📈", dept_ids: ["dept-ceo", "dept-quant", "dept-research", "dept-panel", "dept-finance"] },
-  { slug: "solo-assistant",     emoji: "🧑‍💻", dept_ids: ["dept-ceo", "dept-research", "dept-pub"] },
-  { slug: "law-firm",           emoji: "⚖️", dept_ids: ["dept-ceo", "dept-legal", "dept-security", "dept-research"] },
-].map((t) => ({
-  ...t,
-  name_key: `business.companies.new.tpl.${t.slug}.name`,
-  desc_key: `business.companies.new.tpl.${t.slug}.desc`,
-}));
+// The 2B template list used to be duplicated here and had drifted from the
+// backend, so flipping VITE_USE_MOCK changed which departments a new company
+// got. It now lives once, in fixtures.ts, pinned to catalog.py by
+// `python tools/check.py templates`.
 
 // ─── dispatch table ──────────────────────────────────────────────────────
 
@@ -172,8 +161,17 @@ const HANDLERS: Handler[] = [
   },
   {
     match: exact("/v1/companies", "POST"),
+    // Template-authoritative, mirroring POST /v1/lines below and the real
+    // server's `_resolve_dept_ids`: the client's dept_ids is not trusted, so
+    // mock mode can't quietly disagree with a curated template.
     handle: (_p, _m, body) => {
-      const newCo = makeCompany((body ?? {}) as Partial<Company>, "business");
+      const b = (body ?? {}) as Partial<Company>;
+      const tpl =
+        COMPANY_TEMPLATES.find((t) => t.slug === b.template_slug) ?? COMPANY_TEMPLATES[0];
+      const newCo = makeCompany(
+        { ...b, template_slug: tpl.slug, dept_ids: tpl.dept_ids },
+        "business",
+      );
       COMPANIES.push(newCo);
       return { status: 201, body: newCo };
     },

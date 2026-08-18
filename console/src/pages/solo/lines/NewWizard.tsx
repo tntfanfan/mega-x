@@ -10,6 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
+import { resolveDeptDisplay } from "../../../lib/depts";
+import { lookupGroupLabel } from "../../../lib/fixtures";
 import { useToast } from "../../../components/ui/Toast";
 
 interface LineTemplate {
@@ -51,6 +53,16 @@ export default function SoloNewWizard() {
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  // Keyed by slug so comparing two lines doesn't collapse the first.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (slug: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
 
   useEffect(() => {
     let cancelled = false;
@@ -76,10 +88,11 @@ export default function SoloNewWizard() {
     setError(null);
     setProgress(null);
     try {
+      // dept_ids deliberately not sent — the server resolves them from the
+      // template slug. See business/companies/NewWizard.
       const line = await api.post<CreateLineResp>("/v1/lines", {
         name: name.trim(),
         template_slug: tplSlug,
-        dept_ids: templates.find((x) => x.slug === tplSlug)?.dept_ids,
       });
       if (line.operation_id) {
         setProgress(t("solo.lines.new.progress"));
@@ -132,38 +145,95 @@ export default function SoloNewWizard() {
             {loadError}
           </p>
         )}
+        {/* Same container-div + two-sibling-buttons shape as the 2B wizard; see
+            the comment there for why the card can't stay a single <button>. */}
         <div className="grid sm:grid-cols-2 gap-3">
-          {templates.map((tpl) => (
-            <button
-              key={tpl.slug}
-              type="button"
-              onClick={() => setTplSlug(tpl.slug)}
-              className={`text-left p-4 rounded border transition-colors ${
-                tplSlug === tpl.slug
-                  ? "bg-primary/10 border-primary"
-                  : "bg-surface border-border-solid hover:border-primary"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{tpl.emoji}</span>
-                <span className="text-sm text-heading flex-1 truncate">{t(tpl.name_key)}</span>
-                <span className="text-[10px] text-muted shrink-0">
-                  {tpl.dept_ids.length}
-                  {t("solo.overview.lines.teams-suffix")}
-                </span>
+          {templates.map((tpl) => {
+            const selected = tplSlug === tpl.slug;
+            const open = expanded.has(tpl.slug);
+            const panelId = `line-groups-${tpl.slug}`;
+            const nameId = `line-name-${tpl.slug}`;
+            return (
+              <div
+                key={tpl.slug}
+                role="group"
+                aria-labelledby={nameId}
+                className={`rounded border transition-colors ${
+                  selected
+                    ? "bg-primary/10 border-primary"
+                    : "bg-surface border-border-solid hover:border-primary"
+                }`}
+              >
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setTplSlug(tpl.slug)}
+                  className="w-full text-start p-4 pb-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-t"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl" aria-hidden>{tpl.emoji}</span>
+                    <span id={nameId} className="text-sm text-heading flex-1 truncate">{t(tpl.name_key)}</span>
+                    <span className="text-[10px] text-muted shrink-0">
+                      {tpl.dept_ids.length}
+                      {t("solo.overview.lines.teams-suffix")}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted mt-1.5 leading-relaxed">{t(tpl.desc_key)}</p>
+                  {tpl.monthly_output_estimate != null && tpl.hours_saved_estimate != null && (
+                    <p className="text-[10px] text-dim mt-2">
+                      {t("solo.lines.new.template-meta", {
+                        count: tpl.dept_ids.length,
+                        output: tpl.monthly_output_estimate,
+                        hours: tpl.hours_saved_estimate,
+                      })}
+                    </p>
+                  )}
+                </button>
+
+                {tpl.dept_ids.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(tpl.slug)}
+                      aria-expanded={open}
+                      aria-controls={panelId}
+                      className="w-full flex items-center gap-1 px-4 pt-1 pb-3 text-[11px] text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    >
+                      <span aria-hidden className={`transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+                      {open
+                        ? t("solo.lines.new.tpl.groups.hide")
+                        : t("solo.lines.new.tpl.groups.show", { count: tpl.dept_ids.length })}
+                    </button>
+                    {/* `hidden` CLASS not ATTRIBUTE — see the 2B wizard's note. */}
+                    <ul
+                      id={panelId}
+                      className={`px-4 pb-4 -mt-1 flex-wrap gap-1.5 ${open ? "flex" : "hidden"}`}
+                    >
+                      {/* Pipeline order, straight from the server — a 产线's dept
+                          order is its workflow, so it is deliberately NOT the
+                          canonical org order. Labels go through GROUP_LABELS
+                          first so a super-individual sees 「内容组 / 账目组」
+                          rather than 「发行部 / 财务部」. */}
+                      {tpl.dept_ids.map((deptId) => {
+                        const group = lookupGroupLabel(tpl.slug, deptId);
+                        const fallback = resolveDeptDisplay(deptId);
+                        const emoji = group?.emoji ?? fallback.emoji;
+                        const label = group ? t(group.label_key) : fallback.name;
+                        return (
+                          <li
+                            key={deptId}
+                            className="rounded-full border border-border-solid px-2 py-0.5 text-[11px] text-body"
+                          >
+                            <span aria-hidden>{emoji}</span> {label}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
               </div>
-              <p className="text-[11px] text-muted mt-1.5 leading-relaxed">{t(tpl.desc_key)}</p>
-              {tpl.monthly_output_estimate != null && tpl.hours_saved_estimate != null && (
-                <p className="text-[10px] text-dim mt-2">
-                  {t("solo.lines.new.template-meta", {
-                    count: tpl.dept_ids.length,
-                    output: tpl.monthly_output_estimate,
-                    hours: tpl.hours_saved_estimate,
-                  })}
-                </p>
-              )}
-            </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 

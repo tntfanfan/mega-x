@@ -17,6 +17,8 @@ import { ListSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
+import { resolveDeptDisplay, resolveDeptDesc } from "../../../lib/depts";
+import { TeammateAvatar, type TeammateView } from "../../../components/solo/TeammateAvatar";
 import { OrgCanvasPanel, type DeptWithMeta } from "./CanvasView";
 
 type Ctx = { company: Company };
@@ -33,6 +35,31 @@ export default function DeptsView() {
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Members are fetched lazily per dept on first expand: business has no
+  // /teammates route (that one is solo-only), so eager loading would be an N+1
+  // over every installed dept just to populate a collapsed panel.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [members, setMembers] = useState<Record<string, TeammateView[]>>({});
+
+  const toggleExpanded = (deptId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(deptId)) {
+        next.delete(deptId);
+        return next;
+      }
+      next.add(deptId);
+      if (!members[deptId]) {
+        api
+          .get<{ items: TeammateView[] }>(`/v1/companies/${company.id}/depts/${deptId}/agents`)
+          // Supplementary panel: on failure show an empty list rather than a
+          // toast, so a member fetch can never disrupt the dept list itself.
+          .then((r) => setMembers((cur) => ({ ...cur, [deptId]: r.items || [] })))
+          .catch(() => setMembers((cur) => ({ ...cur, [deptId]: [] })));
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -71,8 +98,13 @@ export default function DeptsView() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
-    return items.filter((d) => `${d.name} ${d.id} ${d.short_desc}`.toLowerCase().includes(q));
-  }, [items, query]);
+    // Search the *localized* strings too, so typing what you see on screen matches.
+    return items.filter((d) =>
+      `${d.name} ${resolveDeptDisplay(d.id, [d], t).name} ${d.id} ${d.short_desc} ${resolveDeptDesc(d, t)}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [items, query, t]);
   const viewOptions = useMemo<SegmentedOption<ViewMode>[]>(
     () => [
       { value: "list", label: t("business.company.depts.view.list") },
@@ -165,11 +197,13 @@ export default function DeptsView() {
               }>
                 {filtered.map((d) => {
                   const selected = selectedDeptId === d.id;
+                  const open = expanded.has(d.id);
+                  const panelId = `dept-members-${d.id}`;
                   return (
                     <div
                       key={d.id}
                       ref={(el) => { rowRefs.current[d.id] = el; }}
-                      className={`flex items-center transition-colors ${
+                      className={`flex flex-col transition-colors ${
                         viewMode === "list" ? "rounded-md border border-border-solid bg-surface" : ""
                       } ${
                         selected
@@ -179,6 +213,9 @@ export default function DeptsView() {
                             : "hover:border-primary/50"
                       }`}
                     >
+                      {/* Inner row keeps the original two-sibling-button layout;
+                          the expander + member panel stack below it. */}
+                      <div className="flex items-center">
                       <button
                         type="button"
                         aria-pressed={selected}
@@ -187,8 +224,8 @@ export default function DeptsView() {
                       >
                         <span className="text-2xl shrink-0">{d.emoji}</span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm text-heading truncate">{d.name}</div>
-                          <div className="text-xs text-muted truncate">{d.short_desc}</div>
+                          <div className="text-sm text-heading truncate" title={resolveDeptDisplay(d.id, [d], t).name}>{resolveDeptDisplay(d.id, [d], t).name}</div>
+                          <div className="text-xs text-muted truncate">{resolveDeptDesc(d, t)}</div>
                           <div className="mt-1 text-xs font-mono text-dim truncate">{d.id}</div>
                           <div className="mt-2 flex gap-3 text-xs">
                             <span className="text-muted">{t("business.company.depts.agents", { count: d.agent_count })}</span>
@@ -208,6 +245,44 @@ export default function DeptsView() {
                       >
                         {removing === d.id ? t("business.company.depts.removing") : t("business.company.depts.remove")}
                       </button>
+                      </div>
+
+                      {d.agent_count > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(d.id)}
+                            aria-expanded={open}
+                            aria-controls={panelId}
+                            className="w-full flex items-center gap-1 px-4 pb-3 text-[11px] text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          >
+                            <span aria-hidden className={`transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+                            {open
+                              ? t("business.company.depts.members.hide")
+                              : t("business.company.depts.members.show", { count: d.agent_count })}
+                          </button>
+                          {/* Tailwind's `hidden` CLASS, not the hidden ATTRIBUTE:
+                              [hidden]{display:none} loses to an author display:flex,
+                              so hidden={!open} would render visible. */}
+                          <div
+                            id={panelId}
+                            className={`px-4 pb-4 flex-wrap gap-3 ${open ? "flex" : "hidden"}`}
+                          >
+                            {(members[d.id] ?? []).map((tm) => (
+                              <TeammateAvatar
+                                key={tm.id}
+                                teammate={tm}
+                                size="sm"
+                                title={tm.title_key ? t(tm.title_key, { defaultValue: tm.display_name }) : tm.display_name}
+                                bubble={tm.bubble_key ? t(tm.bubble_key, { defaultValue: tm.bubble }) : tm.bubble}
+                              />
+                            ))}
+                            {members[d.id] === undefined && (
+                              <span className="text-[11px] text-dim">{t("common.loading")}</span>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}

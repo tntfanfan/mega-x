@@ -15,6 +15,8 @@ import { useToast } from "../../../components/ui/Toast";
 import { ListSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
+import { resolveDeptDisplay, resolveDeptDesc, deptNameKey } from "../../../lib/depts";
+import { RoleGroupCard, type TeammateGroup } from "../../../components/solo/RoleGroupCard";
 import { OrgCanvasPanel, type DeptWithMeta } from "../../business/company/CanvasView";
 
 type Ctx = { line: Company };
@@ -29,6 +31,7 @@ export default function TeamView() {
   const [query, setQuery] = useState("");
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [groups, setGroups] = useState<TeammateGroup[]>([]);
   const apiRoot = `/v1/lines/${line.id}`;
 
   useEffect(() => {
@@ -41,6 +44,17 @@ export default function TeamView() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [apiRoot, toast, t]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .get<{ groups: TeammateGroup[] }>(`${apiRoot}/teammates`)
+      // Members are supplementary: a failure must not blank the dept list, so
+      // this degrades to "no member panel" rather than surfacing a toast.
+      .then((r) => { if (!cancelled) setGroups(r.groups || []); })
+      .catch(() => { if (!cancelled) setGroups([]); });
+    return () => { cancelled = true; };
+  }, [apiRoot]);
 
   useEffect(() => {
     if (!selectedDeptId) return;
@@ -67,8 +81,27 @@ export default function TeamView() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
-    return items.filter((d) => `${d.name} ${d.id} ${d.short_desc}`.toLowerCase().includes(q));
-  }, [items, query]);
+    // Search the *localized* strings too, so typing what you see matches.
+    return items.filter((d) =>
+      `${d.name} ${resolveDeptDisplay(d.id, [d], t).name} ${d.id} ${d.short_desc} ${resolveDeptDesc(d, t)}`
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [items, query, t]);
+
+  const selectedGroup = useMemo<TeammateGroup | null>(() => {
+    if (!selectedDeptId) return null;
+    const g = groups.find((x) => x.dept_id === selectedDeptId);
+    if (!g) return null;
+    const dept = items.find((d) => d.id === selectedDeptId);
+    return {
+      ...g,
+      // The API sends fallback_label (the raw dept name); point the card at the
+      // dept's i18n key so the group header follows the language switch.
+      label_key: deptNameKey(g.dept_id),
+      fallback_label: dept ? resolveDeptDisplay(dept.id, [dept], t).name : g.fallback_label,
+    };
+  }, [selectedDeptId, groups, items, t]);
 
   return (
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
@@ -161,8 +194,8 @@ export default function TeamView() {
                     >
                       <span className="text-2xl shrink-0">{d.emoji}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm text-heading truncate">{d.name}</div>
-                        <div className="text-[11px] text-muted font-mono truncate">{d.id} · {d.short_desc}</div>
+                        <div className="text-sm text-heading truncate" title={resolveDeptDisplay(d.id, [d], t).name}>{resolveDeptDisplay(d.id, [d], t).name}</div>
+                        <div className="text-[11px] text-muted font-mono truncate">{d.id} · {resolveDeptDesc(d, t)}</div>
                         <div className="mt-1 flex gap-3 text-[11px]">
                           <span className="text-muted">{t("solo.line.team.agents", { count: d.agent_count })}</span>
                           {d.active_tasks > 0 ? (
@@ -189,6 +222,13 @@ export default function TeamView() {
               </div>
             )}
           </div>
+          {/* Selected dept's members. Reuses RoleGroupCard, which was written for
+              exactly this and had no importer until now. */}
+          {selectedGroup && (
+            <div className="shrink-0 border-t border-border-solid p-4">
+              <RoleGroupCard group={selectedGroup} />
+            </div>
+          )}
         </aside>
       </div>
     </div>

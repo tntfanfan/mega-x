@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
+import { resolveDeptDisplay } from "../../../lib/depts";
 import { useToast } from "../../../components/ui/Toast";
 
 /** Shape of GET /v1/templates items (R1). */
@@ -43,6 +44,17 @@ export default function NewWizard() {
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
+  // Keyed by slug, not a single boolean: picking a template is a comparison
+  // task, so peeking at #3 must not collapse #1.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = (slug: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
 
   useEffect(() => {
     let cancelled = false;
@@ -65,10 +77,12 @@ export default function NewWizard() {
     setError(null);
     setProgress(null);
     try {
+      // dept_ids deliberately not sent: the server resolves them from the
+      // template slug. Echoing our copy back let a stale bundle (or anyone
+      // with curl) bypass template curation.
       const c = await api.post<CreateCompanyResp>("/v1/companies", {
         name,
         template_slug: tplSlug,
-        dept_ids: templates.find((x) => x.slug === tplSlug)?.dept_ids,
       });
       if (c.operation_id) {
         setProgress("供给中（首启可能需要数分钟）…");
@@ -115,26 +129,81 @@ export default function NewWizard() {
             {loadError}
           </p>
         )}
+        {/* Card = container div + two SIBLING buttons. The whole card used to be
+            one <button>; nesting the expander inside it would be a <button> in a
+            <button> — invalid HTML that React warns about and browsers mishandle. */}
         <div className="grid sm:grid-cols-2 gap-3">
-          {templates.map((tpl) => (
-            <button
-              key={tpl.slug}
-              type="button"
-              onClick={() => setTplSlug(tpl.slug)}
-              className={`text-start p-4 rounded border transition-colors ${
-                tplSlug === tpl.slug
-                  ? "bg-primary/10 border-primary"
-                  : "bg-surface border-border-solid hover:border-primary"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{tpl.emoji}</span>
-                <span className="text-sm text-heading">{t(`business.companies.new.tpl.${tpl.slug}.name`)}</span>
-                <span className="text-[10px] text-muted ms-auto">{tpl.dept_ids.length}{t("business.overview.company.depts-suffix")}</span>
+          {templates.map((tpl) => {
+            const selected = tplSlug === tpl.slug;
+            const open = expanded.has(tpl.slug);
+            const panelId = `tpl-depts-${tpl.slug}`;
+            const nameId = `tpl-name-${tpl.slug}`;
+            return (
+              <div
+                key={tpl.slug}
+                role="group"
+                aria-labelledby={nameId}
+                className={`rounded border transition-colors ${
+                  selected
+                    ? "bg-primary/10 border-primary"
+                    : "bg-surface border-border-solid hover:border-primary"
+                }`}
+              >
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setTplSlug(tpl.slug)}
+                  className="w-full text-start p-4 pb-2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-t"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl" aria-hidden>{tpl.emoji}</span>
+                    <span id={nameId} className="text-sm text-heading">{t(`business.companies.new.tpl.${tpl.slug}.name`)}</span>
+                    <span className="text-[10px] text-muted ms-auto">{tpl.dept_ids.length}{t("business.overview.company.depts-suffix")}</span>
+                  </div>
+                  <p className="text-[11px] text-muted mt-1">{t(`business.companies.new.tpl.${tpl.slug}.desc`)}</p>
+                </button>
+
+                {tpl.dept_ids.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(tpl.slug)}
+                      aria-expanded={open}
+                      aria-controls={panelId}
+                      className="w-full flex items-center gap-1 px-4 pt-1 pb-3 text-[11px] text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    >
+                      <span aria-hidden className={`transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+                      {open
+                        ? t("business.companies.new.tpl.depts.hide")
+                        : t("business.companies.new.tpl.depts.show", { count: tpl.dept_ids.length })}
+                    </button>
+                    {/* Tailwind's `hidden` CLASS, not the hidden ATTRIBUTE: the UA
+                        sheet's [hidden]{display:none} loses to an author
+                        display:flex, so hidden={!open} would render visible.
+                        Staying mounted also keeps aria-controls pointing at a
+                        real element. */}
+                    <ul
+                      id={panelId}
+                      className={`px-4 pb-4 -mt-1 flex-wrap gap-1.5 ${open ? "flex" : "hidden"}`}
+                    >
+                      {/* Already in canonical order from the server — do not re-sort. */}
+                      {tpl.dept_ids.map((deptId) => {
+                        const { emoji, name } = resolveDeptDisplay(deptId);
+                        return (
+                          <li
+                            key={deptId}
+                            className="rounded-full border border-border-solid px-2 py-0.5 text-[11px] text-body"
+                          >
+                            <span aria-hidden>{emoji}</span> {name}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
               </div>
-              <p className="text-[11px] text-muted mt-1">{t(`business.companies.new.tpl.${tpl.slug}.desc`)}</p>
-            </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 

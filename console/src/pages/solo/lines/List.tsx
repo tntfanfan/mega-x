@@ -40,10 +40,11 @@ export default function SoloLinesList() {
               <div className="text-sm text-heading">{line.name}</div>
               <div className="text-[11px] text-muted truncate">{line.description}</div>
             </div>
-            <div className="text-xs text-muted shrink-0 w-20 text-right">
-              {line.dept_ids.length} 组
+            <div className="text-xs text-muted shrink-0 w-20 text-end">
+              {line.dept_ids.length}
+              {t("solo.overview.lines.teams-suffix")}
             </div>
-            <div className="text-xs shrink-0 w-20 text-right">
+            <div className="text-xs shrink-0 w-20 text-end">
               <span className="text-spark-mint">¥{(line.revenue_30d ?? 0).toLocaleString()}</span>
             </div>
             <Link to={`/solo/l/${line.id}/`} className="text-xs text-primary hover:underline shrink-0">

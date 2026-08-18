@@ -48,13 +48,15 @@ export const COMPANIES: Company[] = [
   {
     id: "c-saas",
     name: "我的 SaaS 创业班底",
-    description: "通用 21 部门完整公司，用于自己的 SaaS 产品研发与运营",
+    description: "通用班底起步、按需扩装，用于自己的 SaaS 产品研发与运营",
     template_slug: "mega-x-default",
     state: "running",
     gateway_port: 18789,
+    // 规范展示序（business 侧）——实模式下服务端就是按这个序下发的，
+    // 保证切 VITE_USE_MOCK 看到的顺序不变。
     dept_ids: [
-      "dept-ceo", "dept-dev", "dept-ops", "dept-pub", "dept-growth",
-      "dept-hr", "dept-finance", "dept-legal", "dept-research", "dept-security",
+      "dept-ceo", "dept-legal", "dept-finance", "dept-hr", "dept-security",
+      "dept-dev", "dept-ops", "dept-research", "dept-pub", "dept-growth",
     ],
     token_usage_30d: 245_320,
     active_tasks: 4,
@@ -70,7 +72,7 @@ export const COMPANIES: Company[] = [
     template_slug: "mcn-content-machine",
     state: "paused",
     gateway_port: 18790,
-    dept_ids: ["dept-drama", "dept-cinematic", "dept-pub", "dept-ad", "dept-organic"],
+    dept_ids: ["dept-pub", "dept-ad", "dept-organic", "dept-drama", "dept-cinematic"],
     token_usage_30d: 12_400,
     active_tasks: 0,
     created_at: "2026-04-01T10:30:00Z",
@@ -163,12 +165,98 @@ export const COMPANIES: Company[] = [
   },
 ];
 
+// ─── Company templates（2B 预制模板）──────────────────────────────────────
+//
+// ⚠ 权威是 `platform/ai_native/catalog.py::BUSINESS_TEMPLATES`，这里是给 mock
+// 模式用的**唯一一份**前端拷贝，逐字对齐。由
+// `cd platform/ai_native && python tools/check.py templates` 跨仓钉住。
+//
+// 这份拷贝以前活在 mocks.ts 里并且已经漂移过（game-studio 6 vs 8 个部门、
+// fintech 5 vs 10、law-firm 把 dept-security 换成了 dept-finance+dept-pub），
+// 于是切 VITE_USE_MOCK 就换一套部门。更糟的是 mega-x-default 当时写成
+// `DEPT_CATALOG.map(d => d.id)`——**会自动吸收 catalog 里任何新加的部门**，
+// 等于策展在 mock 侧根本不成立。所以这里必须是**显式列表**。
+//
+// ⚠ 每个 `dept_ids` 都已经是**规范展示序**（= `DEPT_CATALOG` 的顺序），向导直接按
+// 数组序渲染，不在前端重排。闸门会同时钉住「与 catalog.py 逐字相等」和
+// 「本身是规范序」两件事。
+
+export interface CompanyTemplate {
+  slug: string;
+  emoji: string;
+  /** generic 只能用通用部门；industry 才可用自家垂直业务部门。后端 catalog.py 同义。 */
+  scope: "generic" | "industry";
+  name_key: string;
+  desc_key: string;
+  dept_ids: string[];
+}
+
+export const COMPANY_TEMPLATES: CompanyTemplate[] = [
+  {
+    slug: "blank", emoji: "🗂️", scope: "generic",
+    name_key: "business.companies.new.tpl.blank.name",
+    desc_key: "business.companies.new.tpl.blank.desc",
+    dept_ids: [],
+  },
+  {
+    slug: "mega-x-default", emoji: "🏢", scope: "generic",
+    name_key: "business.companies.new.tpl.mega-x-default.name",
+    desc_key: "business.companies.new.tpl.mega-x-default.desc",
+    dept_ids: [
+      "dept-ceo", "dept-legal", "dept-finance", "dept-hr", "dept-cpo",
+      "dept-dev", "dept-ops", "dept-pub", "dept-growth",
+    ],
+  },
+  {
+    slug: "game-studio", emoji: "🎮", scope: "industry",
+    name_key: "business.companies.new.tpl.game-studio.name",
+    desc_key: "business.companies.new.tpl.game-studio.desc",
+    dept_ids: [
+      "dept-ceo", "dept-hr", "dept-dev", "dept-ops", "dept-production",
+      "dept-pub", "dept-growth", "dept-cinematic", "dept-game",
+    ],
+  },
+  {
+    slug: "mcn-content-machine", emoji: "🎬", scope: "industry",
+    name_key: "business.companies.new.tpl.mcn-content-machine.name",
+    desc_key: "business.companies.new.tpl.mcn-content-machine.desc",
+    dept_ids: [
+      "dept-ceo", "dept-hr", "dept-pub", "dept-growth",
+      "dept-ad", "dept-organic", "dept-drama", "dept-cinematic",
+    ],
+  },
+  {
+    slug: "fintech-research", emoji: "📊", scope: "industry",
+    name_key: "business.companies.new.tpl.fintech-research.name",
+    desc_key: "business.companies.new.tpl.fintech-research.desc",
+    dept_ids: [
+      "dept-ceo", "dept-legal", "dept-finance", "dept-hr",
+      "dept-ir", "dept-research", "dept-quant",
+    ],
+  },
+  {
+    slug: "law-firm", emoji: "⚖️", scope: "industry",
+    name_key: "business.companies.new.tpl.law-firm.name",
+    desc_key: "business.companies.new.tpl.law-firm.desc",
+    dept_ids: [
+      "dept-ceo", "dept-legal", "dept-finance",
+      "dept-hr", "dept-research", "dept-pub",
+    ],
+  },
+];
+
 // ─── Line templates（超级个体的产线模板，对应后端 ai_native_template 的子集）─
 // 每个模板预设了「该产线需要哪些部门」+「每个部门内 agent 的人话叫法」
+//
+// ⚠ 同上：权威是 `catalog.py::LINE_TEMPLATES`，这里逐字对齐并由同一个闸门钉住。
+// 2C 的口径是 ≤4 个部门，且**每个部门都要有 GROUP_LABELS 条目**——否则 Solo
+// 界面会回落到企业部门名，把「财务部」「法务部」摆给一个超级个体看。
 
 export interface LineTemplate {
   slug: string;
   emoji: string;
+  /** generic 只能用通用部门；industry 才可用自家垂直业务部门。后端 catalog.py 同义。 */
+  scope: "generic" | "industry";
   /** i18n key for the display name + description, e.g. "solo.line-tpl.content-newsletter.name" */
   name_key: string;
   desc_key: string;
@@ -181,42 +269,43 @@ export interface LineTemplate {
 
 export const LINE_TEMPLATES: LineTemplate[] = [
   {
-    slug: "content-newsletter", emoji: "📝",
+    slug: "content-newsletter", emoji: "📝", scope: "generic",
     name_key: "solo.line-tpl.content-newsletter.name",
     desc_key: "solo.line-tpl.content-newsletter.desc",
     dept_ids: ["dept-pub", "dept-research", "dept-cpo"],
     monthly_output_estimate: 8, hours_saved_estimate: 32,
   },
   {
-    slug: "short-video", emoji: "🎬",
+    slug: "short-video", emoji: "🎬", scope: "industry",
     name_key: "solo.line-tpl.short-video.name",
     desc_key: "solo.line-tpl.short-video.desc",
     dept_ids: ["dept-drama", "dept-cinematic", "dept-pub", "dept-ad"],
     monthly_output_estimate: 12, hours_saved_estimate: 64,
   },
   {
-    slug: "indie-saas", emoji: "💻",
+    // dept-ops 已移除：给一个人配 8 人的 Infra+SRE 部门是全表最离谱的一项。
+    slug: "indie-saas", emoji: "💻", scope: "generic",
     name_key: "solo.line-tpl.indie-saas.name",
     desc_key: "solo.line-tpl.indie-saas.desc",
-    dept_ids: ["dept-dev", "dept-cpo", "dept-ops", "dept-growth", "dept-pub"],
+    dept_ids: ["dept-dev", "dept-cpo", "dept-growth", "dept-pub"],
     monthly_output_estimate: 4, hours_saved_estimate: 48,
   },
   {
-    slug: "dtc-store", emoji: "🛒",
+    slug: "dtc-store", emoji: "🛒", scope: "generic",
     name_key: "solo.line-tpl.dtc-store.name",
     desc_key: "solo.line-tpl.dtc-store.desc",
-    dept_ids: ["dept-pub", "dept-ad", "dept-growth", "dept-finance", "dept-organic"],
+    dept_ids: ["dept-pub", "dept-ad", "dept-growth", "dept-finance"],
     monthly_output_estimate: 16, hours_saved_estimate: 52,
   },
   {
-    slug: "knowledge-course", emoji: "📚",
+    slug: "knowledge-course", emoji: "📚", scope: "generic",
     name_key: "solo.line-tpl.knowledge-course.name",
     desc_key: "solo.line-tpl.knowledge-course.desc",
     dept_ids: ["dept-pub", "dept-research", "dept-cpo", "dept-organic"],
     monthly_output_estimate: 6, hours_saved_estimate: 28,
   },
   {
-    slug: "consultancy", emoji: "🎨",
+    slug: "consultancy", emoji: "🎨", scope: "generic",
     name_key: "solo.line-tpl.consultancy.name",
     desc_key: "solo.line-tpl.consultancy.desc",
     dept_ids: ["dept-research", "dept-pub", "dept-legal", "dept-finance"],
@@ -254,7 +343,8 @@ export const GROUP_LABELS: Record<string, Record<string, GroupLabel>> = {
   "indie-saas": {
     "dept-dev":     { emoji: "💻", label_key: "solo.group.engineering.label", lead_title_key: "solo.group.engineering.lead", helper_title_key: "solo.group.engineering.helper", reviewer_title_key: "solo.group.engineering.reviewer", ops_title_key: "solo.group.engineering.ops" },
     "dept-cpo":     { emoji: "🎯", label_key: "solo.group.product.label",     lead_title_key: "solo.group.product.lead",     helper_title_key: "solo.group.product.helper",     reviewer_title_key: "solo.group.product.reviewer",     ops_title_key: "solo.group.product.ops" },
-    "dept-ops":     { emoji: "⚙️", label_key: "solo.group.devops.label",      lead_title_key: "solo.group.devops.lead",      helper_title_key: "solo.group.devops.helper",      reviewer_title_key: "solo.group.devops.reviewer",      ops_title_key: "solo.group.devops.ops" },
+    // dept-ops（运维组）随模板一起移除。`solo.group.devops.*` 的 i18n 键刻意留着
+    // ——dept-ops 仍可能被别的产线用上，到时不必重新翻译一遍。
     "dept-growth":  { emoji: "📈", label_key: "solo.group.growth.label",     lead_title_key: "solo.group.growth.lead",     helper_title_key: "solo.group.growth.helper",     reviewer_title_key: "solo.group.growth.reviewer",     ops_title_key: "solo.group.growth.ops" },
     "dept-pub":     { emoji: "📢", label_key: "solo.group.marketing.label",  lead_title_key: "solo.group.marketing.lead",  helper_title_key: "solo.group.marketing.helper",  reviewer_title_key: "solo.group.marketing.reviewer",  ops_title_key: "solo.group.marketing.ops" },
   },
@@ -263,6 +353,20 @@ export const GROUP_LABELS: Record<string, Record<string, GroupLabel>> = {
     "dept-research": { emoji: "🔍", label_key: "solo.group.research.label", lead_title_key: "solo.group.research.lead", helper_title_key: "solo.group.research.helper", reviewer_title_key: "solo.group.research.reviewer", ops_title_key: "solo.group.research.ops" },
     "dept-cpo":      { emoji: "🎯", label_key: "solo.group.curriculum.label", lead_title_key: "solo.group.curriculum.lead", helper_title_key: "solo.group.curriculum.helper", reviewer_title_key: "solo.group.curriculum.reviewer", ops_title_key: "solo.group.curriculum.ops" },
     "dept-organic":  { emoji: "🌱", label_key: "solo.group.community.label", lead_title_key: "solo.group.community.lead", helper_title_key: "solo.group.community.helper", reviewer_title_key: "solo.group.community.reviewer", ops_title_key: "solo.group.community.ops" },
+  },
+  // 这两个模板此前一条 label 都没有，于是 TimelineView 直接露出「发行部」
+  // 「广告部」「财务部」「法务部」——那是给企业看的口径，不是给超级个体看的。
+  "dtc-store": {
+    "dept-pub":     { emoji: "📝", label_key: "solo.group.content.label", lead_title_key: "solo.group.content.lead", helper_title_key: "solo.group.content.helper", reviewer_title_key: "solo.group.content.reviewer", ops_title_key: "solo.group.content.ops" },
+    "dept-ad":      { emoji: "💰", label_key: "solo.group.ads.label",     lead_title_key: "solo.group.ads.lead",     helper_title_key: "solo.group.ads.helper",     reviewer_title_key: "solo.group.ads.reviewer",     ops_title_key: "solo.group.ads.ops" },
+    "dept-growth":  { emoji: "📈", label_key: "solo.group.growth.label",  lead_title_key: "solo.group.growth.lead",  helper_title_key: "solo.group.growth.helper",  reviewer_title_key: "solo.group.growth.reviewer",  ops_title_key: "solo.group.growth.ops" },
+    "dept-finance": { emoji: "🧾", label_key: "solo.group.finance.label", lead_title_key: "solo.group.finance.lead", helper_title_key: "solo.group.finance.helper", reviewer_title_key: "solo.group.finance.reviewer", ops_title_key: "solo.group.finance.ops" },
+  },
+  "consultancy": {
+    "dept-research": { emoji: "🔍", label_key: "solo.group.research.label", lead_title_key: "solo.group.research.lead", helper_title_key: "solo.group.research.helper", reviewer_title_key: "solo.group.research.reviewer", ops_title_key: "solo.group.research.ops" },
+    "dept-pub":      { emoji: "📮", label_key: "solo.group.proposal.label", lead_title_key: "solo.group.proposal.lead", helper_title_key: "solo.group.proposal.helper", reviewer_title_key: "solo.group.proposal.reviewer", ops_title_key: "solo.group.proposal.ops" },
+    "dept-legal":    { emoji: "⚖️", label_key: "solo.group.legal.label",    lead_title_key: "solo.group.legal.lead",    helper_title_key: "solo.group.legal.helper",    reviewer_title_key: "solo.group.legal.reviewer",    ops_title_key: "solo.group.legal.ops" },
+    "dept-finance":  { emoji: "🧾", label_key: "solo.group.finance.label",  lead_title_key: "solo.group.finance.lead",  helper_title_key: "solo.group.finance.helper",  reviewer_title_key: "solo.group.finance.reviewer",  ops_title_key: "solo.group.finance.ops" },
   },
 };
 
@@ -298,32 +402,69 @@ export interface DeptCatalogItem {
   install_count?: number;
   /** Pinned published version when sourced from user_depts/published (e.g. "v1"). */
   version?: string;
+  /** Server marks internal-only depts (test harness / expert panel) rather than
+   *  dropping them — a company that already installed one must keep its
+   *  uninstall affordance. Show it only when installed. */
+  hidden?: boolean;
+  /** i18n keys for `name` / `short_desc`, present only for official depts
+   *  (third-party ones get their title from Studio and have no translation).
+   *  `name` / `short_desc` remain the `defaultValue`. Sent by the backend;
+   *  `resolveDeptDisplay` also derives them from `DEPT_CATALOG` membership so
+   *  mock mode localizes identically. */
+  name_key?: string;
+  desc_key?: string;
   category: "leadership" | "engineering" | "creative" | "ops" | "finance" |
             "research" | "marketing" | "security" | "vertical";
 }
 
+// ⚠ `role_count` / `tier_breakdown` / `name` 都是 **demo 近似值**，权威是
+// `platform/ai_native/roster.json`（实模式下 Dashboard 拿的是真 roster 数，这份
+// 只喂 mock 的 /v1/depts 和 API 加载前的名字回落 depts.ts::resolveDeptDisplay）。
+// 人数以 2026-08-17 的 roster 校正过一轮——此前 21 行里有 18 行不一致，且两个
+// 方向都有（dept-panel 写 7 实际 11、dept-dev 写 6 实际 4）。
+// **闸门钉 id 的顺序与 name，不钉人数**：HR 改任一 AGENTS.md 团队表都会让人数变，
+// 钉了会让 ai_native 的门禁因另一个仓的无关改动而失败。
+//
+// ⚠⚠ **顺序与 name 都是承重信息**，必须与 `catalog.py::_DEPT_META` 逐位置相等
+// （`python tools/check.py templates` 钉住）。顺序是规范展示序：治理/职能 →
+// 产品交付 → 市场发行 → 自家垂直业务 → 内部工具排最后。新增部门要**插到正确位置**，
+// 不是追加到末尾。
+//
+// 名字的权威在 `catalog.py::_DEPT_META.name`，这里是它的镜像。**不要**在这里单独
+// 改名——2026-07 后端加 `catalog.py` 时正是漏搬了 `name` 这一个字段，导致 21 个部门
+// 里 20 个在向导和其余页面显示两个不同的名字（本文件曾写着「研发与代码评审」而接口
+// 返回「研发部」），而当时没有任何断言看得见它。现在两边必须一致。
+//
+// 向导仍然用 `resolveDeptDisplay(id)`（不传第二参）从这份镜像取名字而不去 fetch：
+// 那是为了避免首屏画完之后再替换一次、看起来像闪了一下。既然两边的名字现在由闸门
+// 保证相同，这个回落是确定解析，不再是"另一套文案"。
 export const DEPT_CATALOG: DeptCatalogItem[] = [
-  { id: "dept-ceo",        name: "CEO / 总控",          emoji: "👔", short_desc: "战略 + 跨部门编排",       source_type: "builtin", price_monthly: 0, role_count: 1, tier_breakdown: { HIGH: 1, MEDIUM: 0, LOW: 0 }, category: "leadership" },
-  { id: "dept-dev",        name: "研发与代码评审",       emoji: "🛠️", short_desc: "工程 + Review",          source_type: "builtin", price_monthly: 0, role_count: 6, tier_breakdown: { HIGH: 1, MEDIUM: 4, LOW: 1 }, category: "engineering" },
-  { id: "dept-ops",        name: "运维与可靠性",         emoji: "⚙️", short_desc: "Infra + SRE",             source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 0, MEDIUM: 2, LOW: 2 }, category: "ops" },
-  { id: "dept-pub",        name: "官方渠道发行",         emoji: "📢", short_desc: "Discord/Steam/微博",      source_type: "builtin", price_monthly: 0, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 }, category: "marketing" },
-  { id: "dept-growth",     name: "增长与变现",           emoji: "📈", short_desc: "ASO + 活动 + 计价",        source_type: "builtin", price_monthly: 0, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 }, category: "marketing" },
-  { id: "dept-organic",    name: "有机账号运营",         emoji: "🌱", short_desc: "X/Reddit/小红书养号",      source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 0, MEDIUM: 3, LOW: 1 }, category: "marketing" },
-  { id: "dept-ad",         name: "广告投放",            emoji: "💰", short_desc: "买量 + 计费 + 投放",        source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 }, category: "marketing" },
-  { id: "dept-drama",      name: "剧本与短剧",           emoji: "🎭", short_desc: "脚本 + 分镜 + 字幕",        source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 }, category: "creative" },
-  { id: "dept-cinematic",  name: "影视化 CG",            emoji: "🎬", short_desc: "开场 CG / 剧情动画",       source_type: "builtin", price_monthly: 0, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 }, category: "creative" },
-  { id: "dept-game",       name: "像素沙盒游戏",         emoji: "🎮", short_desc: "玩法 + 关卡 + 平衡",        source_type: "builtin", price_monthly: 0, role_count: 5, tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 1 }, category: "creative" },
-  { id: "dept-finance",    name: "财务",                emoji: "💼", short_desc: "记账 + 报表 + 税务",        source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 }, category: "finance" },
-  { id: "dept-ir",         name: "投资者关系",           emoji: "📊", short_desc: "BP + 股东沟通",            source_type: "builtin", price_monthly: 0, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 0 }, category: "finance" },
-  { id: "dept-legal",      name: "法务与合规",           emoji: "⚖️", short_desc: "合同 + 隐私 + 牌照",        source_type: "builtin", price_monthly: 0, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 0 }, category: "security" },
-  { id: "dept-security",   name: "安全",                emoji: "🛡️", short_desc: "AppSec + InfraSec",         source_type: "builtin", price_monthly: 0, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 1, LOW: 1 }, category: "security" },
-  { id: "dept-research",   name: "研究与情报",           emoji: "🔬", short_desc: "市场 + 竞品 + 论文",        source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 }, category: "research" },
-  { id: "dept-cpo",        name: "产品策略 CPO",         emoji: "🎯", short_desc: "PRD + 路线图 + KPI",        source_type: "builtin", price_monthly: 0, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 0 }, category: "leadership" },
-  { id: "dept-hr",         name: "招聘与组织管理",       emoji: "👥", short_desc: "HR Skills 部门工厂",        source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 }, category: "leadership" },
-  { id: "dept-production", name: "项目出品",             emoji: "📋", short_desc: "PM + 上线 + 验收",          source_type: "builtin", price_monthly: 0, role_count: 4, tier_breakdown: { HIGH: 1, MEDIUM: 2, LOW: 1 }, category: "ops" },
-  { id: "dept-panel",      name: "专家面板",             emoji: "🧠", short_desc: "7 位垂直专家",              source_type: "builtin", price_monthly: 0, role_count: 7, tier_breakdown: { HIGH: 7, MEDIUM: 0, LOW: 0 }, category: "research" },
-  { id: "dept-quant",      name: "多策略量化",           emoji: "📈", short_desc: "信号 + 风险 + 执行",        source_type: "builtin", price_monthly: 0, role_count: 6, tier_breakdown: { HIGH: 2, MEDIUM: 3, LOW: 1 }, category: "vertical" },
-  { id: "dept-template",   name: "HR 自检模板",          emoji: "🧪", short_desc: "测试用，可重生成",          source_type: "builtin", price_monthly: 0, role_count: 3, tier_breakdown: { HIGH: 1, MEDIUM: 1, LOW: 1 }, category: "research" },
+  // ── 治理 / 职能 ──
+  { id: "dept-ceo",        name: "CEO办公室",       emoji: "👔", short_desc: "战略 + 跨部门编排",       source_type: "builtin", price_monthly: 0, role_count: 1,  tier_breakdown: { HIGH: 1, MEDIUM: 0, LOW: 0 }, category: "leadership" },
+  { id: "dept-legal",      name: "法务部",           emoji: "⚖️", short_desc: "合同 + 隐私 + 牌照",        source_type: "builtin", price_monthly: 0, role_count: 6,  tier_breakdown: { HIGH: 2, MEDIUM: 3, LOW: 1 }, category: "security" },
+  { id: "dept-finance",    name: "财务部",                emoji: "💼", short_desc: "记账 + 报表 + 税务",        source_type: "builtin", price_monthly: 0, role_count: 11, tier_breakdown: { HIGH: 4, MEDIUM: 6, LOW: 1 }, category: "finance" },
+  { id: "dept-hr",         name: "人事部",       emoji: "👥", short_desc: "招聘 + 组织 + 绩效",        source_type: "builtin", price_monthly: 0, role_count: 5,  tier_breakdown: { HIGH: 2, MEDIUM: 2, LOW: 1 }, category: "leadership" },
+  { id: "dept-ir",         name: "IR 部",           emoji: "📊", short_desc: "BP + 股东沟通",            source_type: "builtin", price_monthly: 0, role_count: 7,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 1 }, category: "finance" },
+  { id: "dept-security",   name: "安全部",                emoji: "🛡️", short_desc: "AppSec + InfraSec",         source_type: "builtin", price_monthly: 0, role_count: 6,  tier_breakdown: { HIGH: 2, MEDIUM: 3, LOW: 1 }, category: "security" },
+  // ── 产品交付 ──
+  { id: "dept-cpo",        name: "产品部",         emoji: "🎯", short_desc: "PRD + 路线图 + KPI",        source_type: "builtin", price_monthly: 0, role_count: 7,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 1 }, category: "leadership" },
+  { id: "dept-dev",        name: "研发部",       emoji: "🛠️", short_desc: "工程 + Review",          source_type: "builtin", price_monthly: 0, role_count: 4,  tier_breakdown: { HIGH: 2, MEDIUM: 1, LOW: 1 }, category: "engineering" },
+  { id: "dept-ops",        name: "运维部",         emoji: "⚙️", short_desc: "Infra + SRE",             source_type: "builtin", price_monthly: 0, role_count: 8,  tier_breakdown: { HIGH: 2, MEDIUM: 3, LOW: 3 }, category: "ops" },
+  { id: "dept-production", name: "制作部",             emoji: "📋", short_desc: "PM + 上线 + 验收",          source_type: "builtin", price_monthly: 0, role_count: 7,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 1 }, category: "ops" },
+  { id: "dept-research",   name: "研究所",           emoji: "🔬", short_desc: "市场 + 竞品 + 论文",        source_type: "builtin", price_monthly: 0, role_count: 7,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 1 }, category: "research" },
+  // ── 市场 / 发行 ──
+  { id: "dept-pub",        name: "发行部",         emoji: "📢", short_desc: "Discord/Steam/微博",      source_type: "builtin", price_monthly: 0, role_count: 7,  tier_breakdown: { HIGH: 2, MEDIUM: 5, LOW: 0 }, category: "marketing" },
+  { id: "dept-growth",     name: "增长部",           emoji: "📈", short_desc: "ASO + 活动 + 计价",        source_type: "builtin", price_monthly: 0, role_count: 4,  tier_breakdown: { HIGH: 1, MEDIUM: 3, LOW: 0 }, category: "marketing" },
+  { id: "dept-ad",         name: "广告部",            emoji: "💰", short_desc: "买量 + 计费 + 投放",        source_type: "builtin", price_monthly: 0, role_count: 9,  tier_breakdown: { HIGH: 2, MEDIUM: 6, LOW: 1 }, category: "marketing" },
+  { id: "dept-organic",    name: "社媒部",         emoji: "🌱", short_desc: "X/Reddit/小红书养号",      source_type: "builtin", price_monthly: 0, role_count: 6,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 0 }, category: "marketing" },
+  // ── 自家垂直业务（仅行业模板） ──
+  { id: "dept-drama",      name: "短剧部",           emoji: "🎭", short_desc: "脚本 + 分镜 + 字幕",        source_type: "builtin", price_monthly: 0, role_count: 9,  tier_breakdown: { HIGH: 2, MEDIUM: 6, LOW: 1 }, category: "creative" },
+  { id: "dept-cinematic",  name: "动画部",            emoji: "🎬", short_desc: "开场 CG / 剧情动画",       source_type: "builtin", price_monthly: 0, role_count: 10, tier_breakdown: { HIGH: 2, MEDIUM: 7, LOW: 1 }, category: "creative" },
+  { id: "dept-game",       name: "游戏部",         emoji: "🎮", short_desc: "玩法 + 关卡 + 平衡",        source_type: "builtin", price_monthly: 0, role_count: 8,  tier_breakdown: { HIGH: 2, MEDIUM: 5, LOW: 1 }, category: "creative" },
+  { id: "dept-quant",      name: "量化部",           emoji: "📈", short_desc: "信号 + 风险 + 执行",        source_type: "builtin", price_monthly: 0, role_count: 8,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 2 }, category: "vertical" },
+  // ── 内部工具：排最后，且永不进预制模板 ──
+  { id: "dept-panel",      name: "专家组",             emoji: "🧠", short_desc: "垂直专家咨询",              source_type: "builtin", price_monthly: 0, role_count: 11, tier_breakdown: { HIGH: 2, MEDIUM: 9, LOW: 0 }, category: "research" },
+  { id: "dept-template",   name: "模板部",          emoji: "🧪", short_desc: "测试用，可重生成",          source_type: "builtin", price_monthly: 0, role_count: 6,  tier_breakdown: { HIGH: 2, MEDIUM: 3, LOW: 1 }, category: "research" },
 ];
 
 // ─── Agents in a department (per-company instance) ────────────────────────
@@ -478,7 +619,7 @@ export const TASKS: Task[] = [
     artifact_ids: ["art-004"],
   },
   {
-    id: "t-003", company_id: "c-saas", dept_id: "dept-design",
+    id: "t-003", company_id: "c-saas", dept_id: "dept-dev",
     title: "设计 Console 顶部导航视觉",
     brief: "金色调，覆盖 dropdown / dropdown active / hover 三态",
     state: "review", progress: 0.92,
@@ -598,7 +739,7 @@ export const ARTIFACTS: Artifact[] = [
       '"""Alembic init migration — Phyntom X8 platform."""\nfrom alembic import op\nimport sqlalchemy as sa\n\nrevision = "0001_init"\ndown_revision = None\n\ndef upgrade() -> None:\n    op.create_table("tenants", sa.Column("id", sa.String(64), primary_key=True))\n',
   },
   {
-    id: "art-005", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design",
+    id: "art-005", task_id: "t-003", company_id: "c-saas", dept_id: "dept-dev",
     name: "topbar-v2.svg", type: "image", size_bytes: 12_400, created_at: "2026-06-23T12:01:00Z",
     thumbnail_url: "/assets/megax-logo.svg",
     url: "/assets/megax-logo.svg",
@@ -615,12 +756,12 @@ export const ARTIFACTS: Artifact[] = [
       "# AI Infra 周报 · 2026-W25\n\n## 头条\n\n1. **OpenAI** 发布 GPT-5.5\n2. **Anthropic** Claude 4.7\n3. **Mistral** 新推理端点\n\n## 简评\n\n本周重点仍是 **context window** 与 **tool use** 的组合拳。",
   },
   {
-    id: "art-008", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design",
+    id: "art-008", task_id: "t-003", company_id: "c-saas", dept_id: "dept-dev",
     name: "walkthrough.webm", type: "video", size_bytes: 1_240_000, created_at: "2026-06-23T12:20:00Z",
     url: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.webm",
   },
   {
-    id: "art-009", task_id: "t-003", company_id: "c-saas", dept_id: "dept-design",
+    id: "art-009", task_id: "t-003", company_id: "c-saas", dept_id: "dept-dev",
     name: "vo-guide.mp3", type: "audio", size_bytes: 420_000, created_at: "2026-06-23T12:22:00Z",
     url: "https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3",
   },
