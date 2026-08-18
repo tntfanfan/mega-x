@@ -5,7 +5,7 @@
  * ChatProvider 挂在壳下，切页不丢会话；任务页左列表右产出。
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useParams, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -14,57 +14,75 @@ import type { Company } from "../../../lib/api";
 import { CompanySwitcher } from "../../../components/layout/CompanySwitcher";
 import { ChatProvider } from "./ChatProvider";
 
+export type CompanyOutlet = {
+  company: Company;
+  companies: Company[];
+  refreshCompany: () => Promise<void>;
+};
+
 type LoadState =
   | { kind: "loading" }
   | { kind: "ok"; company: Company; companies: Company[] }
   | { kind: "not-found" }
   | { kind: "error"; error: string };
 
-function useCompany(companyId: string | undefined): LoadState {
+function useCompany(companyId: string | undefined): {
+  state: LoadState;
+  refresh: () => Promise<void>;
+} {
   const [s, setS] = useState<LoadState>({ kind: "loading" });
+  const cancelledRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const companiesCacheRef = useRef<Company[]>([]);
+  const companyIdRef = useRef(companyId);
+  companyIdRef.current = companyId;
+
+  const load = useCallback(async (includeList = false) => {
+    const id = companyIdRef.current;
+    if (!id) return;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = undefined;
+    }
+    const companyReq = api.get<Company>(`/v1/companies/${id}`);
+    const listReq =
+      includeList || companiesCacheRef.current.length === 0
+        ? api.get<{ items: Company[] }>("/v1/companies")
+        : Promise.resolve({ items: companiesCacheRef.current });
+    try {
+      const [co, all] = await Promise.all([companyReq, listReq]);
+      if (cancelledRef.current || companyIdRef.current !== id) return;
+      companiesCacheRef.current = all.items;
+      setS({ kind: "ok", company: co, companies: all.items });
+      if (co.state === "provisioning") {
+        timerRef.current = setTimeout(() => {
+          void load(false);
+        }, 3000);
+      }
+    } catch (e) {
+      if (cancelledRef.current || companyIdRef.current !== id) return;
+      const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
+      if (status === 404) setS({ kind: "not-found" });
+      else setS({ kind: "error", error: String(e) });
+    }
+  }, []);
 
   useEffect(() => {
-    if (!companyId) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let companiesCache: Company[] = [];
-
-    const load = (includeList = false) => {
-      const companyReq = api.get<Company>(`/v1/companies/${companyId}`);
-      const listReq = includeList || companiesCache.length === 0
-        ? api.get<{ items: Company[] }>("/v1/companies")
-        : Promise.resolve({ items: companiesCache });
-
-      Promise.all([companyReq, listReq])
-        .then(([co, all]) => {
-          if (cancelled) return;
-          companiesCache = all.items;
-          setS({ kind: "ok", company: co, companies: all.items });
-          if (co.state === "provisioning") {
-            timer = setTimeout(() => load(false), 3000);
-          }
-        })
-        .catch((e) => {
-          if (cancelled) return;
-          const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
-          if (status === 404) setS({ kind: "not-found" });
-          else setS({ kind: "error", error: String(e) });
-        });
-    };
-
-    load(true);
+    cancelledRef.current = false;
+    void load(true);
     return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
+      cancelledRef.current = true;
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [companyId]);
+  }, [companyId, load]);
 
-  return s;
+  const refresh = useCallback(() => load(false), [load]);
+  return { state: s, refresh };
 }
 
 export default function CompanyShell() {
   const { companyId } = useParams<{ companyId: string }>();
-  const state = useCompany(companyId);
+  const { state, refresh } = useCompany(companyId);
 
   if (state.kind === "loading") {
     return <div className="container py-10"><p className="text-body text-sm">Loading…</p></div>;
@@ -84,7 +102,7 @@ export default function CompanyShell() {
         <div className="flex flex-1">
           <CompanySidebar companyId={company.id} />
           <div className="flex-1 min-w-0">
-            <Outlet context={{ company, companies }} />
+            <Outlet context={{ company, companies, refreshCompany: refresh } satisfies CompanyOutlet} />
           </div>
         </div>
       </div>

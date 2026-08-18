@@ -1,22 +1,25 @@
 /**
- * /solo/l/:lineId/chat — full-page team chat.
+ * /solo/l/:lineId/chat — team chat + live task rail.
  *
- * State lives in ChatProvider; this view only renders the team list, message
- * stream, input, and the "dispatch as task" confirm layer.
+ * Same logic as business ChatView: history, refs, resume, task events.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
-import type { Company } from "../../../lib/api";
+import type { Company, Task, TaskState } from "../../../lib/api";
+import type { ChatRef } from "../../../lib/chatRefs";
 import { Markdown } from "../../../components/ui/Markdown";
 import { ChatWaitingBubble, TypingDots, waitingMark } from "../../../components/ui/ChatWaiting";
 import { useToast } from "../../../components/ui/Toast";
 import { useTeamChat, resolveDeptDisplay, type ChatTurn } from "./ChatProvider";
 
 type Ctx = { line: Company };
+
+const LIVE: TaskState[] = ["pending", "in_progress"];
+const POLL_MS = 4000;
 
 function titleFromBrief(brief: string): string {
   const line = brief.trim().split(/\r?\n/)[0] ?? "";
@@ -32,32 +35,113 @@ export default function ChatView() {
     line,
     depts,
     deptsLoading,
+    reloadDepts,
     deptId,
     setDeptId,
     turns,
     draft,
     setDraft,
+    pendingRefs,
+    removePendingRef,
     sending,
     canChat,
     selectedDept,
     selectedDeptLabel,
+    historyLoading,
     send,
     appendLocalTurn,
+    resumeTask,
+    resumingTaskId,
   } = chat;
+
+  useEffect(() => {
+    void reloadDepts();
+  }, [reloadDepts]);
 
   const [dispatchOpen, setDispatchOpen] = useState(false);
   const [dispatchBrief, setDispatchBrief] = useState("");
   const [dispatchTitle, setDispatchTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [deptTasks, setDeptTasks] = useState<Task[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const deptDisplay = resolveDeptDisplay(selectedDept?.id || deptId, depts);
-  const waitingLabel = t("solo.line.chat.waiting", {
-    name: deptDisplay.name || selectedDeptLabel,
-  });
+  const seenEvents = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [turns.length, sending]);
+
+  useEffect(() => {
+    if (!deptId) {
+      setDeptTasks([]);
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = (isPoll = false) => {
+      api
+        .get<{ items: Task[] }>(`/v1/lines/${line.id}/tasks`)
+        .then((r) => {
+          if (cancelled) return;
+          const mine = r.items.filter((tk) => tk.dept_id === deptId);
+          setDeptTasks(mine);
+
+          for (const tk of mine) {
+            if (tk.state === "failed") {
+              const key = `failed:${tk.id}:${tk.progress}`;
+              if (!seenEvents.current.has(key)) {
+                seenEvents.current.add(key);
+                if (isPoll) {
+                  appendLocalTurn({
+                    role: "local",
+                    kind: "task_event",
+                    taskId: tk.id,
+                    taskTitle: tk.title,
+                    event: "failed",
+                  });
+                  appendLocalTurn({
+                    role: "local",
+                    kind: "resume_prompt",
+                    taskId: tk.id,
+                    taskTitle: tk.title,
+                  });
+                }
+              }
+            } else if (tk.state === "done") {
+              const key = `done:${tk.id}`;
+              if (!seenEvents.current.has(key)) {
+                seenEvents.current.add(key);
+                if (isPoll) {
+                  appendLocalTurn({
+                    role: "local",
+                    kind: "task_event",
+                    taskId: tk.id,
+                    taskTitle: tk.title,
+                    event: "done",
+                    detail: t("solo.line.chat.local.artifacts-count", {
+                      count: tk.artifact_ids?.length ?? 0,
+                    }),
+                  });
+                }
+              }
+            }
+          }
+
+          if (mine.some((tk) => LIVE.includes(tk.state))) {
+            timer = setTimeout(() => load(true), POLL_MS);
+          }
+        })
+        .catch(() => {
+          /* rail is best-effort */
+        });
+    };
+
+    load(false);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [line.id, deptId, appendLocalTurn, t]);
 
   const openDispatch = (brief: string) => {
     const text = brief.trim();
@@ -102,6 +186,20 @@ export default function ChatView() {
       ? depts.map((d) => d.id)
       : line.dept_ids;
 
+  const liveTasks = useMemo(
+    () => deptTasks.filter((tk) => LIVE.includes(tk.state) || tk.state === "failed"),
+    [deptTasks],
+  );
+  const deptDisplay = resolveDeptDisplay(selectedDept?.id || deptId, depts);
+  const waitingLabel = t("solo.line.chat.waiting", {
+    name: deptDisplay.name || t("solo.line.chat.speaker.agent"),
+  });
+  const quickPrompts = [
+    t("solo.line.chat.empty.prompt.plan"),
+    t("solo.line.chat.empty.prompt.review"),
+    t("solo.line.chat.empty.prompt.next"),
+  ];
+
   return (
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
       <header className="px-6 py-3 border-b border-border-solid bg-surface/60 shrink-0">
@@ -112,8 +210,8 @@ export default function ChatView() {
       </header>
 
       <div className="flex flex-1 min-h-0">
-        <aside className="w-48 shrink-0 border-e border-border-solid bg-surface/40 overflow-y-auto py-2">
-          <div className="px-3 py-1 text-[10px] uppercase tracking-widest text-muted">
+        <aside className="w-44 shrink-0 border-e border-border-solid bg-surface/40 overflow-y-auto py-2">
+          <div className="px-3 py-1 text-xs uppercase tracking-widest text-muted">
             {t("solo.line.conversations.team-label")}
           </div>
           <nav className="flex flex-col">
@@ -144,16 +242,45 @@ export default function ChatView() {
 
         <div className="flex-1 min-w-0 flex flex-col min-h-0">
           <div
-            className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto"
+            role="log"
+            aria-label={t("solo.line.chat.history-label")}
+            aria-live="polite"
             aria-busy={sending}
+            tabIndex={0}
+            className="flex-1 min-h-0 p-4 space-y-3 overflow-y-auto focus:outline-none focus:ring-1 focus:ring-inset focus:ring-primary/50"
           >
-            {turns.length === 0 && (
+            {turns.length === 0 && historyLoading && (
+              <div className="h-full grid place-items-center text-sm text-muted">
+                {t("solo.line.chat.history-loading")}
+              </div>
+            )}
+            {turns.length === 0 && !historyLoading && selectedDept && (
+              <div className="mx-auto flex min-h-full max-w-xl flex-col items-center justify-center py-10 text-center">
+                <div className="text-4xl" aria-hidden>💬</div>
+                <h2 className="mt-3 font-display text-xl text-heading">
+                  {t("solo.line.chat.empty.title", { name: selectedDeptLabel })}
+                </h2>
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
+                  {t("solo.line.chat.empty.hint")}
+                </p>
+                <div className="mt-5 flex w-full flex-col gap-2">
+                  {quickPrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      disabled={!canChat}
+                      onClick={() => setDraft(prompt)}
+                      className="rounded-md border border-border-solid bg-surface px-4 py-2 text-start text-sm text-body transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+                    >
+                      {prompt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {turns.length === 0 && !historyLoading && !selectedDept && (
               <p className="text-sm text-muted">
-                {selectedDept
-                  ? t("solo.line.conversations.hint", {
-                      team: selectedDeptLabel,
-                    })
-                  : t("solo.line.conversations.empty")}
+                {t("solo.line.conversations.empty")}
               </p>
             )}
             {turns.map((turn, i) => (
@@ -166,12 +293,14 @@ export default function ChatView() {
                     ? resolveDeptDisplay(selectedDept.id, depts).name
                     : resolveDeptDisplay(deptId, depts).name
                 }
+                onResume={(taskId) => void resumeTask(taskId)}
+                resuming={resumingTaskId === (turn.role === "local" && "taskId" in turn ? turn.taskId : "")}
               />
             ))}
             {sending && (
               <ChatWaitingBubble
                 mark={waitingMark(deptDisplay.emoji, deptDisplay.name)}
-                speaker={deptDisplay.name || selectedDeptLabel}
+                speaker={deptDisplay.name || t("solo.line.chat.speaker.agent")}
                 label={waitingLabel}
               />
             )}
@@ -179,6 +308,17 @@ export default function ChatView() {
           </div>
 
           <div className="px-4 py-3 border-t border-border-solid shrink-0 space-y-2">
+            {pendingRefs.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {pendingRefs.map((ref) => (
+                  <RefChip
+                    key={`${ref.type}:${ref.id}:${ref.taskId ?? ""}`}
+                    refItem={ref}
+                    onRemove={() => removePendingRef(ref)}
+                  />
+                ))}
+              </div>
+            )}
             <div className="flex gap-2">
               <input
                 value={draft}
@@ -189,7 +329,11 @@ export default function ChatView() {
                     void send();
                   }
                 }}
-                placeholder={t("solo.line.conversations.placeholder")}
+                placeholder={
+                  pendingRefs.length
+                    ? t("solo.line.chat.placeholder-with-refs")
+                    : t("solo.line.conversations.placeholder")
+                }
                 disabled={sending || !canChat}
                 className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
               />
@@ -211,6 +355,9 @@ export default function ChatView() {
                 {sending ? <TypingDots dotClassName="bg-bg" /> : t("solo.line.conversations.send")}
               </button>
             </div>
+            <p className="text-xs text-muted">
+              {t("solo.line.chat.composer-hint")}
+            </p>
             {line.state === "provisioning" ? (
               <p className="text-xs text-muted">
                 {t("solo.line.conversations.provisioning")}
@@ -224,6 +371,64 @@ export default function ChatView() {
             ) : null}
           </div>
         </div>
+
+        <aside className="hidden xl:flex w-56 shrink-0 border-s border-border-solid bg-surface/30 flex-col min-h-0">
+          <div className="px-3 py-2 text-xs uppercase tracking-widest text-muted border-b border-border-solid">
+            {t("solo.line.chat.rail.title")}
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+            {liveTasks.length === 0 ? (
+              <p className="px-1 py-2 text-xs text-muted">
+                {t("solo.line.chat.rail.empty")}
+              </p>
+            ) : (
+              liveTasks.map((tk) => (
+                <TaskRailCard
+                  key={tk.id}
+                  task={tk}
+                  lineId={line.id}
+                  onDiscuss={() =>
+                    chat.bringToChat(deptId, [
+                      {
+                        type: "task",
+                        id: tk.id,
+                        taskId: tk.id,
+                        label: tk.title,
+                        detail: t("solo.line.chat.ref.status", {
+                          state: t(`task.state.${tk.state}`),
+                        }),
+                      },
+                    ])
+                  }
+                  onSolve={
+                    tk.state === "failed"
+                      ? () =>
+                          chat.bringToChat(
+                            deptId,
+                            [
+                              {
+                                type: "task",
+                                id: tk.id,
+                                taskId: tk.id,
+                                label: tk.title,
+                                detail: t("solo.line.chat.ref.status", {
+                                  state: t("task.state.failed"),
+                                }),
+                              },
+                            ],
+                            {
+                              draft: t("solo.line.chat.solve.draft", {
+                                title: tk.title,
+                              }),
+                            },
+                          )
+                      : undefined
+                  }
+                />
+              ))
+            )}
+          </div>
+        </aside>
       </div>
 
       {dispatchOpen && (
@@ -244,65 +449,246 @@ export default function ChatView() {
   );
 }
 
+function RefChip({
+  refItem,
+  onRemove,
+  readonly,
+}: {
+  refItem: ChatRef;
+  onRemove?: () => void;
+  readonly?: boolean;
+}) {
+  const { t } = useTranslation();
+  const typeKey = `solo.line.chat.ref.${refItem.type}`;
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs text-heading max-w-full">
+      <span className="text-xs uppercase tracking-wider text-muted shrink-0">
+        {t(typeKey)}
+      </span>
+      <span className="truncate">{refItem.label}</span>
+      {!readonly && onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-muted hover:text-fusion shrink-0"
+          aria-label={t("solo.line.chat.ref.remove")}
+        >
+          ✕
+        </button>
+      )}
+    </span>
+  );
+}
+
 function TurnRow({
   turn,
   lineId,
   deptName,
+  onResume,
+  resuming,
 }: {
   turn: ChatTurn;
   lineId: string;
   deptName: string;
+  onResume: (taskId: string) => void;
+  resuming: boolean;
 }) {
   const { t } = useTranslation();
 
   if (turn.role === "local") {
-    // Shared ChatTurn gained resume/event kinds for business chat; solo
-    // only creates task_dispatched today — ignore the rest safely.
-    if (turn.kind !== "task_dispatched") return null;
-    const copyKey = ("auto" in turn && turn.auto)
-      ? "solo.line.chat.local.auto-dispatched"
-      : "solo.line.chat.local.dispatched";
-    return (
-      <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[10px] uppercase tracking-widest text-muted">
-            {t("solo.line.chat.local.record-label")}
-          </span>
-          <Link
-            to={`/solo/l/${lineId}/tasks/${turn.taskId}`}
-            className="shrink-0 text-xs text-primary hover:underline"
-          >
-            {t("solo.line.chat.local.view-task")}
-          </Link>
+    if (turn.kind === "task_dispatched") {
+      const copyKey = turn.auto
+        ? "solo.line.chat.local.auto-dispatched"
+        : "solo.line.chat.local.dispatched";
+      return (
+        <LocalCard
+          label={t("solo.line.chat.local.record-label")}
+          body={t(copyKey, { title: turn.taskTitle })}
+          link={`/solo/l/${lineId}/tasks/${turn.taskId}`}
+          linkLabel={t("solo.line.chat.local.view-task")}
+        />
+      );
+    }
+    if (turn.kind === "task_resumed") {
+      return (
+        <LocalCard
+          label={t("solo.line.chat.local.record-label")}
+          body={t("solo.line.chat.local.resumed", { title: turn.taskTitle })}
+          link={`/solo/l/${lineId}/tasks/${turn.taskId}`}
+          linkLabel={t("solo.line.chat.local.view-task")}
+        />
+      );
+    }
+    if (turn.kind === "task_event") {
+      const copyKey =
+        turn.event === "failed"
+          ? "solo.line.chat.local.event-failed"
+          : turn.event === "done"
+            ? "solo.line.chat.local.event-done"
+            : "solo.line.chat.local.event-artifact";
+      return (
+        <LocalCard
+          label={t("solo.line.chat.local.record-label")}
+          body={t(copyKey, { title: turn.taskTitle, detail: turn.detail || "" })}
+          link={`/solo/l/${lineId}/tasks/${turn.taskId}`}
+          linkLabel={t("solo.line.chat.local.view-task")}
+          tone={turn.event === "failed" ? "danger" : "ok"}
+        />
+      );
+    }
+    if (turn.kind === "resume_prompt") {
+      return (
+        <div className="rounded-md border border-fusion/30 bg-fusion/5 px-3 py-2.5 text-sm">
+          <p className="text-heading leading-snug">
+            {t("solo.line.chat.resume.prompt", { title: turn.taskTitle })}
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              disabled={resuming}
+              onClick={() => onResume(turn.taskId)}
+              className="rounded-md bg-primary text-bg px-3 py-1 text-xs font-medium disabled:opacity-50"
+            >
+              {resuming
+                ? t("solo.line.chat.resume.submitting")
+                : t("solo.line.chat.resume.confirm")}
+            </button>
+            <Link
+              to={`/solo/l/${lineId}/tasks/${turn.taskId}`}
+              className="rounded-md border border-border-solid px-3 py-1 text-xs text-body hover:text-primary"
+            >
+              {t("solo.line.chat.local.view-task")}
+            </Link>
+          </div>
         </div>
-        <p className="mt-1.5 text-heading leading-snug">
-          {t(copyKey, { title: turn.taskTitle })}
-        </p>
-      </div>
-    );
+      );
+    }
+    return null;
   }
 
   const message = turn;
   const speakerLabel =
     message.role === "user"
-      ? "你"
+      ? t("solo.line.chat.speaker.you")
       : message.label && !message.label.startsWith("dept-")
         ? message.label
-        : deptName || "Agent";
+        : deptName || t("solo.line.chat.speaker.agent");
   return (
     <div
       className={`text-sm ${
         message.role === "user" ? "text-heading" : "text-body"
       }`}
     >
-      <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
+      <div className="text-xs uppercase tracking-widest text-muted mb-1">
         {speakerLabel}
       </div>
+      {message.refs && message.refs.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-1.5">
+          {message.refs.map((ref) => (
+            <RefChip
+              key={`${ref.type}:${ref.id}`}
+              refItem={ref}
+              readonly
+            />
+          ))}
+        </div>
+      )}
       {message.role === "assistant" ? (
         <Markdown text={message.text} />
       ) : (
         <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
       )}
+    </div>
+  );
+}
+
+function LocalCard({
+  label,
+  body,
+  link,
+  linkLabel,
+  tone = "primary",
+}: {
+  label: string;
+  body: string;
+  link: string;
+  linkLabel: string;
+  tone?: "primary" | "danger" | "ok";
+}) {
+  const border =
+    tone === "danger"
+      ? "border-fusion/30 bg-fusion/5"
+      : tone === "ok"
+        ? "border-spark-mint/30 bg-spark-mint/5"
+        : "border-primary/30 bg-primary/5";
+  return (
+    <div className={`rounded-md border ${border} px-3 py-2.5 text-sm`}>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs uppercase tracking-widest text-muted">
+          {label}
+        </span>
+        <Link
+          to={link}
+          className="shrink-0 text-xs text-primary hover:underline"
+        >
+          {linkLabel}
+        </Link>
+      </div>
+      <p className="mt-1.5 text-heading leading-snug">{body}</p>
+    </div>
+  );
+}
+
+function TaskRailCard({
+  task,
+  lineId,
+  onDiscuss,
+  onSolve,
+}: {
+  task: Task;
+  lineId: string;
+  onDiscuss: () => void;
+  onSolve?: () => void;
+}) {
+  const { t } = useTranslation();
+  const step = (task.plan || []).find((s) => s.status === "running" || s.status === "failed")
+    || (task.plan || [])[(task.plan || []).length - 1];
+  return (
+    <div className="rounded-md border border-border-solid bg-surface px-2.5 py-2 text-xs">
+      <div className="flex items-start justify-between gap-1">
+        <Link
+          to={`/solo/l/${lineId}/tasks/${task.id}`}
+          className="text-heading hover:text-primary truncate font-medium"
+        >
+          {task.title}
+        </Link>
+        <span className={task.state === "failed" ? "text-fusion shrink-0" : "text-muted shrink-0"}>
+          {t(`task.state.${task.state}`)}
+        </span>
+      </div>
+      {step && (
+        <div className="mt-1 text-muted truncate">
+          {step.label || step.key}
+        </div>
+      )}
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        <button
+          type="button"
+          onClick={onDiscuss}
+          className="text-primary hover:underline"
+        >
+          {t("solo.line.chat.bring")}
+        </button>
+        {onSolve && (
+          <button
+            type="button"
+            onClick={onSolve}
+            className="text-fusion hover:underline"
+          >
+            {t("solo.line.chat.solve.action")}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -354,7 +740,7 @@ function DispatchConfirm({
             {t("solo.line.chat.dispatch.team", { team: teamLabel })}
           </p>
           <label className="block space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted">
+            <span className="text-xs uppercase tracking-widest text-muted">
               {t("solo.line.chat.dispatch.field-title")}
             </span>
             <input
@@ -365,7 +751,7 @@ function DispatchConfirm({
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-[10px] uppercase tracking-widest text-muted">
+            <span className="text-xs uppercase tracking-widest text-muted">
               {t("solo.line.chat.dispatch.field-brief")}
             </span>
             <textarea

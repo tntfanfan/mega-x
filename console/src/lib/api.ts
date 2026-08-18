@@ -105,6 +105,11 @@ export function apiErrorMessage(e: unknown, fallback = "请求失败，请稍后
       for (const k of ["error", "detail", "message"] as const) {
         if (typeof obj[k] === "string" && obj[k]) return obj[k] as string;
       }
+      const nested = obj.detail;
+      if (nested && typeof nested === "object") {
+        const msg = (nested as Record<string, unknown>).message;
+        if (typeof msg === "string" && msg) return msg;
+      }
     }
     if (typeof b === "string" && b) return b;
     return e.message || fallback;

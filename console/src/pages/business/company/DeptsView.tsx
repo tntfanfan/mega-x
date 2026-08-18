@@ -21,11 +21,11 @@ import { resolveDeptDisplay, resolveDeptDesc } from "../../../lib/depts";
 import { TeammateAvatar, type TeammateView } from "../../../components/solo/TeammateAvatar";
 import { OrgCanvasPanel, type DeptWithMeta } from "./CanvasView";
 
-type Ctx = { company: Company };
+type Ctx = { company: Company; refreshCompany?: () => Promise<void> };
 type ViewMode = "list" | "org";
 
 export default function DeptsView() {
-  const { company } = useOutletContext<Ctx>();
+  const { company, refreshCompany } = useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
   const [items, setItems] = useState<DeptWithMeta[]>([]);
@@ -70,7 +70,7 @@ export default function DeptsView() {
       .catch((e) => { if (!cancelled) toast.error(apiErrorMessage(e, t("business.company.depts.load-error"))); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [company.id, toast, t]);
+  }, [company.id, (company.dept_ids || []).join(","), toast, t]);
 
   // Scroll list row into view when selection comes from the canvas.
   useEffect(() => {
@@ -85,7 +85,7 @@ export default function DeptsView() {
     try {
       await api.delete(`/v1/companies/${company.id}/depts/${d.id}`);
       setItems((cur) => cur.filter((x) => x.id !== d.id));
-      company.dept_ids = company.dept_ids.filter((x) => x !== d.id);
+      await refreshCompany?.();
       if (selectedDeptId === d.id) setSelectedDeptId(null);
       toast.success(t("business.company.depts.remove-success", { name: d.name }));
     } catch (e) {

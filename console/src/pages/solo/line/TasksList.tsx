@@ -1,7 +1,6 @@
 /**
- * /solo/l/:lineId/tasks — left: task list, right: that task's outputs.
- *
- * Mirrors business/company/TasksList; paths use /v1/lines/:id/*.
+ * /solo/l/:lineId/tasks — left: compact task list; right: plan steps
+ * with per-step outputs. Same logic as business TasksList.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -9,15 +8,15 @@ import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
-import type { Company, DeptCatalogItem, Task, TaskState } from "../../../lib/api";
+import type { Artifact, Company, DeptCatalogItem, Task, TaskState } from "../../../lib/api";
+import { artifactRef, stepRef, taskRef } from "../../../lib/chatRefs";
 import { resolveDeptDisplay } from "../../../lib/depts";
 import { useToast } from "../../../components/ui/Toast";
 import { ListSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
-import { TaskPlanFlow } from "../../../components/ui/TaskPlanFlow";
-import { ArtifactGallery } from "../../business/company/ArtifactGallery";
+import { TaskStepOutputs } from "../../../components/ui/TaskStepOutputs";
 import { useTeamChat } from "./ChatProvider";
 
 type Ctx = { line: Company };
@@ -44,6 +43,7 @@ export default function TasksList() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
@@ -58,12 +58,15 @@ export default function TasksList() {
 
     const load = (isPoll = false) => {
       if (!isPoll) setLoading(true);
-      api
-        .get<{ items: Task[] }>(`/v1/lines/${line.id}/tasks`)
-        .then((r) => {
+      Promise.all([
+        api.get<{ items: Task[] }>(`/v1/lines/${line.id}/tasks`),
+        api.get<{ items: Artifact[] }>(`/v1/lines/${line.id}/artifacts`),
+      ])
+        .then(([tr, ar]) => {
           if (cancelled) return;
-          setTasks(r.items);
-          if (r.items.some((tk) => LIVE_STATES.has(tk.state))) {
+          setTasks(tr.items);
+          setArtifacts(ar.items);
+          if (tr.items.some((tk) => LIVE_STATES.has(tk.state))) {
             timer = setTimeout(() => load(true), POLL_MS);
           }
         })
@@ -91,6 +94,16 @@ export default function TasksList() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [line.id, toast, t]);
+
+  const artsByTask = useMemo(() => {
+    const m = new Map<string, Artifact[]>();
+    for (const a of artifacts) {
+      const list = m.get(a.task_id) || [];
+      list.push(a);
+      m.set(a.task_id, list);
+    }
+    return m;
+  }, [artifacts]);
 
   const stateOptions = useMemo<SegmentedOption<StateFilter>[]>(() => {
     const counts = tasks.reduce<Record<string, number>>((m, tk) => {
@@ -166,7 +179,21 @@ export default function TasksList() {
     setSearchParams(next, { replace: true });
   };
 
-  const selectedLive = selectedTask ? LIVE_STATES.has(selectedTask.state) : false;
+  const solveInChat = (task: Task, stepKey?: string) => {
+    const step = stepKey
+      ? (task.plan || []).find((s) => s.key === stepKey)
+      : (task.plan || []).find((s) => s.status === "failed");
+    const refs = step
+      ? [stepRef(task, step, t("solo.line.chat.solve.step-detail"))]
+      : [taskRef(task)];
+    chat.bringToChat(task.dept_id, refs, {
+      draft: t("solo.line.chat.solve.draft", { title: task.title }),
+    });
+  };
+
+  const selectedArts = selectedTask
+    ? artsByTask.get(selectedTask.id) || []
+    : [];
 
   return (
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
@@ -207,7 +234,7 @@ export default function TasksList() {
         </div>
       ) : (
         <div className="flex-1 min-h-0 flex flex-col lg:flex-row">
-          <aside className="lg:w-[42%] lg:max-w-xl shrink-0 border-b lg:border-b-0 lg:border-e border-border-solid flex flex-col min-h-0 max-h-[45vh] lg:max-h-none">
+          <aside className="lg:w-[36%] lg:max-w-md shrink-0 border-b lg:border-b-0 lg:border-e border-border-solid flex flex-col min-h-0 max-h-[40vh] lg:max-h-none">
             <div className="px-4 py-3 border-b border-border-solid flex flex-wrap items-center justify-between gap-3 shrink-0">
               <Segmented
                 options={stateOptions}
@@ -218,7 +245,7 @@ export default function TasksList() {
                 value={query}
                 onChange={setQuery}
                 placeholder={t("solo.line.tasks.search-placeholder")}
-                className="w-full sm:w-44"
+                className="w-full sm:w-40"
               />
             </div>
             <div className="flex-1 overflow-y-auto min-h-0">
@@ -238,10 +265,19 @@ export default function TasksList() {
                       task={task}
                       lineId={line.id}
                       depts={depts}
+                      artCount={(artsByTask.get(task.id) || []).length}
                       active={task.id === selectedTask?.id}
                       deleting={deletingId === task.id}
                       onSelect={() => selectTask(task.id)}
                       onDelete={() => void deleteTask(task)}
+                      onDiscuss={() =>
+                        chat.bringToChat(task.dept_id, [taskRef(task)])
+                      }
+                      onSolve={
+                        task.state === "failed"
+                          ? () => solveInChat(task)
+                          : undefined
+                      }
                     />
                   ))}
                 </div>
@@ -252,50 +288,53 @@ export default function TasksList() {
           <section className="flex-1 min-w-0 flex flex-col min-h-0">
             <div className="px-4 py-3 border-b border-border-solid flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div className="min-w-0">
-                <div className="text-[10px] uppercase tracking-widest text-muted">
-                  {t("solo.line.tasks.pane.outputs")}
+                <div className="text-xs uppercase tracking-widest text-muted">
+                  {t("solo.line.tasks.pane.detail")}
                 </div>
                 <div className="text-sm text-heading truncate">
                   {selectedTask
                     ? selectedTask.title
                     : t("solo.line.tasks.pane.pick-task")}
                 </div>
+                {selectedTask && (
+                  <p className="text-xs text-muted mt-0.5 truncate">
+                    {selectedTask.brief}
+                  </p>
+                )}
               </div>
-              {selectedTask && (
-                <Link
-                  to={`/solo/l/${line.id}/tasks/${selectedTask.id}`}
-                  className="text-xs text-primary hover:underline shrink-0"
-                >
-                  {t("solo.line.tasks.pane.open-detail")}
-                </Link>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {selectedTask?.state === "failed" && (
+                  <button
+                    type="button"
+                    onClick={() => solveInChat(selectedTask)}
+                    className="text-xs text-fusion hover:underline"
+                  >
+                    {t("solo.line.chat.solve.action")}
+                  </button>
+                )}
+                {selectedTask && (
+                  <Link
+                    to={`/solo/l/${line.id}/tasks/${selectedTask.id}`}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {t("solo.line.tasks.pane.open-detail")}
+                  </Link>
+                )}
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto min-h-0">
               {selectedTask ? (
-                <div className="flex flex-col min-h-0">
-                  <div className="px-4 pt-3 pb-1 shrink-0">
-                    <TaskPlanFlow task={selectedTask} compact />
-                  </div>
-                  <ArtifactGallery
-                    owner={{ kind: "lines", id: line.id }}
-                    taskId={selectedTask.id}
-                    taskTitle={selectedTask.title}
-                    taskBasePath={`/solo/l/${line.id}/tasks`}
-                    emptyTitle={
-                      selectedLive
-                        ? t("solo.line.tasks.pane.waiting-outputs")
-                        : t("solo.line.tasks.pane.no-outputs")
-                    }
-                    emptyHint={
-                      selectedLive
-                        ? t("solo.line.tasks.detail.waiting-artifacts")
-                        : undefined
-                    }
-                    pollMs={selectedLive ? POLL_MS : undefined}
-                    loadErrorKey="solo.line.portfolio.load-error"
-                    taskLinkKey="solo.line.portfolio.task-link"
-                  />
-                </div>
+                <TaskStepOutputs
+                  task={selectedTask}
+                  artifacts={selectedArts}
+                  owner={{ kind: "lines", id: line.id }}
+                  onDiscuss={(art) =>
+                    chat.bringToChat(selectedTask.dept_id, [
+                      artifactRef(art, selectedTask.title),
+                    ])
+                  }
+                  onSolveStep={(step) => solveInChat(selectedTask, step.key)}
+                />
               ) : (
                 <div className="p-4">
                   <EmptyState
@@ -316,83 +355,107 @@ function TaskRow({
   task,
   lineId,
   depts,
+  artCount,
   active,
   deleting,
   onSelect,
   onDelete,
+  onDiscuss,
+  onSolve,
 }: {
   task: Task;
   lineId: string;
   depts: DeptCatalogItem[];
+  artCount: number;
   active: boolean;
   deleting: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onDiscuss: () => void;
+  onSolve?: () => void;
 }) {
   const { t } = useTranslation();
   const meta = STATE_META[task.state];
+  const plan = task.plan || [];
+  const doneCount = plan.filter((s) => s.status === "done").length;
+  const focus =
+    plan.find((s) => s.status === "failed") ||
+    plan.find((s) => s.status === "running");
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
-      className={`block w-full text-start px-4 py-3 transition-colors cursor-pointer border-s-2 ${
+      className={`block w-full text-start transition-colors border-s-2 ${
         active
           ? "border-primary bg-surface-2"
           : "border-transparent hover:bg-surface-2"
       }`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="text-sm text-heading">{task.title}</div>
-          <div className="text-[11px] text-muted mt-0.5 truncate">{task.brief}</div>
-        </div>
-        <span className={`text-xs ${meta.color} shrink-0`}>
-          {meta.emoji} {t(`task.state.${task.state}`)}
-        </span>
-      </div>
-      <div className="mt-2 flex items-center gap-3 text-[11px] text-muted">
-        <span>{resolveDeptDisplay(task.dept_id, depts).label}</span>
-        {task.source === "chat" && (
-          <>
-            <span>·</span>
-            <span>{t("solo.line.tasks.detail.source-chat")}</span>
-          </>
-        )}
-        {task.state === "in_progress" && (
-          <>
-            <span>·</span>
-            <span>{Math.round(task.progress * 100)}%</span>
-            <span className="flex-1 max-w-32 h-1 rounded bg-surface-3 overflow-hidden">
-              <span
-                className="block h-full bg-primary"
-                style={{ width: `${task.progress * 100}%` }}
-              />
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-pressed={active}
+        className="block w-full px-4 pt-3 text-start"
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-heading truncate">{task.title}</div>
+            <div className="text-xs text-muted mt-1 flex flex-wrap items-center gap-x-2">
+              <span className={meta.color}>
+                {meta.emoji} {t(`task.state.${task.state}`)}
+              </span>
+              <span>·</span>
+              <span>{resolveDeptDisplay(task.dept_id, depts).label}</span>
+              {plan.length > 0 && (
+                <>
+                  <span>·</span>
+                  <span>
+                    {doneCount}/{plan.length}
+                    {focus ? ` · ${focus.label || focus.key}` : ""}
+                  </span>
+                </>
+              )}
+              <span>·</span>
+              <span>
+                {t("solo.line.tasks.pane.outputs-count", { count: artCount })}
+              </span>
+            </div>
+          </div>
+          {LIVE_STATES.has(task.state) && (
+            <span className="text-xs text-muted shrink-0">
+              {Math.round(task.progress * 100)}%
             </span>
-          </>
+          )}
+        </div>
+      </button>
+
+      <div className="px-4 pb-3 pt-2 flex items-center gap-2 text-xs">
+        <button
+          type="button"
+          onClick={onDiscuss}
+          className="text-primary hover:underline"
+        >
+          {t("solo.line.chat.bring")}
+        </button>
+        {onSolve && (
+          <button
+            type="button"
+            onClick={onSolve}
+            className="text-fusion hover:underline"
+          >
+            {t("solo.line.chat.solve.action")}
+          </button>
         )}
         <Link
           to={`/solo/l/${lineId}/tasks/${task.id}`}
-          onClick={(e) => e.stopPropagation()}
-          className="ms-auto text-primary hover:underline shrink-0"
+          className="ms-auto text-muted hover:text-primary"
         >
           {t("solo.line.tasks.pane.detail-link")}
         </Link>
         <button
           type="button"
           disabled={deleting}
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="text-muted hover:text-fusion disabled:opacity-50 shrink-0"
+          onClick={onDelete}
+          className="text-muted hover:text-fusion disabled:opacity-50"
         >
           {deleting ? "…" : t("task.delete.action")}
         </button>

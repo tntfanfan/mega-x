@@ -16,15 +16,19 @@ import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
 import { resolveDeptDisplay, resolveDeptDesc } from "../../../lib/depts";
 
-type Ctx = { line: Company };
+type Ctx = { line: Company; refreshLine?: () => Promise<void> };
 type SourceFilter = "all" | "builtin" | "marketplace";
 
 export default function LineMarketplace() {
-  const { line } = useOutletContext<Ctx>();
+  const { line, refreshLine } = useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
   const [items, setItems] = useState<DeptCatalogItem[]>([]);
   const [enabled, setEnabled] = useState<Set<string>>(new Set(line.dept_ids));
+
+  useEffect(() => {
+    setEnabled(new Set(line.dept_ids));
+  }, [line.dept_ids]);
   const [installing, setInstalling] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -56,7 +60,7 @@ export default function LineMarketplace() {
     try {
       await api.post(`/v1/lines/${line.id}/depts`, { dept_id: d.id });
       setEnabled((cur) => new Set(cur).add(d.id));
-      line.dept_ids = Array.from(new Set([...line.dept_ids, d.id]));
+      await refreshLine?.();
       toast.success(t("solo.line.marketplace.install-success", { name: d.name }));
     } catch (e) {
       toast.error(
@@ -79,7 +83,7 @@ export default function LineMarketplace() {
         next.delete(d.id);
         return next;
       });
-      line.dept_ids = line.dept_ids.filter((x) => x !== d.id);
+      await refreshLine?.();
       toast.success(t("solo.line.marketplace.uninstall-success", { name: d.name }));
     } catch (e) {
       toast.error(
@@ -184,7 +188,9 @@ export default function LineMarketplace() {
                             : "bg-ai/10 text-ai"
                         }`}
                       >
-                        {d.source_type === "builtin" ? "official" : "marketplace"}
+                        {d.source_type === "builtin"
+                          ? t("solo.line.marketplace.source.official")
+                          : t("solo.line.marketplace.source.thirdparty")}
                       </span>
                     </div>
                     <h3 className="font-display text-sm text-heading mt-2 truncate">

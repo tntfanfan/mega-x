@@ -47,6 +47,8 @@ import DevHome from "./pages/dev/Home";
 import DevStudio from "./pages/dev/Studio";
 import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
+import AdminTemplates from "./pages/admin/Templates";
+import AdminTemplateStudio from "./pages/admin/TemplateStudio";
 
 function UserMenu() {
   const { t } = useTranslation();
@@ -198,6 +200,8 @@ export default function App() {
         <Route path="admin" element={<AdminOutlet />}>
           <Route index element={<AdminLanding />} />
           <Route path="review-queue" element={<AdminQueue />} />
+          <Route path="templates" element={<AdminTemplates />} />
+          <Route path="templates/:deptId/studio" element={<AdminTemplateStudio />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
