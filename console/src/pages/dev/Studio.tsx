@@ -120,6 +120,9 @@ export default function DevStudio() {
   // develop = 文件/预览/对话；publish = 整页发布（就绪度）
   const [view, setView] = useState<"develop" | "publish">("develop");
   const [userId, setUserId] = useState("user-dev-0001");
+  const [cellStatus, setCellStatus] = useState<string | null>(null);
+  const [cellReady, setCellReady] = useState(false);
+  const [cellError, setCellError] = useState<string | null>(null);
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tryBusy, setTryBusy] = useState(false);
@@ -161,6 +164,42 @@ export default function DevStudio() {
     return () => { cancelled = true; };
   }, []);
 
+  // Entering Studio always provisions/reuses this developer's DevCell.
+  // Recruiter WS opens only after the container is running.
+  useEffect(() => {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const failed = new Set(["unavailable", "error", "frozen"]);
+    const tick = async () => {
+      try {
+        const r = await api.post<{ status?: string; error?: string }>("/v1/dev/cell");
+        if (cancelled) return;
+        const st = r.status || "unknown";
+        setCellStatus(st);
+        if (st === "running") {
+          setCellError(null);
+          setCellReady(true);
+          return;
+        }
+        if (failed.has(st)) {
+          setCellError(r.error || st);
+          return;
+        }
+        timer = setTimeout(tick, 2000);
+      } catch (e) {
+        if (!cancelled) {
+          setCellStatus("error");
+          setCellError(apiErrorMessage(e, t("dev.studio.cell.unreachable")));
+        }
+      }
+    };
+    void tick();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [t]);
+
   // 新建部门 — allocate a fresh draft server-side, then swap the URL to its id
   // so every "new" opens a clean draft instead of the stale dept-untitled.
   useEffect(() => {
@@ -199,7 +238,7 @@ export default function DevStudio() {
   }, [draftId, toast, t]);
 
   useEffect(() => {
-    if (!draftId || !userId) return;
+    if (!draftId || !userId || !cellReady) return;
     // Clear before (re)connect so userId resolution / remount doesn't stack
     // a second history replay on top of the first.
     setMessages([]);
@@ -271,7 +310,7 @@ export default function DevStudio() {
       client.close();
       wsRef.current = null;
     };
-  }, [draftId, userId, toast]);
+  }, [draftId, userId, cellReady, toast]);
 
   const onSend = useCallback((text: string) => {
     setMessages((cur) => [...cur, { id: `u-${Date.now()}`, role: "user", text }]);
@@ -466,8 +505,22 @@ export default function DevStudio() {
   const passes = checks.filter((c) => c.status === "pass").length;
   const scoreTotal = checks.filter((c) => c.status !== "info").length;
 
+  const cellFailed = cellStatus === "unavailable" || cellStatus === "error" || cellStatus === "frozen";
+
   if (!draft) {
-    return <section className="container py-10"><p className="text-body text-sm">{t("common.loading")}…</p></section>;
+    if (cellFailed) {
+      return (
+        <section className="container py-10">
+          <p className="text-spark-flare text-sm">
+            {t("dev.studio.cell.failed", { error: cellError || cellStatus })}
+          </p>
+        </section>
+      );
+    }
+    const cellHint = !cellReady
+      ? t("dev.studio.cell.provisioning")
+      : t("common.loading");
+    return <section className="container py-10"><p className="text-body text-sm">{cellHint}…</p></section>;
   }
 
   return (
@@ -537,6 +590,17 @@ export default function DevStudio() {
             <span className={`text-[11px] ${DRAFT_STATE_COLOR[draft.state] ?? "text-muted"}`}>
               {t(`dev.dept.state.${draft.state}`, { defaultValue: draft.state })}
             </span>
+            {cellStatus && (
+              <span className={`text-[11px] ${cellFailed ? "text-spark-flare" : "text-muted"}`}>
+                {cellStatus === "running"
+                  ? t("dev.studio.cell.running")
+                  : cellFailed
+                    ? t("dev.studio.cell.failed", { error: cellError || cellStatus })
+                    : cellStatus === "provisioning" || cellStatus === "starting"
+                      ? t("dev.studio.cell.provisioning")
+                      : t("dev.studio.cell.status", { status: cellStatus })}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">

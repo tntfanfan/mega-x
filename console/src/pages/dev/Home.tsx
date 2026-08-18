@@ -4,10 +4,11 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
 import type { DraftCard } from "../../lib/builderFixtures";
 import { useToast } from "../../components/ui/Toast";
 import { CardGridSkeleton } from "../../components/ui/Skeleton";
@@ -24,10 +25,22 @@ const STATE_COLOR: Record<string, string> = {
 /** List items are DraftCards; published entries additionally carry version/_key. */
 type DeptItem = DraftCard & { version?: string; _key?: string };
 
+type OfficialCard = {
+  id: string;
+  name: string;
+  emoji: string;
+  short_desc?: string;
+  edit?: { state: string; editor_user_id: string } | null;
+};
+
 export default function DevHome() {
   const { t } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
+  const { me } = useAuth();
+  const isAdmin = Boolean(me?.roles?.includes("admin"));
   const [items, setItems] = useState<DeptItem[]>([]);
+  const [official, setOfficial] = useState<OfficialCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
@@ -40,6 +53,16 @@ export default function DevHome() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast, t]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    api
+      .get<{ items: OfficialCard[] }>("/v1/dev/official")
+      .then((r) => { if (!cancelled) setOfficial(r.items || []); })
+      .catch(() => { /* non-admin 403 or flag off — hide the group */ });
+    return () => { cancelled = true; };
+  }, [isAdmin]);
 
   useEffect(() => load(), [load]);
 
@@ -112,6 +135,42 @@ export default function DevHome() {
             <h3 className="font-display text-base text-heading mt-2">{t("dev.mydepts.new")}</h3>
           </Link>
         </div>
+      )}
+
+      {isAdmin && official.length > 0 && (
+        <section className="space-y-3 pt-6">
+          <header>
+            <h2 className="font-display text-xl text-heading">{t("dev.mydepts.official-title")}</h2>
+            <p className="text-sm text-muted mt-1">{t("dev.mydepts.official-subtitle")}</p>
+          </header>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {official.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                onClick={async () => {
+                  try {
+                    await api.post(`/v1/dev/official/${d.id}/edit?reuse=true`);
+                    navigate(`/admin/templates/${d.id}/studio`);
+                  } catch (e) {
+                    toast.error(apiErrorMessage(e, t("admin.templates.edit-failed")));
+                  }
+                }}
+                className="text-start group rounded-md border border-border-solid bg-surface p-5 hover:border-primary transition-colors flex flex-col"
+              >
+                <div className="flex items-start justify-between">
+                  <span className="text-2xl">{d.emoji}</span>
+                  {d.edit && (
+                    <span className="text-[11px] text-spark-flare">{d.edit.state}</span>
+                  )}
+                </div>
+                <h3 className="font-display text-lg text-heading mt-2 group-hover:text-primary">{d.name}</h3>
+                <p className="text-[11px] text-muted mt-1 line-clamp-2">{d.short_desc}</p>
+                <span className="mt-3 text-xs text-primary self-start">{t("dev.mydepts.official-edit")}</span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
     </section>
   );
