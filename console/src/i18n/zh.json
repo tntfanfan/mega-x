@@ -815,6 +815,7 @@
   "dev.studio.cell.status": "DevCell：{{status}}",
   "dev.studio.cell.failed": "开发容器不可用：{{error}}",
   "dev.studio.cell.unreachable": "无法连接 DevCell 调度",
+  "dev.studio.chat.not-connected": "对话通道未连接，请刷新页面后再试",
   "dev.dept.state.draft": "草稿",
   "dev.dept.state.ready": "就绪待上架",
   "dev.dept.state.in_review": "安全审查中",

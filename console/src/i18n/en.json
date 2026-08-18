@@ -815,6 +815,7 @@
   "dev.studio.cell.status": "DevCell: {{status}}",
   "dev.studio.cell.failed": "DevCell unavailable: {{error}}",
   "dev.studio.cell.unreachable": "Cannot reach DevCell scheduler",
+  "dev.studio.chat.not-connected": "Chat is not connected — refresh and try again",
   "dev.dept.state.draft": "Draft",
   "dev.dept.state.ready": "Ready to publish",
   "dev.dept.state.in_review": "Security review",

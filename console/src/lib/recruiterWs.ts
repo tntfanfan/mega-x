@@ -139,6 +139,7 @@ export class RecruiterWs {
 
   private send(obj: Record<string, unknown>): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.busy = false;
       this.handlers.onError?.("not connected");
       return;
     }

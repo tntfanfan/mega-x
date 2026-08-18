@@ -789,6 +789,7 @@
   "dev.studio.cell.status": "DevCell: {{status}}",
   "dev.studio.cell.failed": "DevCell غير متاح: {{error}}",
   "dev.studio.cell.unreachable": "تعذر الاتصال بمجدول DevCell",
+  "dev.studio.chat.not-connected": "المحادثة غير متصلة، حدّث الصفحة ثم أعد المحاولة",
   "dev.dept.state.draft": "مسودة",
   "dev.dept.state.in_review": "جارٍ النشر",
   "dev.dept.state.published": "منشور",

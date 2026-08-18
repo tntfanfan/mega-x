@@ -238,7 +238,7 @@ export default function DevStudio() {
   }, [draftId, toast, t]);
 
   useEffect(() => {
-    if (!draftId || !userId || !cellReady) return;
+    if (!draftId || !userId) return;
     // Clear before (re)connect so userId resolution / remount doesn't stack
     // a second history replay on top of the first.
     setMessages([]);
@@ -310,14 +310,19 @@ export default function DevStudio() {
       client.close();
       wsRef.current = null;
     };
-  }, [draftId, userId, cellReady, toast]);
+  }, [draftId, userId, toast]);
 
   const onSend = useCallback((text: string) => {
+    const client = wsRef.current;
+    if (!client) {
+      toast.error(t("dev.studio.chat.not-connected"));
+      return;
+    }
     setMessages((cur) => [...cur, { id: `u-${Date.now()}`, role: "user", text }]);
     setBusy(true);
     streamingIdRef.current = null;
-    wsRef.current?.sendPrompt(text);
-  }, []);
+    client.sendPrompt(text);
+  }, [toast, t]);
 
   const onCancel = useCallback(() => {
     if (chatMode === "try") {
@@ -508,19 +513,7 @@ export default function DevStudio() {
   const cellFailed = cellStatus === "unavailable" || cellStatus === "error" || cellStatus === "frozen";
 
   if (!draft) {
-    if (cellFailed) {
-      return (
-        <section className="container py-10">
-          <p className="text-spark-flare text-sm">
-            {t("dev.studio.cell.failed", { error: cellError || cellStatus })}
-          </p>
-        </section>
-      );
-    }
-    const cellHint = !cellReady
-      ? t("dev.studio.cell.provisioning")
-      : t("common.loading");
-    return <section className="container py-10"><p className="text-body text-sm">{cellHint}…</p></section>;
+    return <section className="container py-10"><p className="text-body text-sm">{t("common.loading")}…</p></section>;
   }
 
   return (
