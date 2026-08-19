@@ -10,7 +10,19 @@ export function extractTryReply(reply: unknown): string {
   try {
     const parsed = JSON.parse(t) as unknown;
     if (parsed && typeof parsed === "object") {
-      return fromBlob(parsed as Record<string, unknown>) || t;
+      const text = fromBlob(parsed as Record<string, unknown>);
+      if (text) return text;
+      const o = parsed as Record<string, unknown>;
+      const result = o.result && typeof o.result === "object"
+        ? (o.result as Record<string, unknown>)
+        : null;
+      const meta = (result?.meta && typeof result.meta === "object"
+        ? result.meta
+        : o.meta && typeof o.meta === "object" ? o.meta : null) as Record<string, unknown> | null;
+      if (meta?.yielded) return "部门正在把任务派给子代理，请稍后再问进度。";
+      if ("runId" in o || "systemPromptReport" in o || "payloads" in o) {
+        return "这次没有返回可见回复，请再试一次。";
+      }
     }
   } catch {
     /* not JSON — show as-is */
