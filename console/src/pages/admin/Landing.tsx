@@ -68,12 +68,6 @@ export default function AdminLanding() {
           >
             {t("admin.landing.cta.review-queue")}
           </Link>
-          <Link
-            to="/admin/templates"
-            className="rounded-md border border-border-solid px-5 py-2 text-sm font-medium text-body hover:border-primary hover:text-primary transition"
-          >
-            {t("admin.landing.cta.templates")}
-          </Link>
         </div>
         <div className="mt-6 grid gap-3 md:grid-cols-2 max-w-3xl">
           <div className="rounded-lg border border-border-solid bg-bg/40 p-4 text-sm">

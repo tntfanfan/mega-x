@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Link, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate, Link, Outlet, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { isMockMode } from "./lib/mocks";
@@ -47,7 +47,6 @@ import DevHome from "./pages/dev/Home";
 import DevStudio from "./pages/dev/Studio";
 import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
-import AdminTemplates from "./pages/admin/Templates";
 import AdminTemplateStudio from "./pages/admin/TemplateStudio";
 
 function UserMenu() {
@@ -139,6 +138,11 @@ function AdminOutlet() {
   );
 }
 
+function RedirectOfficialStudio() {
+  const { deptId } = useParams();
+  return <Navigate to={`/dev/official/${deptId}/studio`} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -195,13 +199,21 @@ export default function App() {
           <Route index element={<DevLanding />} />
           <Route path="home" element={<DevHome />} />
           <Route path="depts/:deptId/studio" element={<DevStudio />} />
+          <Route
+            path="official/:deptId/studio"
+            element={
+              <RequireAdmin>
+                <AdminTemplateStudio />
+              </RequireAdmin>
+            }
+          />
         </Route>
 
         <Route path="admin" element={<AdminOutlet />}>
           <Route index element={<AdminLanding />} />
           <Route path="review-queue" element={<AdminQueue />} />
-          <Route path="templates" element={<AdminTemplates />} />
-          <Route path="templates/:deptId/studio" element={<AdminTemplateStudio />} />
+          <Route path="templates" element={<Navigate to="/dev/home" replace />} />
+          <Route path="templates/:deptId/studio" element={<RedirectOfficialStudio />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

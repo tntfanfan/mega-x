@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
+import { extractTryReply } from "../../lib/tryChatReply";
 import type { BuilderDraft, ChatMsg } from "../../lib/builderFixtures";
 import { RecruiterWs } from "../../lib/recruiterWs";
 import {
@@ -215,7 +216,7 @@ export default function AdminTemplateStudio() {
       if (res.session_id) setTrySessionId(res.session_id);
       setTryMessages((cur) => [
         ...cur,
-        { id: `tc-${Date.now()}`, role: "copilot", text: res.reply || res.error || "(空回复)" },
+        { id: `tc-${Date.now()}`, role: "copilot", text: extractTryReply(res.reply) || res.error || "(空回复)" },
       ]);
     } catch (e) {
       if (ac.signal.aborted) return;
@@ -266,7 +267,7 @@ export default function AdminTemplateStudio() {
       setConfirmOpen(false);
       if (res.ok) {
         toast.info(t("admin.templates.apply-ok"));
-        navigate("/admin/templates");
+        navigate("/dev/home");
         return;
       }
       if (res.code === "push_failed") {
@@ -297,7 +298,7 @@ export default function AdminTemplateStudio() {
   if (loadError) {
     return (
       <section className="container py-10">
-        <Link to="/admin/templates" className="text-xs text-muted hover:text-primary">{t("admin.templates.back-list")}</Link>
+        <Link to="/dev/home" className="text-xs text-muted hover:text-primary">← {t("dev.mydepts.title")}</Link>
         <p className="mt-4 text-fusion text-sm">{loadError}</p>
       </section>
     );
@@ -326,8 +327,8 @@ export default function AdminTemplateStudio() {
     <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
       <header className="border-b border-border-solid bg-surface px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
-          <Link to="/admin/templates" className="text-xs text-muted hover:text-primary shrink-0">
-            {t("admin.templates.back-list")}
+          <Link to="/dev/home" className="text-xs text-muted hover:text-primary shrink-0">
+            ← {t("dev.mydepts.title")}
           </Link>
           <span className="text-2xl shrink-0">{draft.emoji}</span>
           <div className="min-w-0">

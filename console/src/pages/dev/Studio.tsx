@@ -10,6 +10,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
+import { extractTryReply } from "../../lib/tryChatReply";
 import type {
   BuilderDraft, ChatMsg, SecurityReviewInfo,
 } from "../../lib/builderFixtures";
@@ -358,7 +359,7 @@ export default function DevStudio() {
         {
           id: `tc-${Date.now()}`,
           role: "copilot",
-          text: res.reply || res.error || "(空回复)",
+          text: extractTryReply(res.reply) || res.error || "(空回复)",
         },
       ]);
       if (!res.ok) {

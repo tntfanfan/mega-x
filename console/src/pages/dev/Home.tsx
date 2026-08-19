@@ -151,7 +151,7 @@ export default function DevHome() {
                 onClick={async () => {
                   try {
                     await api.post(`/v1/dev/official/${d.id}/edit?reuse=true`);
-                    navigate(`/admin/templates/${d.id}/studio`);
+                    navigate(`/dev/official/${d.id}/studio`);
                   } catch (e) {
                     toast.error(apiErrorMessage(e, t("admin.templates.edit-failed")));
                   }
