@@ -176,7 +176,7 @@ export function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; ini
           <FileView file={file} />
         ) : (
           <div className="p-6">
-            <EmptyState icon="📄" title={t("dev.studio.files.empty", { defaultValue: "还没有文件——先和 Recruiter 聊出一版草稿" })} />
+            <EmptyState icon="📄" title={t("dev.studio.files.empty", { defaultValue: "还没有文件——先和部门开发聊出一版草稿" })} />
           </div>
         )}
       </div>

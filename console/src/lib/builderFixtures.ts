@@ -248,7 +248,7 @@ export const NEW_DRAFT: BuilderDraft = {
     { name: "AGENTS.md", content: "# 团队概览\n\n| 角色 | Team Role | Lifecycle | Model tier | SOUL.md path |\n|---|---|---|---|---|\n| 部门长 | orchestrator | persistent | HIGH | — |\n" },
   ],
   chat: [
-    { id: "m1", role: "copilot", text: "嗨，我是 Recruiter。用一句话告诉我你想要一个什么部门，或者说「从官方 dept-xxx fork」，我来起草。" },
+    { id: "m1", role: "copilot", text: "嗨，我是部门开发。用一句话告诉我你想要一个什么部门，或者说「从官方 dept-xxx fork」，我来起草。" },
   ],
 };
 

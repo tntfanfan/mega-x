@@ -74,9 +74,17 @@ export function ChatWaitingBubble({
   );
 }
 
-/** Recruiter Studio waiting card — same motion, Recruiter branding. */
-export function RecruiterWaiting({ label }: { label?: string }) {
-  return <ChatWaitingBubble mark="R" speaker="Recruiter" label={label} />;
+/** Recruiter Studio waiting card — same motion; speaker comes from i18n. */
+export function RecruiterWaiting({
+  label,
+  speaker,
+}: {
+  label?: string;
+  speaker?: string;
+}) {
+  const name = speaker || "Recruiter";
+  const mark = [...name.trim()][0] || "R";
+  return <ChatWaitingBubble mark={mark} speaker={name} label={label} />;
 }
 
 export function waitingMark(emoji?: string, name?: string): string {

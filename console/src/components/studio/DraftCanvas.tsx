@@ -152,7 +152,7 @@ export function DraftCanvas({ draft }: { draft: BuilderDraft }) {
           )
         ) : (
           <span className="text-spark-flare">
-            {t("dev.studio.canvas.no-workflow", { defaultValue: "还没有工作流——让 Recruiter 帮你设计子 Agent 流水线" })}
+            {t("dev.studio.canvas.no-workflow", { defaultValue: "还没有工作流——让部门开发帮你设计子 Agent 流水线" })}
           </span>
         )}
       </div>

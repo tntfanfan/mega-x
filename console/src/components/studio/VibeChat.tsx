@@ -42,7 +42,8 @@ export function VibeChat({
   const lastMsg = messages[messages.length - 1];
   const waitingForReply = busy && (!lastMsg || lastMsg.role !== "copilot" || !lastMsg.text);
   const isTry = mode === "try";
-  const assistantLabel = isTry ? deptLabel : "Recruiter";
+  const recruiterLabel = t("dev.studio.chat.mode-recruiter");
+  const assistantLabel = isTry ? deptLabel : recruiterLabel;
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -149,7 +150,7 @@ export function VibeChat({
                     <TypingDots label={waitingLabel} />
                   </div>
                 ) : (
-                  <RecruiterWaiting label={waitingLabel} />
+                  <RecruiterWaiting label={waitingLabel} speaker={recruiterLabel} />
                 )}
               </div>
             );
@@ -198,7 +199,7 @@ export function VibeChat({
                 <TypingDots label={waitingLabel} />
               </div>
             ) : (
-              <RecruiterWaiting label={waitingLabel} />
+              <RecruiterWaiting label={waitingLabel} speaker={recruiterLabel} />
             )}
           </div>
         )}
