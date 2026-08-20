@@ -1,3 +1,63 @@
+import type { ChatMsg } from "./builderFixtures";
+
+type StoredTryChat = { session_id?: string; messages: ChatMsg[]; mode?: "recruiter" | "try" };
+
+function storageKey(deptId: string): string {
+  return `dev.tryChat.${deptId}`;
+}
+
+export function loadTryChat(deptId: string): StoredTryChat | null {
+  try {
+    const raw = localStorage.getItem(storageKey(deptId));
+    if (!raw) return null;
+    const o = JSON.parse(raw) as StoredTryChat;
+    if (!o || !Array.isArray(o.messages)) return null;
+    return o;
+  } catch {
+    return null;
+  }
+}
+
+export function saveTryChat(deptId: string, data: StoredTryChat): void {
+  try {
+    localStorage.setItem(storageKey(deptId), JSON.stringify(data));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function mergeTryHistory(current: ChatMsg[], incoming: ChatMsg[]): ChatMsg[] {
+  if (incoming.length > current.length) return incoming;
+  const have = new Set(current.map((m) => m.text));
+  const extra = incoming.filter((m) => m.role === "copilot" && m.text && !have.has(m.text));
+  return extra.length ? [...current, ...extra] : current;
+}
+
+export function turnsToMessages(turns: { role?: string; text?: string }[]): ChatMsg[] {
+  return turns
+    .filter((t) => (t.text || "").trim() && !isTryContinue(t.text || ""))
+    .map((t, i) => ({
+      id: `th-${i}-${t.role || "copilot"}`,
+      role: t.role === "user" ? "user" : "copilot",
+      text: (t.text || "").trim(),
+    }));
+}
+
+export const TRY_CHAT_CONTINUE =
+  "[TRY_CHAT_CONTINUE] 子代理已结束本轮。请立刻阅读最新 handoff 与 shared/artifacts，把用户能直接使用的内容完整贴到对话里，然后继续流水线。有可交付内容时必须先发给用户再 yield。不要等用户再问。";
+
+export function isTryContinue(text: string): boolean {
+  return text.trimStart().startsWith("[TRY_CHAT_CONTINUE]");
+}
+
+export type TryChatResponse = {
+  ok: boolean;
+  reply: string;
+  session_id?: string;
+  error?: string;
+  yielded?: boolean;
+};
+
 /** Pull the assistant line out of an OpenClaw ``agent --json`` blob. */
 export function extractTryReply(reply: unknown): string {
   if (reply && typeof reply === "object") {
@@ -19,7 +79,7 @@ export function extractTryReply(reply: unknown): string {
       const meta = (result?.meta && typeof result.meta === "object"
         ? result.meta
         : o.meta && typeof o.meta === "object" ? o.meta : null) as Record<string, unknown> | null;
-      if (meta?.yielded) return "部门正在把任务派给子代理，请稍后再问进度。";
+      if (meta?.yielded) return "部门正在处理子任务，完成后会把内容发过来。";
       if ("runId" in o || "systemPromptReport" in o || "payloads" in o) {
         return "这次没有返回可见回复，请再试一次。";
       }

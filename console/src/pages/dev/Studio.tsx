@@ -10,13 +10,18 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
-import { extractTryReply } from "../../lib/tryChatReply";
+import {
+  loadTryChat,
+  saveTryChat,
+  turnsToMessages,
+} from "../../lib/tryChatReply";
 import type {
   BuilderDraft, ChatMsg, SecurityReviewInfo,
 } from "../../lib/builderFixtures";
 import { estCostPerTask } from "../../lib/builderFixtures";
 import { needsDeptSlug, sanitizeDeptShort } from "../../lib/depts";
 import { RecruiterWs } from "../../lib/recruiterWs";
+import { TryChatWs } from "../../lib/tryChatWs";
 import { SecurityReviewOverlay } from "../../components/SecurityReviewOverlay";
 import {
   type ChatMode,
@@ -125,8 +130,11 @@ export default function DevStudio() {
   const [cellReady, setCellReady] = useState(false);
   const [cellError, setCellError] = useState<string | null>(null);
   const [toolStatus, setToolStatus] = useState<string | null>(null);
+  const [tryToolStatus, setTryToolStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tryBusy, setTryBusy] = useState(false);
+  const [tryReady, setTryReady] = useState(false);
+  const [tryConnectError, setTryConnectError] = useState<string | null>(null);
   const [trySessionId, setTrySessionId] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -138,7 +146,8 @@ export default function DevStudio() {
   const [renameSlug, setRenameSlug] = useState("");
   const wsRef = useRef<RecruiterWs | null>(null);
   const streamingIdRef = useRef<string | null>(null);
-  const tryAbortRef = useRef<AbortController | null>(null);
+  const tryWsRef = useRef<TryChatWs | null>(null);
+  const tryStreamIds = useRef<Record<string, string>>({});
   const [chatWidth, setChatWidth] = useState<number>(
     () => loadPaneWidth(CHAT_WIDTH_KEY, CHAT_MIN_W, CHAT_MAX_W, 420),
   );
@@ -219,14 +228,45 @@ export default function DevStudio() {
   useEffect(() => {
     setDraft(null);
     setMessages([]);
-    setTryMessages([]);
-    setTrySessionId(undefined);
-    setChatMode("recruiter");
+    const cached = draftId ? loadTryChat(draftId) : null;
+    setTryMessages(cached?.messages ?? []);
+    setTrySessionId(cached?.session_id ?? (draftId ? `try-${draftId}` : undefined));
+    setChatMode(cached?.mode === "try" ? "try" : "recruiter");
     setTryBusy(false);
-    tryAbortRef.current?.abort();
-    tryAbortRef.current = null;
+    setTryReady(false);
+    setTryConnectError(null);
+    setTryToolStatus(null);
+    tryStreamIds.current = {};
     setView("develop");
   }, [draftId]);
+
+  useEffect(() => {
+    if (!draftId) return;
+    let cancelled = false;
+    api
+      .get<{ session_id?: string; messages?: { role: string; text: string }[] }>(
+        `/v1/dev/depts/${draftId}/try_chat`,
+      )
+      .then((r) => {
+        if (cancelled || !r.messages?.length) return;
+        const msgs = turnsToMessages(r.messages);
+        setTryMessages(msgs);
+        const sid = r.session_id || `try-${draftId}`;
+        setTrySessionId(sid);
+        saveTryChat(draftId, { session_id: sid, messages: msgs });
+      })
+      .catch(() => { /* keep local cache */ });
+    return () => { cancelled = true; };
+  }, [draftId]);
+
+  useEffect(() => {
+    if (!draftId || tryMessages.length === 0) return;
+    saveTryChat(draftId, {
+      session_id: trySessionId || `try-${draftId}`,
+      messages: tryMessages,
+      mode: chatMode,
+    });
+  }, [draftId, tryMessages, trySessionId, chatMode]);
 
   useEffect(() => {
     if (!draftId) return;
@@ -313,6 +353,79 @@ export default function DevStudio() {
     };
   }, [draftId, userId, toast]);
 
+  useEffect(() => {
+    if (!draftId || !userId || chatMode !== "try") return;
+    const leadLabel = draft
+      ? `${draft.emoji || ""} ${draft.name}`.trim()
+      : "部长";
+    const client = new TryChatWs(`/v1/dev/depts/${draftId}/try_ws`, {
+      onReady: (info) => {
+        setTryReady(true);
+        setTryConnectError(null);
+        if (info.session_id) setTrySessionId(info.session_id);
+      },
+      onClose: () => setTryReady(false),
+      onStart: (key, source, label) => {
+        if (tryStreamIds.current[key]) return;
+        const id = `t-${key}-${Date.now()}`;
+        tryStreamIds.current[key] = id;
+        setTryMessages((cur) => [
+          ...cur,
+          { id, role: "copilot", text: "", source, label: label || leadLabel },
+        ]);
+      },
+      onDelta: (key, source, label, text) => {
+        let id = tryStreamIds.current[key];
+        if (!id) {
+          id = `t-${key}-${Date.now()}`;
+          tryStreamIds.current[key] = id;
+          setTryMessages((cur) => [
+            ...cur,
+            { id, role: "copilot", text, source, label: label || leadLabel },
+          ]);
+          return;
+        }
+        setTryMessages((cur) => {
+          const idx = cur.findIndex((m) => m.id === id);
+          if (idx === -1) {
+            return [...cur, { id, role: "copilot", text, source, label: label || leadLabel }];
+          }
+          return cur.map((m) => (
+            m.id === id
+              ? { ...m, text: m.text + text, label: m.label || label || leadLabel, source }
+              : m
+          ));
+        });
+      },
+      onTool: (_key, _source, label, name) => {
+        setTryToolStatus(label ? `${label} · ${name}` : name);
+      },
+      onEnd: (key) => {
+        delete tryStreamIds.current[key];
+      },
+      onIdle: () => {
+        tryStreamIds.current = {};
+        setTryBusy(false);
+        setTryToolStatus(null);
+        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
+      },
+      onError: (message) => {
+        setTryBusy(false);
+        setTryToolStatus(null);
+        setTryConnectError(message);
+        tryStreamIds.current = {};
+        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
+        toast.error(message);
+      },
+    });
+    tryWsRef.current = client;
+    client.connect();
+    return () => {
+      client.close();
+      tryWsRef.current = null;
+    };
+  }, [draftId, userId, chatMode]);
+
   const onSend = useCallback((text: string) => {
     const client = wsRef.current;
     if (!client) {
@@ -327,67 +440,25 @@ export default function DevStudio() {
 
   const onCancel = useCallback(() => {
     if (chatMode === "try") {
-      tryAbortRef.current?.abort();
-      tryAbortRef.current = null;
+      tryWsRef.current?.cancel();
       setTryBusy(false);
+      setTryToolStatus(null);
       return;
     }
     wsRef.current?.cancel();
   }, [chatMode]);
 
-  const onTrySend = useCallback(async (text: string) => {
-    if (!draftId || tryBusy) return;
-    const userMsg: ChatMsg = { id: `tu-${Date.now()}`, role: "user", text };
-    setTryMessages((cur) => [...cur, userMsg]);
-    setTryBusy(true);
-    const ac = new AbortController();
-    tryAbortRef.current = ac;
-    try {
-      const res = await api.post<{
-        ok: boolean;
-        reply: string;
-        session_id?: string;
-        error?: string;
-      }>(
-        `/v1/dev/depts/${draftId}/try_chat`,
-        { message: text, session_id: trySessionId },
-        { signal: ac.signal },
-      );
-      if (res.session_id) setTrySessionId(res.session_id);
-      setTryMessages((cur) => [
-        ...cur,
-        {
-          id: `tc-${Date.now()}`,
-          role: "copilot",
-          text: extractTryReply(res.reply) || res.error || "(空回复)",
-        },
-      ]);
-      if (!res.ok) {
-        toast.error(res.error || res.reply || t("dev.studio.chat.try-error"));
-      }
-    } catch (e) {
-      if (ac.signal.aborted) {
-        setTryMessages((cur) => [
-          ...cur,
-          {
-            id: `tc-cancel-${Date.now()}`,
-            role: "copilot",
-            text: t("dev.studio.chat.try-cancelled"),
-          },
-        ]);
-        return;
-      }
-      const err = apiErrorMessage(e, t("dev.studio.chat.try-error"));
-      setTryMessages((cur) => [
-        ...cur,
-        { id: `tc-err-${Date.now()}`, role: "copilot", text: err },
-      ]);
-      toast.error(err);
-    } finally {
-      if (tryAbortRef.current === ac) tryAbortRef.current = null;
-      setTryBusy(false);
+  const onTrySend = useCallback((text: string) => {
+    const client = tryWsRef.current;
+    if (!client || !client.ready) {
+      toast.error(t("dev.studio.chat.not-connected"));
+      return;
     }
-  }, [draftId, tryBusy, trySessionId, toast, t]);
+    setTryMessages((cur) => [...cur, { id: `tu-${Date.now()}`, role: "user", text }]);
+    setTryBusy(true);
+    setTryToolStatus(null);
+    client.sendPrompt(text);
+  }, [toast, t]);
 
   const onSendToRecruiter = useCallback((snippet: string) => {
     const prompt = t("dev.studio.chat.fix-prompt", {
@@ -701,14 +772,20 @@ export default function DevStudio() {
             width={chatWidth}
             mode={chatMode}
             onModeChange={setChatMode}
-            canTry={draftCanTry(draft)}
-            tryDisabledReason={t("dev.studio.chat.try-disabled")}
+            canTry={draftCanTry(draft) && (chatMode !== "try" || tryReady)}
+            tryDisabledReason={
+              tryConnectError
+                ? tryConnectError
+                : chatMode === "try" && !tryReady
+                  ? t("dev.studio.chat.try-connecting")
+                  : t("dev.studio.chat.try-disabled")
+            }
             deptLabel={draft ? `${draft.emoji || ""} ${draft.name}`.trim() : t("dev.studio.chat.mode-try")}
             messages={chatMode === "try" ? tryMessages : messages}
-            onSend={chatMode === "try" ? (text) => { void onTrySend(text); } : onSend}
+            onSend={chatMode === "try" ? onTrySend : onSend}
             onCancel={onCancel}
             busy={chatMode === "try" ? tryBusy : busy}
-            toolStatus={chatMode === "try" ? null : toolStatus}
+            toolStatus={chatMode === "try" ? tryToolStatus : toolStatus}
             composeSeed={chatMode === "recruiter" ? composeSeed : null}
             onComposeSeedConsumed={() => setComposeSeed(null)}
             onSendToRecruiter={onSendToRecruiter}

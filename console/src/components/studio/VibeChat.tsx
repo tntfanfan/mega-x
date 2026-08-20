@@ -134,16 +134,17 @@ export function VibeChat({
               : t(recruiterEmptyKey || "dev.studio.chat.recruiter-empty")}
           </p>
         )}
-        {messages.map((m, index) => {
+        {messages.map((m) => {
           if (m.role === "copilot" && !m.text) {
-            const isCurrentWait = busy && index === messages.length - 1;
-            if (!isCurrentWait) return null;
+            if (!busy) return null;
             return (
               <div key={m.id} className="flex justify-start">
                 {isTry ? (
                   <div className="max-w-[85%] rounded-md px-3 py-2 text-xs bg-surface border border-border-solid">
-                    <div className="text-[10px] uppercase tracking-widest text-spark-mint mb-1">
-                      {assistantLabel}
+                    <div className={`text-[10px] uppercase tracking-widest mb-1 ${
+                      m.source === "sub" ? "text-spark-blue" : "text-spark-mint"
+                    }`}>
+                      {m.label || assistantLabel}
                     </div>
                     <TypingDots label={waitingLabel} />
                   </div>
@@ -163,9 +164,11 @@ export function VibeChat({
                 {m.role === "copilot" ? (
                   <>
                     <div className={`text-[10px] uppercase tracking-widest mb-1 ${
-                      isTry ? "text-spark-mint" : "text-primary"
+                      isTry
+                        ? (m.source === "sub" ? "text-spark-blue" : "text-spark-mint")
+                        : "text-primary"
                     }`}>
-                      {assistantLabel}
+                      {m.label || assistantLabel}
                     </div>
                     {m.text ? <Markdown text={m.text} /> : null}
                     {isTry && m.text && onSendToRecruiter && (

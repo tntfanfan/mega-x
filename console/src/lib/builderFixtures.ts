@@ -109,6 +109,8 @@ export interface ChatMsg {
   id: string;
   role: "user" | "copilot";
   text: string;
+  source?: "lead" | "sub";
+  label?: string;
 }
 
 export interface BuilderDraft {
