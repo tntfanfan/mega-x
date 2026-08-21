@@ -122,9 +122,13 @@ export function VibeChat({
           </span>
         )}
       </div>
-      {isTry && (
+      {isTry ? (
         <div className="px-4 py-1.5 border-b border-border-solid text-[11px] text-muted shrink-0">
           {t("dev.studio.chat.try-banner")}
+        </div>
+      ) : (
+        <div className="px-4 py-1.5 border-b border-border-solid text-[11px] text-muted shrink-0">
+          {t("dev.studio.chat.recruiter-banner")}
         </div>
       )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
