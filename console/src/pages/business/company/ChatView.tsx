@@ -503,13 +503,12 @@ function TurnRow({
 
   if (turn.role === "local") {
     if (turn.kind === "task_dispatched") {
-      const copyKey = turn.auto
-        ? "business.company.chat.local.auto-dispatched"
-        : "business.company.chat.local.dispatched";
       return (
         <LocalCard
           label={t("business.company.chat.local.record-label")}
-          body={t(copyKey, { title: turn.taskTitle })}
+          body={t("business.company.chat.local.dispatched", {
+            title: turn.taskTitle,
+          })}
           link={`/business/c/${companyId}/tasks/${turn.taskId}`}
           linkLabel={t("business.company.chat.local.view-task")}
         />

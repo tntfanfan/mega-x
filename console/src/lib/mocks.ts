@@ -33,10 +33,6 @@ import {
 /** Tasks created via makeTask in this tab — fixture rows are left alone. */
 const SIMULATED_TASK_IDS = new Set<string>();
 
-/** Demo-only: verb prefixes that mock chat treats as a task assignment. */
-const MOCK_TASK_VERB_RE =
-  /(?:帮我|请帮|麻烦|写一篇|写一?个|做一个|做一份|生成|整理|设计|起草|撰写|准备)/;
-
 const SIMULATED_LATENCY_MS = 80;
 
 type MockResponse = { status?: number; body: unknown };
@@ -208,30 +204,7 @@ const HANDLERS: Handler[] = [
       const dept = DEPT_CATALOG.find((d) => d.id === b.dept_id);
       const msg = (b.message ?? "").trim();
       const sessionId = b.session_id ?? `mock-sess-${cid}`;
-      // Demo-only heuristic (NOT production logic — agent judges there).
-      const isTask = MOCK_TASK_VERB_RE.test(msg);
-      if (isTask) {
-        const title = msg.split(/\r?\n/)[0]?.slice(0, 30) || msg.slice(0, 30) || "未命名任务";
-        const task = makeTask(cid, {
-          title,
-          brief: msg,
-          dept_id: b.dept_id ?? "dept-pub",
-          source: "chat",
-          chat_session_id: sessionId,
-        });
-        TASKS.push(task);
-        return {
-          body: {
-            ok: true,
-            reply:
-              `【演示 · ${dept ? dept.name : "总控"}】已理解这是一项交付任务「${title}」。` +
-              "我先立项确认目标与计划，具体产出会在任务会话中完成——可到「任务」页查看进度。",
-            session_id: sessionId,
-            task,
-            _mock: true,
-          },
-        };
-      }
+      // Chat is only chat — tasks come from the 派发任务 button (POST .../tasks).
       return {
         body: {
           ok: true,
@@ -521,7 +494,7 @@ const HANDLERS: Handler[] = [
       return { status: 405, body: { error: "method not allowed" } };
     },
   },
-  // POST /v1/lines/:id/chat — same auto-task heuristic as company chat
+  // POST /v1/lines/:id/chat — chat only; tasks come from POST .../tasks
   {
     match: rx(/^\/v1\/lines\/([^/]+)\/chat$/),
     handle: (_p, _m, body, match) => {
@@ -530,29 +503,6 @@ const HANDLERS: Handler[] = [
       const dept = DEPT_CATALOG.find((d) => d.id === b.dept_id);
       const msg = (b.message ?? "").trim();
       const sessionId = b.session_id ?? `mock-sess-${cid}`;
-      const isTask = MOCK_TASK_VERB_RE.test(msg);
-      if (isTask) {
-        const title = msg.split(/\r?\n/)[0]?.slice(0, 30) || msg.slice(0, 30) || "未命名任务";
-        const task = makeTask(cid, {
-          title,
-          brief: msg,
-          dept_id: b.dept_id ?? "dept-pub",
-          source: "chat",
-          chat_session_id: sessionId,
-        });
-        TASKS.push(task);
-        return {
-          body: {
-            ok: true,
-            reply:
-              `【演示 · ${dept ? dept.name : "团队"}】已理解这是一项交付任务「${title}」。` +
-              "我先立项确认目标与计划，具体产出会在任务会话中完成——可到「任务」页查看进度。",
-            session_id: sessionId,
-            task,
-            _mock: true,
-          },
-        };
-      }
       return {
         body: {
           ok: true,

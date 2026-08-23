@@ -83,6 +83,13 @@ const ChatContext = createContext<ChatContextValue | null>(null);
 
 const STORAGE_PREFIX = "console.solo.chat.v2:";
 
+const PENDING_POLL_INTERVAL_MS = 5000;
+const PENDING_POLL_TOTAL_MS = 15 * 60 * 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function storageKey(lineId: string): string {
   return `${STORAGE_PREFIX}${lineId}`;
 }
@@ -326,6 +333,37 @@ export function ChatProvider({
 
   const canChat = line.state === "running" || line.state === "provisioning";
 
+  // A dept lead that delegates answers with a progress line, then posts the
+  // real deliverable minutes later. Poll for it so the chat doesn't look dead.
+  const waitForPendingReply = useCallback(
+    async (activeDept: string, assistantLabel: string) => {
+      const deadline = Date.now() + PENDING_POLL_TOTAL_MS;
+      while (Date.now() < deadline) {
+        await sleep(PENDING_POLL_INTERVAL_MS);
+        let res: { resolved: boolean; working: boolean; reply?: string };
+        try {
+          res = await api.get(
+            `/v1/lines/${line.id}/chat/pending?dept_id=${encodeURIComponent(activeDept)}`,
+          );
+        } catch {
+          return; // older backend / offline — leave the progress line as-is
+        }
+        if (res.resolved && res.reply) {
+          updateBucket(activeDept, (cur) => ({
+            ...cur,
+            turns: [
+              ...cur.turns,
+              { role: "assistant", text: res.reply as string, label: assistantLabel },
+            ],
+          }));
+          return;
+        }
+        if (!res.working) return;
+      }
+    },
+    [line.id, updateBucket],
+  );
+
   const send = useCallback(async () => {
     const msg = bucket.draft.trim();
     const activeDept = deptId;
@@ -354,13 +392,14 @@ export function ChatProvider({
         reply: string;
         session_id?: string;
         error?: string;
-        task?: Task;
+        pending?: boolean;
       }>(`/v1/lines/${line.id}/chat`, {
         message: msg,
         dept_id: activeDept,
         session_id: sessionId,
         refs: refs.length ? refsForApi(refs) : undefined,
       });
+      if (res.pending) void waitForPendingReply(activeDept, assistantLabel);
       const nextTurns: ChatTurn[] = [
         {
           role: "assistant",
@@ -369,15 +408,6 @@ export function ChatProvider({
           label: assistantLabel,
         },
       ];
-      if (res.task?.id) {
-        nextTurns.push({
-          role: "local",
-          kind: "task_dispatched",
-          taskId: res.task.id,
-          taskTitle: res.task.title || msg.slice(0, 30),
-          auto: true,
-        });
-      }
       const failedTaskRef = refs.find(
         (r) =>
           (r.type === "task" || r.type === "step") &&
@@ -428,6 +458,7 @@ export function ChatProvider({
     t,
     toast,
     updateBucket,
+    waitForPendingReply,
   ]);
 
   const resumeTask = useCallback(

@@ -46,8 +46,6 @@ export type ChatTurn =
       kind: "task_dispatched";
       taskId: string;
       taskTitle: string;
-      /** true = agent auto-detected; false/absent = user clicked dispatch */
-      auto?: boolean;
     }
   | {
       role: "local";
@@ -118,6 +116,13 @@ const ChatContext = createContext<ChatContextValue | null>(null);
 
 const STORAGE_PREFIX = "console.chat.v1:";
 
+const PENDING_POLL_INTERVAL_MS = 5000;
+const PENDING_POLL_TOTAL_MS = 15 * 60 * 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function storageKey(companyId: string): string {
   return `${STORAGE_PREFIX}${companyId}`;
 }
@@ -177,7 +182,6 @@ export function serverRowToTurn(row: Record<string, unknown>): ChatTurn | null {
         kind: "task_dispatched",
         taskId: String(row.taskId || row.task_id || ""),
         taskTitle: String(row.taskTitle || row.task_title || row.title || ""),
-        auto: Boolean(row.auto),
       };
     }
     if (kind === "task_resumed") {
@@ -425,6 +429,37 @@ export function ChatProvider({
 
   const canChat = company.state === "running" || company.state === "provisioning";
 
+  // A dept lead that delegates answers with a progress line, then posts the
+  // real deliverable minutes later. Poll for it so the chat doesn't look dead.
+  const waitForPendingReply = useCallback(
+    async (activeDept: string, assistantLabel: string) => {
+      const deadline = Date.now() + PENDING_POLL_TOTAL_MS;
+      while (Date.now() < deadline) {
+        await sleep(PENDING_POLL_INTERVAL_MS);
+        let res: { resolved: boolean; working: boolean; reply?: string };
+        try {
+          res = await api.get(
+            `/v1/companies/${company.id}/chat/pending?dept_id=${encodeURIComponent(activeDept)}`,
+          );
+        } catch {
+          return; // older backend / offline — leave the progress line as-is
+        }
+        if (res.resolved && res.reply) {
+          updateBucket(activeDept, (cur) => ({
+            ...cur,
+            turns: [
+              ...cur.turns,
+              { role: "assistant", text: res.reply as string, label: assistantLabel },
+            ],
+          }));
+          return;
+        }
+        if (!res.working) return;
+      }
+    },
+    [company.id, updateBucket],
+  );
+
   const send = useCallback(async () => {
     const msg = bucket.draft.trim();
     const activeDept = deptId;
@@ -453,13 +488,14 @@ export function ChatProvider({
         reply: string;
         session_id?: string;
         error?: string;
-        task?: Task;
+        pending?: boolean;
       }>(`/v1/companies/${company.id}/chat`, {
         message: msg,
         dept_id: activeDept,
         session_id: sessionId,
         refs: refs.length ? refsForApi(refs) : undefined,
       });
+      if (res.pending) void waitForPendingReply(activeDept, assistantLabel);
       const nextTurns: ChatTurn[] = [
         {
           role: "assistant",
@@ -468,15 +504,6 @@ export function ChatProvider({
           label: assistantLabel,
         },
       ];
-      if (res.task?.id) {
-        nextTurns.push({
-          role: "local",
-          kind: "task_dispatched",
-          taskId: res.task.id,
-          taskTitle: res.task.title || msg.slice(0, 30),
-          auto: true,
-        });
-      }
       // After discussing a failed task/step, offer resume.
       const failedTaskRef = refs.find(
         (r) =>
@@ -528,6 +555,7 @@ export function ChatProvider({
     t,
     toast,
     updateBucket,
+    waitForPendingReply,
   ]);
 
   const resumeTask = useCallback(
