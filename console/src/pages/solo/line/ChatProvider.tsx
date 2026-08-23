@@ -3,7 +3,7 @@
  * (user switches to Tasks) without losing per-team sessions / drafts.
  *
  * Same logic as business/company/ChatProvider: sessionStorage + server
- * history, refs, auto-dispatch, resume. Paths use /v1/lines.
+ * history, refs, pending-reply poll, resume. Paths use /v1/lines.
  */
 
 import {

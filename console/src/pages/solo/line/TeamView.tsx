@@ -2,7 +2,7 @@
  * /solo/l/:lineId/ — 团队（列表 / 组织图，与企业版部门页同构）。
  *
  * 列表：卡片网格。组织图：左 Org Canvas，右已安装团队列表。
- * 两侧共用选中态：点节点 ↔ 点列表行。
+ * 成员按卡片懒加载 /depts/:id/agents，与企业版 DeptsView 同一套展开逻辑。
  */
 
 import { useEffect, useMemo, useState, useRef } from "react";
@@ -16,8 +16,8 @@ import { ListSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
-import { resolveDeptDisplay, resolveDeptDesc, deptNameKey } from "../../../lib/depts";
-import { RoleGroupCard, type TeammateGroup } from "../../../components/solo/RoleGroupCard";
+import { resolveDeptDisplay, resolveDeptDesc } from "../../../lib/depts";
+import { TeammateAvatar, type TeammateView } from "../../../components/solo/TeammateAvatar";
 import { OrgCanvasPanel, type DeptWithMeta } from "../../business/company/CanvasView";
 
 type Ctx = { line: Company; refreshLine?: () => Promise<void> };
@@ -34,8 +34,29 @@ export default function TeamView() {
   const [selectedDeptId, setSelectedDeptId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const [groups, setGroups] = useState<TeammateGroup[]>([]);
   const apiRoot = `/v1/lines/${line.id}`;
+  // Same lazy-per-dept fetch as DeptsView: expanding one team must not N+1
+  // the rest, and a member failure must not blank the team list.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [members, setMembers] = useState<Record<string, TeammateView[]>>({});
+
+  const toggleExpanded = (deptId: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(deptId)) {
+        next.delete(deptId);
+        return next;
+      }
+      next.add(deptId);
+      if (!members[deptId]) {
+        api
+          .get<{ items: TeammateView[] }>(`${apiRoot}/depts/${deptId}/agents`)
+          .then((r) => setMembers((cur) => ({ ...cur, [deptId]: r.items || [] })))
+          .catch(() => setMembers((cur) => ({ ...cur, [deptId]: [] })));
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -47,17 +68,6 @@ export default function TeamView() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [apiRoot, (line.dept_ids || []).join(","), toast, t]);
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get<{ groups: TeammateGroup[] }>(`${apiRoot}/teammates`)
-      // Members are supplementary: a failure must not blank the dept list, so
-      // this degrades to "no member panel" rather than surfacing a toast.
-      .then((r) => { if (!cancelled) setGroups(r.groups || []); })
-      .catch(() => { if (!cancelled) setGroups([]); });
-    return () => { cancelled = true; };
-  }, [apiRoot]);
 
   useEffect(() => {
     if (!selectedDeptId) return;
@@ -84,27 +94,12 @@ export default function TeamView() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
-    // Search the *localized* strings too, so typing what you see matches.
     return items.filter((d) =>
       `${d.name} ${resolveDeptDisplay(d.id, [d], t).name} ${d.id} ${d.short_desc} ${resolveDeptDesc(d, t)}`
         .toLowerCase()
         .includes(q),
     );
   }, [items, query, t]);
-
-  const selectedGroup = useMemo<TeammateGroup | null>(() => {
-    if (!selectedDeptId) return null;
-    const g = groups.find((x) => x.dept_id === selectedDeptId);
-    if (!g) return null;
-    const dept = items.find((d) => d.id === selectedDeptId);
-    return {
-      ...g,
-      // The API sends fallback_label (the raw dept name); point the card at the
-      // dept's i18n key so the group header follows the language switch.
-      label_key: deptNameKey(g.dept_id),
-      fallback_label: dept ? resolveDeptDisplay(dept.id, [dept], t).name : g.fallback_label,
-    };
-  }, [selectedDeptId, groups, items, t]);
 
   const viewOptions = useMemo<SegmentedOption<ViewMode>[]>(
     () => [
@@ -197,11 +192,13 @@ export default function TeamView() {
               }>
                 {filtered.map((d) => {
                   const selected = selectedDeptId === d.id;
+                  const open = expanded.has(d.id);
+                  const panelId = `team-members-${d.id}`;
                   return (
                     <div
                       key={d.id}
                       ref={(el) => { rowRefs.current[d.id] = el; }}
-                      className={`flex items-center transition-colors ${
+                      className={`flex flex-col transition-colors ${
                         viewMode === "list" ? "rounded-md border border-border-solid bg-surface" : ""
                       } ${
                         selected
@@ -211,8 +208,7 @@ export default function TeamView() {
                             : "hover:border-primary/50"
                       }`}
                     >
-                      {/* Upstream's button-wrapped row (matches DeptsView) with the
-                          localized name/desc from the i18n pass. */}
+                      <div className="flex items-center">
                       <button
                         type="button"
                         aria-pressed={selected}
@@ -242,19 +238,47 @@ export default function TeamView() {
                       >
                         {removing === d.id ? t("solo.line.team.removing") : t("solo.line.team.remove")}
                       </button>
+                      </div>
+
+                      {d.agent_count > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(d.id)}
+                            aria-expanded={open}
+                            aria-controls={panelId}
+                            className="w-full flex items-center gap-1 px-4 pb-3 text-[11px] text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          >
+                            <span aria-hidden className={`transition-transform ${open ? "rotate-90" : ""}`}>▸</span>
+                            {open
+                              ? t("solo.line.team.members.hide")
+                              : t("solo.line.team.members.show", { count: d.agent_count })}
+                          </button>
+                          <div
+                            id={panelId}
+                            className={`px-4 pb-4 flex-wrap gap-3 ${open ? "flex" : "hidden"}`}
+                          >
+                            {(members[d.id] ?? []).map((tm) => (
+                              <TeammateAvatar
+                                key={tm.id}
+                                teammate={tm}
+                                size="sm"
+                                title={tm.title_key ? t(tm.title_key, { defaultValue: tm.display_name }) : tm.display_name}
+                                bubble={tm.bubble_key ? t(tm.bubble_key, { defaultValue: tm.bubble }) : tm.bubble}
+                              />
+                            ))}
+                            {members[d.id] === undefined && (
+                              <span className="text-[11px] text-dim">{t("common.loading")}</span>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
-          {/* Selected dept's members. Reuses RoleGroupCard, which was written for
-              exactly this and had no importer until now. */}
-          {selectedGroup && (
-            <div className="shrink-0 border-t border-border-solid p-4">
-              <RoleGroupCard group={selectedGroup} />
-            </div>
-          )}
         </aside>
       </div>
     </div>

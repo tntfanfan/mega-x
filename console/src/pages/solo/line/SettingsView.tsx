@@ -21,7 +21,7 @@ export default function SettingsView() {
     try {
       await api.delete(`/v1/lines/${line.id}`);
       toast.info(t("solo.line.settings.deleted"));
-      navigate("/solo/overview");
+      navigate("/solo/lines");
     } catch (err) {
       toast.error(apiErrorMessage(err, t("solo.line.settings.delete-error")));
       setDeleting(false);
@@ -29,51 +29,85 @@ export default function SettingsView() {
   }, [line.id, line.name, t, toast, navigate]);
 
   return (
-    <section className="p-6 space-y-4 max-w-2xl">
-      <h1 className="font-display text-2xl text-heading">{t("solo.line.settings.title")}</h1>
-      <dl className="text-sm space-y-2">
-        <div>
-          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.name")}</dt>
-          <dd className="text-body">{line.name}</dd>
+    <section className="p-6 space-y-6 max-w-5xl">
+      <header>
+        <h1 className="font-display text-2xl text-heading">{t("solo.line.settings.title")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("solo.line.settings.subtitle")}</p>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-md border border-border-solid bg-surface p-4">
+          <div className="text-xs uppercase tracking-widest text-muted">
+            {t("solo.line.settings.status")}
+          </div>
+          <div className="mt-2 text-lg text-heading">
+            {t(`solo.overview.lines.state.${line.state}`)}
+          </div>
         </div>
-        <div>
-          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.template")}</dt>
-          <dd className="text-body font-mono">{line.template_slug}</dd>
+        <div className="rounded-md border border-border-solid bg-surface p-4">
+          <div className="text-xs uppercase tracking-widest text-muted">
+            {t("solo.line.settings.team-count")}
+          </div>
+          <div className="mt-2 text-lg text-heading">{line.dept_ids.length}</div>
         </div>
-        <div>
-          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.state")}</dt>
-          <dd className="text-body font-mono">{line.state}</dd>
+        <div className="rounded-md border border-border-solid bg-surface p-4">
+          <div className="text-xs uppercase tracking-widest text-muted">
+            {t("solo.line.settings.token-30d")}
+          </div>
+          <div className="mt-2 text-lg text-heading">
+            {line.token_usage_30d.toLocaleString()}
+          </div>
         </div>
-        <div>
-          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.gateway-port")}</dt>
-          <dd className="text-body font-mono">{line.gateway_port ?? "—"}</dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.team-count")}</dt>
-          <dd className="text-body">{line.dept_ids.length}</dd>
-        </div>
-        <div>
-          <dt className="text-muted text-xs uppercase tracking-widest">{t("solo.line.settings.token-30d")}</dt>
-          <dd className="text-body">{line.token_usage_30d.toLocaleString()}</dd>
-        </div>
-      </dl>
-      <div className="pt-4 border-t border-border-solid space-y-2">
-        <h2 className="text-xs uppercase tracking-widest text-fusion">
-          {t("solo.line.settings.danger-title")}
+      </div>
+
+      <section className="rounded-md border border-border-solid bg-surface p-4">
+        <h2 className="font-display text-lg text-heading">
+          {t("solo.line.settings.workspace-title")}
         </h2>
-        <p className="text-xs text-muted">{t("solo.line.settings.danger-hint")}</p>
+        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("solo.line.settings.name")}</dt>
+            <dd className="mt-1 text-body">{line.name}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("solo.line.settings.template")}</dt>
+            <dd className="mt-1 text-body">
+              {t(`solo.lines.new.tpl.${line.template_slug}.name`, {
+                defaultValue: line.template_slug,
+              })}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <details className="rounded-md border border-border-solid bg-surface">
+        <summary className="cursor-pointer px-4 py-3 text-sm text-body hover:text-primary">
+          {t("solo.line.settings.advanced-title")}
+        </summary>
+        <dl className="grid gap-4 border-t border-border-solid px-4 py-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("solo.line.settings.line-id")}</dt>
+            <dd className="mt-1 break-all font-mono text-body">{line.id}</dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-widest text-muted">{t("solo.line.settings.gateway-port")}</dt>
+            <dd className="mt-1 font-mono text-body">{line.gateway_port ?? "—"}</dd>
+          </div>
+        </dl>
+      </details>
+
+      <section className="rounded-md border border-fusion/40 bg-fusion/5 p-4 space-y-2">
+        <h2 className="text-sm font-medium text-fusion">{t("solo.line.settings.danger-title")}</h2>
+        <p className="text-sm text-muted">{t("solo.line.settings.danger-hint")}</p>
         <button
           type="button"
-          onClick={() => void onDelete()}
+          onClick={onDelete}
           disabled={deleting}
           className="rounded-md border border-fusion/50 text-fusion px-4 py-1.5 text-sm hover:bg-fusion/10 transition disabled:opacity-50"
         >
-          {deleting ? t("solo.line.settings.deleting") : t("solo.line.settings.delete")}
+          {t("solo.line.settings.delete")}
         </button>
-      </div>
-      <p className="text-xs text-muted pt-4 border-t border-border-solid">
-        {t("solo.line.settings.footer")}
-      </p>
+      </section>
     </section>
   );
 }
