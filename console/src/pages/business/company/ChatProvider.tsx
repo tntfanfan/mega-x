@@ -40,6 +40,7 @@ export type ChatTurn =
       session_id?: string;
       label?: string;
       refs?: ChatRef[];
+      pending?: boolean;
     }
   | {
       role: "local";
@@ -222,6 +223,7 @@ export function serverRowToTurn(row: Record<string, unknown>): ChatTurn | null {
       session_id: row.session_id != null ? String(row.session_id) : undefined,
       label: row.label != null ? String(row.label) : undefined,
       refs: normalizeRefs(row.refs),
+      pending: role === "assistant" && Boolean(row.pending) ? true : undefined,
     };
   }
   return null;
@@ -535,14 +537,55 @@ export function ChatProvider({
       }
     } catch (e) {
       const err = apiErrorMessage(e, t("business.company.conversations.send-error"));
-      updateBucket(activeDept, (cur) => ({
-        ...cur,
-        turns: [
-          ...cur.turns,
-          { role: "assistant", text: err, label: assistantLabel },
-        ],
-      }));
-      toast.error(err);
+      // The POST may have died (browser / proxy idle timeout) while the
+      // server finished the turn. Re-read history so the user sees the
+      // draft instead of a raw "Failed to fetch" bubble.
+      let recovered = false;
+      let shouldPoll = false;
+      try {
+        const hist = await api.get<{ items: Record<string, unknown>[] }>(
+          `/v1/companies/${company.id}/chat?dept_id=${encodeURIComponent(activeDept)}&limit=200`,
+        );
+        const serverTurns = (hist.items || [])
+          .map((row) => serverRowToTurn(row))
+          .filter((x): x is ChatTurn => x != null);
+        if (serverTurns.some((turn) => turn.role === "assistant")) {
+          updateBucket(activeDept, (cur) => ({
+            ...cur,
+            turns: serverTurns,
+            historyLoaded: true,
+            sessionId:
+              cur.sessionId ||
+              [...serverTurns]
+                .reverse()
+                .find(
+                  (turn): turn is Extract<ChatTurn, { role: "user" | "assistant" }> =>
+                    turn.role === "user" || turn.role === "assistant",
+                )?.session_id,
+          }));
+          recovered = true;
+          const lastAsst = [...serverTurns]
+            .reverse()
+            .find((turn) => turn.role === "assistant");
+          shouldPoll = Boolean(
+            lastAsst && lastAsst.role === "assistant" && lastAsst.pending,
+          );
+        }
+      } catch {
+        // offline — fall through to the error bubble
+      }
+      if (!recovered) {
+        updateBucket(activeDept, (cur) => ({
+          ...cur,
+          turns: [
+            ...cur.turns,
+            { role: "assistant", text: err, label: assistantLabel },
+          ],
+        }));
+        toast.error(err);
+      } else if (shouldPoll) {
+        void waitForPendingReply(activeDept, assistantLabel);
+      }
     } finally {
       setSending(false);
     }

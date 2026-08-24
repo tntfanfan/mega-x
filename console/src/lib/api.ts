@@ -119,7 +119,18 @@ export function apiErrorMessage(e: unknown, fallback = "请求失败，请稍后
   }
   if (e instanceof Error) {
     if (e.name === "AbortError") return fallback;
-    if (e.message) return e.message;
+    const msg = e.message || "";
+    // Cross-origin fetch to api.mega-x.ai: a dropped long POST becomes
+    // TypeError("Failed to fetch"). Surface the caller's i18n fallback
+    // ("对话失败") instead of the raw browser string in the chat bubble.
+    if (
+      e instanceof TypeError
+      || /^failed to fetch$/i.test(msg)
+      || /networkerror/i.test(msg)
+    ) {
+      return fallback;
+    }
+    if (msg) return msg;
   }
   return fallback;
 }

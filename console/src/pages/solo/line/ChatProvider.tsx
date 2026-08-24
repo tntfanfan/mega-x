@@ -438,14 +438,52 @@ export function ChatProvider({
       }
     } catch (e) {
       const err = apiErrorMessage(e, t("solo.line.conversations.send-error"));
-      updateBucket(activeDept, (cur) => ({
-        ...cur,
-        turns: [
-          ...cur.turns,
-          { role: "assistant", text: err, label: assistantLabel },
-        ],
-      }));
-      toast.error(err);
+      let recovered = false;
+      let shouldPoll = false;
+      try {
+        const hist = await api.get<{ items: Record<string, unknown>[] }>(
+          `/v1/lines/${line.id}/chat?dept_id=${encodeURIComponent(activeDept)}&limit=200`,
+        );
+        const serverTurns = (hist.items || [])
+          .map((row) => serverRowToTurn(row))
+          .filter((x): x is ChatTurn => x != null);
+        if (serverTurns.some((turn) => turn.role === "assistant")) {
+          updateBucket(activeDept, (cur) => ({
+            ...cur,
+            turns: serverTurns,
+            historyLoaded: true,
+            sessionId:
+              cur.sessionId ||
+              [...serverTurns]
+                .reverse()
+                .find(
+                  (turn): turn is Extract<ChatTurn, { role: "user" | "assistant" }> =>
+                    turn.role === "user" || turn.role === "assistant",
+                )?.session_id,
+          }));
+          recovered = true;
+          const lastAsst = [...serverTurns]
+            .reverse()
+            .find((turn) => turn.role === "assistant");
+          shouldPoll = Boolean(
+            lastAsst && lastAsst.role === "assistant" && lastAsst.pending,
+          );
+        }
+      } catch {
+        // offline — fall through to the error bubble
+      }
+      if (!recovered) {
+        updateBucket(activeDept, (cur) => ({
+          ...cur,
+          turns: [
+            ...cur.turns,
+            { role: "assistant", text: err, label: assistantLabel },
+          ],
+        }));
+        toast.error(err);
+      } else if (shouldPoll) {
+        void waitForPendingReply(activeDept, assistantLabel);
+      }
     } finally {
       setSending(false);
     }
