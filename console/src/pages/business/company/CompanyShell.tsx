@@ -9,8 +9,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useParams, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-import { api } from "../../../lib/api";
+import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company } from "../../../lib/api";
+import { useToast } from "../../../components/ui/Toast";
 import { CompanySwitcher } from "../../../components/layout/CompanySwitcher";
 import { ChatProvider } from "./ChatProvider";
 
@@ -98,7 +99,7 @@ export default function CompanyShell() {
   return (
     <ChatProvider company={company}>
       <div className="min-h-[calc(100vh-8rem)] flex flex-col">
-        <CompanyHeader company={company} companies={companies} />
+        <CompanyHeader company={company} companies={companies} onRefresh={refresh} />
         <div className="flex flex-1">
           <CompanySidebar companyId={company.id} />
           <div className="flex-1 min-w-0">
@@ -110,8 +111,35 @@ export default function CompanyShell() {
   );
 }
 
-function CompanyHeader({ company, companies }: { company: Company; companies: Company[] }) {
+function CompanyHeader({
+  company,
+  companies,
+  onRefresh,
+}: {
+  company: Company;
+  companies: Company[];
+  onRefresh: () => Promise<void>;
+}) {
   const { t } = useTranslation();
+  const toast = useToast();
+  const [restarting, setRestarting] = useState(false);
+
+  // 手动重建容器（后端复用装/删部门那条 reconcile 链）。发起后公司会进入
+  // provisioning 态，useCompany 里的 3s 轮询会自动跟进到 running。
+  const onRestart = useCallback(async () => {
+    if (!window.confirm(t("business.company.restart.confirm", { name: company.name }))) return;
+    setRestarting(true);
+    try {
+      await api.post(`/v1/companies/${company.id}/restart`);
+      toast.info(t("business.company.restart.started"));
+      await onRefresh();
+    } catch (err) {
+      toast.error(apiErrorMessage(err, t("business.company.restart.error")));
+    } finally {
+      setRestarting(false);
+    }
+  }, [company.id, company.name, t, toast, onRefresh]);
+
   const stateBadge = {
     running: { label: t("business.company.subtitle.running"), color: "text-spark-mint" },
     paused: { label: t("business.company.subtitle.paused"), color: "text-spark-flare" },
@@ -134,10 +162,23 @@ function CompanyHeader({ company, companies }: { company: Company; companies: Co
           <CompanySwitcher current={company} companies={companies} />
           <span className={`text-xs ${stateBadge.color} shrink-0`}>{stateBadge.label}</span>
         </div>
-        <div className="text-xs text-muted whitespace-nowrap">
-          {t("business.company.subtitle.token-usage", {
-            tokens: company.token_usage_30d.toLocaleString(),
-          })}
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-xs text-muted whitespace-nowrap">
+            {t("business.company.subtitle.token-usage", {
+              tokens: company.token_usage_30d.toLocaleString(),
+            })}
+          </span>
+          <button
+            type="button"
+            onClick={() => void onRestart()}
+            disabled={restarting || company.state === "provisioning"}
+            title={t("business.company.restart.hint")}
+            className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:text-primary hover:border-primary transition-colors disabled:opacity-50 whitespace-nowrap"
+          >
+            {restarting || company.state === "provisioning"
+              ? t("business.company.restart.busy")
+              : t("business.company.restart.action")}
+          </button>
         </div>
       </div>
     </header>
