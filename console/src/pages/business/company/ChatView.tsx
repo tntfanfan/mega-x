@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api, apiErrorMessage } from "../../../lib/api";
 import type { Company, Task, TaskState } from "../../../lib/api";
 import type { ChatRef } from "../../../lib/chatRefs";
+import { extractTryReply } from "../../../lib/tryChatReply";
 import { Markdown } from "../../../components/ui/Markdown";
 import { ChatWaitingBubble, TypingDots, waitingMark } from "../../../components/ui/ChatWaiting";
 import { useToast } from "../../../components/ui/Toast";
@@ -599,7 +600,7 @@ function TurnRow({
         </div>
       )}
       {message.role === "assistant" ? (
-        <Markdown text={message.text} />
+        <Markdown text={extractTryReply(message.text) || message.text} />
       ) : (
         <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
       )}

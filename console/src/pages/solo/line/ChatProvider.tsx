@@ -26,6 +26,7 @@ import {
   refsForApi,
   type ChatRef,
 } from "../../../lib/chatRefs";
+import { extractTryReply } from "../../../lib/tryChatReply";
 import { useToast } from "../../../components/ui/Toast";
 import {
   resolveDeptDisplay,
@@ -353,7 +354,11 @@ export function ChatProvider({
             ...cur,
             turns: [
               ...cur.turns,
-              { role: "assistant", text: res.reply as string, label: assistantLabel },
+              {
+                role: "assistant",
+                text: extractTryReply(res.reply) || String(res.reply),
+                label: assistantLabel,
+              },
             ],
           }));
           return;
@@ -403,7 +408,7 @@ export function ChatProvider({
       const nextTurns: ChatTurn[] = [
         {
           role: "assistant",
-          text: res.reply || res.error || t("solo.line.chat.empty-reply"),
+          text: extractTryReply(res.reply) || res.reply || res.error || t("solo.line.chat.empty-reply"),
           session_id: res.session_id,
           label: assistantLabel,
         },

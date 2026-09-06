@@ -58,6 +58,31 @@ export type TryChatResponse = {
   yielded?: boolean;
 };
 
+function looksLikeReport(t: string): boolean {
+  const head = t.slice(0, 800);
+  return (
+    head.includes('"runId"') ||
+    head.includes("'runId'") ||
+    head.includes('"systemPromptReport"') ||
+    head.includes("'systemPromptReport'") ||
+    head.includes('"payloads"') ||
+    head.includes("'payloads'")
+  );
+}
+
+function unescapePy(s: string): string {
+  return s.replace(/\\n/g, "\n").replace(/\\'/g, "'").replace(/\\"/g, '"');
+}
+
+/** Python ``str(dict)`` / JSON — pull the spoken line out of an OpenClaw dump. */
+function fromReportString(t: string): string {
+  const vis = /['"]finalAssistantVisibleText['"]\s*:\s*['"]((?:\\.|[^'"])*)['"]/.exec(t);
+  if (vis?.[1]) return unescapePy(vis[1]).trim();
+  const pay = /['"]payloads['"][\s\S]{0,120}['"]text['"]\s*:\s*['"]((?:\\.|[^'"])*)['"]/.exec(t);
+  if (pay?.[1]) return unescapePy(pay[1]).trim();
+  return "";
+}
+
 /** Pull the assistant line out of an OpenClaw ``agent --json`` blob. */
 export function extractTryReply(reply: unknown): string {
   if (reply && typeof reply === "object") {
@@ -85,7 +110,12 @@ export function extractTryReply(reply: unknown): string {
       }
     }
   } catch {
-    /* not JSON — show as-is */
+    const scraped = fromReportString(t);
+    if (scraped) return scraped;
+    if (looksLikeReport(t)) return "这次没有返回可见回复，请再试一次。";
+  }
+  if (looksLikeReport(t)) {
+    return fromReportString(t) || "这次没有返回可见回复，请再试一次。";
   }
   return t;
 }
@@ -104,14 +134,28 @@ function fromBlob(o: Record<string, unknown>): string {
       }
     }
   }
-  const meta = (result?.meta && typeof result.meta === "object"
-    ? result.meta
-    : o.meta && typeof o.meta === "object" ? o.meta : null) as Record<string, unknown> | null;
-  const vis = meta?.finalAssistantVisibleText;
-  if (typeof vis === "string" && vis.trim()) return vis.trim();
+  for (const blob of [result, o]) {
+    if (!blob) continue;
+    for (const key of ["finalAssistantVisibleText", "finalAssistantRawText"] as const) {
+      const vis = blob[key];
+      if (typeof vis === "string" && vis.trim()) return vis.trim();
+    }
+    const meta = blob.meta && typeof blob.meta === "object"
+      ? (blob.meta as Record<string, unknown>)
+      : null;
+    const vis = meta?.finalAssistantVisibleText;
+    if (typeof vis === "string" && vis.trim()) return vis.trim();
+  }
   for (const key of ["reply", "text", "content"] as const) {
     const v = o[key];
-    if (typeof v === "string" && v.trim() && !v.trim().startsWith("{")) return v.trim();
+    if (typeof v === "string" && v.trim()) {
+      if (looksLikeReport(v)) {
+        const nested = extractTryReply(v);
+        if (nested && nested !== v) return nested;
+        continue;
+      }
+      return v.trim();
+    }
   }
   return "";
 }

@@ -28,6 +28,7 @@ import {
   type ChatRef,
 } from "../../../lib/chatRefs";
 import { resolveDeptDisplay } from "../../../lib/depts";
+import { extractTryReply } from "../../../lib/tryChatReply";
 import { useToast } from "../../../components/ui/Toast";
 
 export { resolveDeptDisplay };
@@ -217,9 +218,10 @@ export function serverRowToTurn(row: Record<string, unknown>): ChatTurn | null {
     return null;
   }
   if (role === "user" || role === "assistant") {
+    const raw = String(row.text || "");
     return {
       role,
-      text: String(row.text || ""),
+      text: role === "assistant" ? extractTryReply(raw) || raw : raw,
       session_id: row.session_id != null ? String(row.session_id) : undefined,
       label: row.label != null ? String(row.label) : undefined,
       refs: normalizeRefs(row.refs),
@@ -451,7 +453,11 @@ export function ChatProvider({
             ...cur,
             turns: [
               ...cur.turns,
-              { role: "assistant", text: res.reply as string, label: assistantLabel },
+              {
+                role: "assistant",
+                text: extractTryReply(res.reply) || String(res.reply),
+                label: assistantLabel,
+              },
             ],
           }));
           return;
@@ -501,7 +507,7 @@ export function ChatProvider({
       const nextTurns: ChatTurn[] = [
         {
           role: "assistant",
-          text: res.reply || res.error || t("business.company.chat.empty-reply"),
+          text: extractTryReply(res.reply) || res.reply || res.error || t("business.company.chat.empty-reply"),
           session_id: res.session_id,
           label: assistantLabel,
         },
