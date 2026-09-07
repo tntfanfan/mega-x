@@ -201,6 +201,11 @@ export class RecruiterWs {
   private handleClaudeEvent(event: Record<string, unknown>): void {
     if (!event || typeof event !== "object") return;
     const et = event.type;
+    if (et === "error") {
+      this.busy = false;
+      this.handlers.onError?.(String(event.message ?? "error"));
+      return;
+    }
 
     // Stream text deltas
     if (et === "stream_event") {
