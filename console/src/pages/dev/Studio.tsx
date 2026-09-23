@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api, apiErrorMessage, type Me } from "../../lib/api";
 import {
   loadTryChat,
+  mergeTryHistory,
   saveTryChat,
   turnsToMessages,
 } from "../../lib/tryChatReply";
@@ -145,6 +146,7 @@ export default function DevStudio() {
   const [renameVal, setRenameVal] = useState("");
   const [renameSlug, setRenameSlug] = useState("");
   const wsRef = useRef<RecruiterWs | null>(null);
+  const renamedDraftRef = useRef<string | null>(null);
   const streamingIdRef = useRef<string | null>(null);
   const tryWsRef = useRef<TryChatWs | null>(null);
   const tryStreamIds = useRef<Record<string, string>>({});
@@ -244,16 +246,15 @@ export default function DevStudio() {
     if (!draftId) return;
     let cancelled = false;
     api
-      .get<{ session_id?: string; messages?: { role: string; text: string }[] }>(
+      .get<{ session_id?: string; messages?: { role: string; text: string; media?: string[] }[] }>(
         `/v1/dev/depts/${draftId}/try_chat`,
       )
       .then((r) => {
         if (cancelled || !r.messages?.length) return;
         const msgs = turnsToMessages(r.messages);
-        setTryMessages(msgs);
+        setTryMessages((cur) => mergeTryHistory(cur, msgs));
         const sid = r.session_id || `try-${draftId}`;
         setTrySessionId(sid);
-        saveTryChat(draftId, { session_id: sid, messages: msgs });
       })
       .catch(() => { /* keep local cache */ });
     return () => { cancelled = true; };
@@ -283,6 +284,7 @@ export default function DevStudio() {
     // Clear before (re)connect so userId resolution / remount doesn't stack
     // a second history replay on top of the first.
     setMessages([]);
+    renamedDraftRef.current = null;
     streamingIdRef.current = null;
     const client = new RecruiterWs(userId, draftId, {
       onUserText: (text) => {
@@ -326,7 +328,11 @@ export default function DevStudio() {
       },
       onDraftUpdate: (d) => {
         if (d && typeof d === "object") {
-          setDraft(d as BuilderDraft);
+          const updated = d as BuilderDraft;
+          setDraft(updated);
+          if (updated.id && updated.id !== draftId) {
+            renamedDraftRef.current = updated.id;
+          }
           setToolStatus(null);
         }
       },
@@ -336,6 +342,11 @@ export default function DevStudio() {
         streamingIdRef.current = null;
         // Drop empty streaming placeholders so they never linger / re-animate.
         setMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
+        const renamedId = renamedDraftRef.current;
+        if (renamedId && renamedId !== draftId) {
+          renamedDraftRef.current = null;
+          navigate(`/dev/depts/${renamedId}/studio`, { replace: true });
+        }
       },
       onError: (message) => {
         setBusy(false);
@@ -351,7 +362,7 @@ export default function DevStudio() {
       client.close();
       wsRef.current = null;
     };
-  }, [draftId, userId, toast]);
+  }, [draftId, userId, navigate, toast]);
 
   useEffect(() => {
     if (!draftId || !userId || chatMode !== "try") return;
@@ -397,6 +408,22 @@ export default function DevStudio() {
           ));
         });
       },
+      onMedia: (key, source, label, url) => {
+        let id = tryStreamIds.current[key];
+        if (!id) {
+          id = `t-${key}-${Date.now()}`;
+          tryStreamIds.current[key] = id;
+        }
+        setTryMessages((cur) => {
+          const index = cur.findIndex((m) => m.id === id);
+          if (index < 0) {
+            return [...cur, { id, role: "copilot", text: "", media: [url], source, label: label || leadLabel }];
+          }
+          return cur.map((m) => m.id === id
+            ? { ...m, media: [...new Set([...(m.media || []), url])] }
+            : m);
+        });
+      },
       onTool: (_key, _source, label, name) => {
         setTryToolStatus(label ? `${label} · ${name}` : name);
       },
@@ -407,14 +434,14 @@ export default function DevStudio() {
         tryStreamIds.current = {};
         setTryBusy(false);
         setTryToolStatus(null);
-        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
+        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
       },
       onError: (message) => {
         setTryBusy(false);
         setTryToolStatus(null);
         setTryConnectError(message);
         tryStreamIds.current = {};
-        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
+        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
         toast.error(message);
       },
     });

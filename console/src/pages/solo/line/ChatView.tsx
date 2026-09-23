@@ -13,6 +13,7 @@ import type { Company, Task, TaskState } from "../../../lib/api";
 import type { ChatRef } from "../../../lib/chatRefs";
 import { extractTryReply } from "../../../lib/tryChatReply";
 import { Markdown } from "../../../components/ui/Markdown";
+import { ChatMedia } from "../../../components/ui/ChatMedia";
 import { ChatWaitingBubble, TypingDots, waitingMark } from "../../../components/ui/ChatWaiting";
 import { useToast } from "../../../components/ui/Toast";
 import { useTeamChat, resolveDeptDisplay, type ChatTurn } from "./ChatProvider";
@@ -592,7 +593,10 @@ function TurnRow({
         </div>
       )}
       {message.role === "assistant" ? (
-        <Markdown text={extractTryReply(message.text) || message.text} />
+        <>
+          {message.text && <Markdown text={extractTryReply(message.text) || message.text} />}
+          <ChatMedia media={message.media} />
+        </>
       ) : (
         <p className="leading-relaxed whitespace-pre-wrap">{message.text}</p>
       )}

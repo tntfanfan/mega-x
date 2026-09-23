@@ -38,6 +38,7 @@ export type ChatTurn =
   | {
       role: "user" | "assistant";
       text: string;
+      media?: string[];
       session_id?: string;
       label?: string;
       refs?: ChatRef[];
@@ -222,6 +223,9 @@ export function serverRowToTurn(row: Record<string, unknown>): ChatTurn | null {
     return {
       role,
       text: role === "assistant" ? extractTryReply(raw) || raw : raw,
+      media: role === "assistant" && Array.isArray(row.media)
+        ? row.media.filter((url): url is string => typeof url === "string")
+        : undefined,
       session_id: row.session_id != null ? String(row.session_id) : undefined,
       label: row.label != null ? String(row.label) : undefined,
       refs: normalizeRefs(row.refs),
@@ -440,7 +444,7 @@ export function ChatProvider({
       const deadline = Date.now() + PENDING_POLL_TOTAL_MS;
       while (Date.now() < deadline) {
         await sleep(PENDING_POLL_INTERVAL_MS);
-        let res: { resolved: boolean; working: boolean; reply?: string };
+        let res: { resolved: boolean; working: boolean; reply?: string; media?: string[] };
         try {
           res = await api.get(
             `/v1/companies/${company.id}/chat/pending?dept_id=${encodeURIComponent(activeDept)}`,
@@ -448,14 +452,15 @@ export function ChatProvider({
         } catch {
           return; // older backend / offline — leave the progress line as-is
         }
-        if (res.resolved && res.reply) {
+        if (res.resolved && (res.reply || res.media?.length)) {
           updateBucket(activeDept, (cur) => ({
             ...cur,
             turns: [
               ...cur.turns,
               {
                 role: "assistant",
-                text: extractTryReply(res.reply) || String(res.reply),
+                text: extractTryReply(res.reply) || res.reply || "",
+                media: res.media,
                 label: assistantLabel,
               },
             ],
@@ -497,6 +502,7 @@ export function ChatProvider({
         session_id?: string;
         error?: string;
         pending?: boolean;
+        media?: string[];
       }>(`/v1/companies/${company.id}/chat`, {
         message: msg,
         dept_id: activeDept,
@@ -507,7 +513,9 @@ export function ChatProvider({
       const nextTurns: ChatTurn[] = [
         {
           role: "assistant",
-          text: extractTryReply(res.reply) || res.reply || res.error || t("business.company.chat.empty-reply"),
+          text: extractTryReply(res.reply) || res.reply || res.error ||
+            (res.media?.length ? "" : t("business.company.chat.empty-reply")),
+          media: res.media,
           session_id: res.session_id,
           label: assistantLabel,
         },

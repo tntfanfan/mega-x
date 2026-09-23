@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { ChatMsg } from "../../lib/builderFixtures";
 import { Markdown } from "../ui/Markdown";
+import { ChatMedia } from "../ui/ChatMedia";
 import { RecruiterWaiting, TypingDots } from "../ui/ChatWaiting";
 
 export type ChatMode = "recruiter" | "try";
@@ -40,7 +41,7 @@ export function VibeChat({
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastMsg = messages[messages.length - 1];
-  const waitingForReply = busy && (!lastMsg || lastMsg.role !== "copilot" || !lastMsg.text);
+  const waitingForReply = busy && (!lastMsg || lastMsg.role !== "copilot" || (!lastMsg.text && !lastMsg.media?.length));
   const isTry = mode === "try";
   const recruiterLabel = t("dev.studio.chat.mode-recruiter");
   const assistantLabel = isTry ? deptLabel : recruiterLabel;
@@ -140,7 +141,7 @@ export function VibeChat({
           </p>
         )}
         {messages.map((m) => {
-          if (m.role === "copilot" && !m.text) {
+          if (m.role === "copilot" && !m.text && !m.media?.length) {
             if (!busy) return null;
             return (
               <div key={m.id} className="flex justify-start">
@@ -176,6 +177,7 @@ export function VibeChat({
                       {m.label || assistantLabel}
                     </div>
                     {m.text ? <Markdown text={m.text} /> : null}
+                    <ChatMedia media={m.media} />
                     {isTry && m.text && onSendToRecruiter && (
                       <button
                         type="button"

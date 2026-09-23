@@ -27,19 +27,33 @@ export function saveTryChat(deptId: string, data: StoredTryChat): void {
 }
 
 export function mergeTryHistory(current: ChatMsg[], incoming: ChatMsg[]): ChatMsg[] {
-  if (incoming.length > current.length) return incoming;
-  const have = new Set(current.map((m) => m.text));
-  const extra = incoming.filter((m) => m.role === "copilot" && m.text && !have.has(m.text));
-  return extra.length ? [...current, ...extra] : current;
+  const merged = incoming.map((m) => ({ ...m }));
+  const matched = new Set<number>();
+  for (const old of current) {
+    const index = merged.findIndex((m, i) =>
+      !matched.has(i) && m.role === old.role && m.text === old.text &&
+      (!old.media?.length || !m.media?.length || old.media.some((url) => m.media?.includes(url))),
+    );
+    if (index < 0) {
+      merged.push(old);
+      continue;
+    }
+    matched.add(index);
+    if (old.media?.length) {
+      merged[index].media = [...new Set([...(merged[index].media || []), ...old.media])];
+    }
+  }
+  return merged;
 }
 
-export function turnsToMessages(turns: { role?: string; text?: string }[]): ChatMsg[] {
+export function turnsToMessages(turns: { role?: string; text?: string; media?: string[] }[]): ChatMsg[] {
   return turns
-    .filter((t) => (t.text || "").trim() && !isTryContinue(t.text || ""))
+    .filter((t) => ((t.text || "").trim() || t.media?.length) && !isTryContinue(t.text || ""))
     .map((t, i) => ({
       id: `th-${i}-${t.role || "copilot"}`,
       role: t.role === "user" ? "user" : "copilot",
       text: (t.text || "").trim(),
+      media: Array.isArray(t.media) ? t.media.filter((url) => typeof url === "string") : undefined,
     }));
 }
 

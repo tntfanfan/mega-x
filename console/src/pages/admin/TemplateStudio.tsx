@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api, apiErrorMessage, type Me } from "../../lib/api";
 import {
   loadTryChat,
+  mergeTryHistory,
   saveTryChat,
   turnsToMessages,
 } from "../../lib/tryChatReply";
@@ -136,16 +137,15 @@ export default function AdminTemplateStudio() {
     if (!deptId) return;
     let cancelled = false;
     api
-      .get<{ session_id?: string; messages?: { role: string; text: string }[] }>(
+      .get<{ session_id?: string; messages?: { role: string; text: string; media?: string[] }[] }>(
         `/v1/admin/templates/${deptId}/try_chat`,
       )
       .then((r) => {
         if (cancelled || !r.messages?.length) return;
         const msgs = turnsToMessages(r.messages);
-        setTryMessages(msgs);
+        setTryMessages((cur) => mergeTryHistory(cur, msgs));
         const sid = r.session_id || `try-${deptId}`;
         setTrySessionId(sid);
-        saveTryChat(deptId, { session_id: sid, messages: msgs });
       })
       .catch(() => { /* keep local cache */ });
     return () => { cancelled = true; };
@@ -269,6 +269,22 @@ export default function AdminTemplateStudio() {
           ));
         });
       },
+      onMedia: (key, source, label, url) => {
+        let id = tryStreamIds.current[key];
+        if (!id) {
+          id = `t-${key}-${Date.now()}`;
+          tryStreamIds.current[key] = id;
+        }
+        setTryMessages((cur) => {
+          const index = cur.findIndex((m) => m.id === id);
+          if (index < 0) {
+            return [...cur, { id, role: "copilot", text: "", media: [url], source, label: label || leadLabel }];
+          }
+          return cur.map((m) => m.id === id
+            ? { ...m, media: [...new Set([...(m.media || []), url])] }
+            : m);
+        });
+      },
       onTool: (_key, _source, label, name) => {
         setTryToolStatus(label ? `${label} · ${name}` : name);
       },
@@ -279,14 +295,14 @@ export default function AdminTemplateStudio() {
         tryStreamIds.current = {};
         setTryBusy(false);
         setTryToolStatus(null);
-        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
+        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
       },
       onError: (message) => {
         setTryBusy(false);
         setTryToolStatus(null);
         setTryConnectError(message);
         tryStreamIds.current = {};
-        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text)));
+        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
         toast.error(message);
       },
     });

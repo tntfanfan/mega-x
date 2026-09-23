@@ -12,6 +12,7 @@ export type TryChatWsHandlers = {
   onReady?: (info: { session_id: string; agent: string }) => void;
   onStart?: (key: string, source: TryChatSource, label: string) => void;
   onDelta?: (key: string, source: TryChatSource, label: string, text: string) => void;
+  onMedia?: (key: string, source: TryChatSource, label: string, url: string) => void;
   onTool?: (key: string, source: TryChatSource, label: string, name: string) => void;
   onEnd?: (key: string) => void;
   onIdle?: () => void;
@@ -147,6 +148,11 @@ export class TryChatWs {
     if (t === "delta" && key) {
       this.busy = true;
       this.handlers.onDelta?.(key, source, label, String(msg.text ?? ""));
+      return;
+    }
+    if (t === "media" && key && typeof msg.url === "string") {
+      this.busy = true;
+      this.handlers.onMedia?.(key, source, label, msg.url);
       return;
     }
     if (t === "tool" && key) {

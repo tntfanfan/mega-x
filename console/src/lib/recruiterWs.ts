@@ -179,6 +179,12 @@ export class RecruiterWs {
       return;
     }
     if (t === "draft_update") {
+      const nextId = (msg.draft as { id?: unknown } | null)?.id;
+      if (typeof nextId === "string" && /^dept-[a-z0-9]+(?:-[a-z0-9]+)*$/.test(nextId)) {
+        // Reconnect to the renamed draft if the socket drops before Studio
+        // changes its URL at the end of this turn.
+        this.draftId = nextId;
+      }
       this.handlers.onDraftUpdate?.(msg.draft);
       return;
     }

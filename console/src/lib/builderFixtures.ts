@@ -109,6 +109,7 @@ export interface ChatMsg {
   id: string;
   role: "user" | "copilot";
   text: string;
+  media?: string[];
   source?: "lead" | "sub";
   label?: string;
 }
