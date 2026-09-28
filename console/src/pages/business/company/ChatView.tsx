@@ -6,7 +6,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import type { CSSProperties } from "react";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage } from "../../../lib/api";
@@ -18,11 +19,17 @@ import { ChatMedia } from "../../../components/ui/ChatMedia";
 import { ChatWaitingBubble, TypingDots, waitingMark } from "../../../components/ui/ChatWaiting";
 import { useToast } from "../../../components/ui/Toast";
 import { useDeptChat, resolveDeptDisplay, type ChatTurn } from "./ChatProvider";
+import { companyScope } from "../../../lib/workspaceScope";
+import { useDeptStatus } from "../../../hooks/useDeptStatus";
+import { useHorizontalSplit } from "../../../hooks/useHorizontalSplit";
+import { DeptStatusBadge } from "../../../components/depts/DeptStatusBadge";
+import { OutputsPane } from "../../../components/outputs/OutputsPane";
 
 type Ctx = { company: Company };
 
 const LIVE: TaskState[] = ["pending", "in_progress"];
 const POLL_MS = 4000;
+const CHAT_SPLIT_KEY = "lgh.companyChat.split";
 
 function titleFromBrief(brief: string): string {
   const line = brief.trim().split(/\r?\n/)[0] ?? "";
@@ -33,6 +40,7 @@ export default function ChatView() {
   useOutletContext<Ctx>();
   const { t } = useTranslation();
   const toast = useToast();
+  const navigate = useNavigate();
   const chat = useDeptChat();
   const {
     company,
@@ -56,6 +64,8 @@ export default function ChatView() {
     resumeTask,
     resumingTaskId,
   } = chat;
+  const scope = useMemo(() => companyScope(company.id), [company.id]);
+  const { byId: deptStatus } = useDeptStatus(scope);
 
   useEffect(() => {
     void reloadDepts();
@@ -68,6 +78,18 @@ export default function ChatView() {
   const [deptTasks, setDeptTasks] = useState<Task[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const seenEvents = useRef<Set<string>>(new Set());
+  const [mobileView, setMobileView] = useState<"chat" | "outputs">("chat");
+  const {
+    containerRef: workspaceRef,
+    ratio: chatSplit,
+    onPointerDown: startSplit,
+    onKeyDown: onSplitKeyDown,
+  } = useHorizontalSplit({
+    storageKey: CHAT_SPLIT_KEY,
+    initialRatio: 0.5,
+    minStart: 300,
+    minEnd: 320,
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -207,16 +229,26 @@ export default function ChatView() {
 
   return (
     <div className="h-[calc(100vh-8rem-72px)] flex flex-col min-h-0">
-      <header className="px-6 py-3 border-b border-border-solid bg-surface/60 shrink-0">
-        <h1 className="font-display text-lg text-heading">
-          {t("business.company.chat.title")}
-        </h1>
-        <p className="text-xs text-muted">{t("business.company.chat.subtitle")}</p>
+      <header className="flex items-center justify-between gap-3 px-6 py-3 border-b border-border-solid bg-surface/60 shrink-0">
+        <div>
+          <h1 className="font-display text-lg text-heading">
+            {t("business.company.chat.title")}
+          </h1>
+          <p className="text-xs text-muted">{t("business.company.chat.subtitle")}</p>
+        </div>
+        <div className="flex shrink-0 rounded-md border border-border-solid p-0.5 xl:hidden" role="group" aria-label={t("business.company.chat.view-label")}>
+          <button type="button" onClick={() => setMobileView("chat")} aria-pressed={mobileView === "chat"} className={`rounded px-2 py-1 text-xs ${mobileView === "chat" ? "bg-primary/10 text-primary" : "text-muted"}`}>
+            {t("business.company.chat.title")}
+          </button>
+          <button type="button" onClick={() => setMobileView("outputs")} aria-pressed={mobileView === "outputs"} className={`rounded px-2 py-1 text-xs ${mobileView === "outputs" ? "bg-primary/10 text-primary" : "text-muted"}`}>
+            {t("outputs.title")}
+          </button>
+        </div>
       </header>
 
       <div className="flex flex-1 min-h-0">
         {/* Left — department list */}
-        <aside className="w-44 shrink-0 border-e border-border-solid bg-surface/40 overflow-y-auto py-2">
+        <aside className={`${mobileView === "outputs" ? "hidden xl:block" : "block"} w-44 shrink-0 border-e border-border-solid bg-surface/40 overflow-y-auto py-2`}>
           <div className="px-3 py-1 text-xs uppercase tracking-widest text-muted">
             {t("business.company.conversations.dept-label")}
           </div>
@@ -238,7 +270,8 @@ export default function ChatView() {
                         : "border-transparent text-body hover:text-primary hover:bg-surface-2"
                     }`}
                   >
-                    {label}
+                    <span className="block truncate">{label}</span>
+                    <DeptStatusBadge item={deptStatus.get(id)} />
                   </button>
                 );
               })
@@ -246,8 +279,9 @@ export default function ChatView() {
           </nav>
         </aside>
 
+        <div ref={workspaceRef} className="flex flex-1 min-w-0 min-h-0" style={{ "--chat-split": `${chatSplit * 100}%` } as CSSProperties}>
         {/* Center — messages + input */}
-        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        <div className={`${mobileView === "outputs" ? "hidden xl:flex" : "flex"} company-chat-conversation min-w-0 flex-col min-h-0`}>
           <div
             role="log"
             aria-label={t("business.company.chat.history-label")}
@@ -326,7 +360,7 @@ export default function ChatView() {
                 ))}
               </div>
             )}
-            <div className="flex gap-2">
+            <div className="chat-compose-row flex gap-2">
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
@@ -342,22 +376,25 @@ export default function ChatView() {
                     : t("business.company.conversations.placeholder")
                 }
                 disabled={sending || !canChat}
-                className="flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
+                className="chat-compose-input min-w-0 flex-1 bg-surface border border-border-solid rounded px-3 py-2 text-sm disabled:opacity-50"
               />
               <button
                 type="button"
-                onClick={() => openDispatch(draft)}
+                onClick={() => {
+                  sessionStorage.setItem("lgh.taskDraft", JSON.stringify({ goal: draft, deptId }));
+                  navigate(`/business/c/${company.id}/tasks/new?kind=long&dept=${encodeURIComponent(deptId)}`);
+                }}
                 disabled={sending || !draft.trim() || !deptId || !canChat}
-                className="rounded-md border border-border-solid px-3 py-2 text-sm text-body hover:text-primary hover:border-primary disabled:opacity-50"
+                className="shrink-0 whitespace-nowrap rounded-md border border-border-solid px-3 py-2 text-sm text-body hover:text-primary hover:border-primary disabled:opacity-50"
               >
-                {t("business.company.chat.dispatch.action")}
+                转为任务
               </button>
               <button
                 type="button"
                 onClick={() => void send()}
                 disabled={sending || !draft.trim() || !canChat}
                 aria-label={sending ? waitingLabel : undefined}
-                className="rounded-md bg-primary text-bg px-4 py-2 text-sm font-medium disabled:opacity-50 min-w-[4.5rem] inline-flex items-center justify-center"
+                className="inline-flex min-w-[4.5rem] shrink-0 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-bg disabled:opacity-50"
               >
                 {sending ? <TypingDots dotClassName="bg-bg" /> : t("business.company.conversations.send")}
               </button>
@@ -379,64 +416,25 @@ export default function ChatView() {
           </div>
         </div>
 
-        {/* Right — department tasks */}
-        <aside className="hidden xl:flex w-56 shrink-0 border-s border-border-solid bg-surface/30 flex-col min-h-0">
-          <div className="px-3 py-2 text-xs uppercase tracking-widest text-muted border-b border-border-solid">
-            {t("business.company.chat.rail.title")}
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-            {liveTasks.length === 0 ? (
-              <p className="px-1 py-2 text-xs text-muted">
-                {t("business.company.chat.rail.empty")}
-              </p>
-            ) : (
-              liveTasks.map((tk) => (
-                <TaskRailCard
-                  key={tk.id}
-                  task={tk}
-                  companyId={company.id}
-                  onDiscuss={() =>
-                    chat.bringToChat(deptId, [
-                      {
-                        type: "task",
-                        id: tk.id,
-                        taskId: tk.id,
-                        label: tk.title,
-                        detail: t("business.company.chat.ref.status", {
-                          state: t(`task.state.${tk.state}`),
-                        }),
-                      },
-                    ])
-                  }
-                  onSolve={
-                    tk.state === "failed"
-                      ? () =>
-                          chat.bringToChat(
-                            deptId,
-                            [
-                              {
-                                type: "task",
-                                id: tk.id,
-                                taskId: tk.id,
-                                label: tk.title,
-                                detail: t("business.company.chat.ref.status", {
-                                  state: t("task.state.failed"),
-                                }),
-                              },
-                            ],
-                            {
-                              draft: t("business.company.chat.solve.draft", {
-                                title: tk.title,
-                              }),
-                            },
-                          )
-                      : undefined
-                  }
-                />
-              ))
-            )}
-          </div>
-        </aside>
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t("business.company.chat.resize")}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(chatSplit * 100)}
+          tabIndex={0}
+          title={t("business.company.chat.resize")}
+          onPointerDown={startSplit}
+          onKeyDown={onSplitKeyDown}
+          className="group hidden w-2 shrink-0 cursor-col-resize items-center justify-center hover:bg-primary/10 focus-visible:bg-primary/10 xl:flex"
+        >
+          <span className="h-10 w-0.5 rounded-full bg-border-solid transition-colors group-hover:bg-primary group-focus-visible:bg-primary" />
+        </div>
+        <div className={`${mobileView === "chat" ? "hidden xl:flex" : "flex"} min-w-0 flex-1`}>
+          <OutputsPane scope={scope} deptId={deptId} className="flex-1" />
+        </div>
+        </div>
       </div>
 
       {dispatchOpen && (

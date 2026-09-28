@@ -20,12 +20,17 @@ import { Segmented, type SegmentedOption } from "../../../components/ui/Segmente
 import { resolveDeptDisplay, resolveDeptDesc } from "../../../lib/depts";
 import { TeammateAvatar, type TeammateView } from "../../../components/solo/TeammateAvatar";
 import { OrgCanvasPanel, type DeptWithMeta } from "./CanvasView";
+import { companyScope } from "../../../lib/workspaceScope";
+import { useDeptStatus } from "../../../hooks/useDeptStatus";
+import { DeptStatusBadge } from "../../../components/depts/DeptStatusBadge";
 
 type Ctx = { company: Company; refreshCompany?: () => Promise<void> };
 type ViewMode = "list" | "org";
 
 export default function DeptsView() {
   const { company, refreshCompany } = useOutletContext<Ctx>();
+  const statusScope = useMemo(() => companyScope(company.id), [company.id]);
+  const { byId: deptStatus } = useDeptStatus(statusScope);
   const { t } = useTranslation();
   const toast = useToast();
   const [items, setItems] = useState<DeptWithMeta[]>([]);
@@ -229,7 +234,9 @@ export default function DeptsView() {
                           <div className="mt-1 text-xs font-mono text-dim truncate">{d.id}</div>
                           <div className="mt-2 flex gap-3 text-xs">
                             <span className="text-muted">{t("business.company.depts.agents", { count: d.agent_count })}</span>
-                            {d.active_tasks > 0 ? (
+                            {deptStatus.get(d.id) ? (
+                              <DeptStatusBadge item={deptStatus.get(d.id)} />
+                            ) : d.active_tasks > 0 ? (
                               <span className="text-spark-blue">{t("business.company.depts.tasks-active", { count: d.active_tasks })}</span>
                             ) : (
                               <span className="text-dim">{t("business.company.depts.idle")}</span>

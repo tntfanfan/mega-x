@@ -43,6 +43,67 @@
   }
 }
 
+.company-chat-conversation {
+  flex: 1 1 0%;
+  container: company-chat / inline-size;
+}
+
+.workspace-task-detail {
+  flex: 1 1 0%;
+}
+
+.task-detail-timeline {
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .task-detail-timeline {
+    flex: none;
+    width: clamp(280px, var(--detail-split, 45%), calc(100% - 368px));
+  }
+}
+
+@media (min-width: 1280px) {
+  .company-chat-conversation {
+    flex: none;
+    width: clamp(300px, var(--chat-split, 50%), calc(100% - 328px));
+  }
+
+  .workspace-task-detail {
+    flex: none;
+    width: clamp(320px, var(--task-split, 56%), calc(100% - 368px));
+  }
+}
+
+@container company-chat (max-width: 420px) {
+  .chat-compose-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .chat-compose-input {
+    grid-column: 1 / -1;
+  }
+}
+
+.outputs-preview {
+  container: outputs-preview / inline-size;
+}
+
+.outputs-tree {
+  width: clamp(170px, var(--tree-split, 40%), calc(100% - 148px));
+}
+
+.outputs-action-label {
+  display: none;
+}
+
+@container outputs-preview (min-width: 300px) {
+  .outputs-action-label {
+    display: inline;
+  }
+}
+
 /*
  * Arabic typography. The Latin display/body fonts (Instrument Serif / Barlow)
  * have no Arabic glyphs, so under [lang="ar"] route text — including headings

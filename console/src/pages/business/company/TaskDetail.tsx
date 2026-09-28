@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -12,6 +13,7 @@ import { ArtifactViewer } from "../../../components/ui/ArtifactViewer";
 import { ArtifactPreviewModal } from "../../../components/ui/ArtifactPreviewModal";
 import { TaskPlanFlow } from "../../../components/ui/TaskPlanFlow";
 import { useDeptChat } from "./ChatProvider";
+import { useHorizontalSplit } from "../../../hooks/useHorizontalSplit";
 
 type Ctx = { company: Company };
 
@@ -44,6 +46,17 @@ export default function TaskDetail() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const {
+    containerRef: detailSplitRef,
+    ratio: detailSplit,
+    onPointerDown: startDetailSplit,
+    onKeyDown: onDetailSplitKeyDown,
+  } = useHorizontalSplit({
+    storageKey: "lgh.taskDetail.split",
+    initialRatio: 0.45,
+    minStart: 280,
+    minEnd: 360,
+  });
   const backTo = taskId
     ? `/business/c/${company.id}/tasks?task=${taskId}`
     : `/business/c/${company.id}/tasks`;
@@ -174,7 +187,7 @@ export default function TaskDetail() {
           <span>·</span>
           <span>
             {t("business.usage.tokens", {
-              count: task.token_used.toLocaleString(),
+              count: task.token_used,
             })}
           </span>
           <span>·</span>
@@ -243,9 +256,9 @@ export default function TaskDetail() {
 
       <TaskPlanFlow task={task} />
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div ref={detailSplitRef} className="flex flex-col gap-6 lg:flex-row lg:gap-0" style={{ "--detail-split": `${detailSplit * 100}%` } as CSSProperties}>
         {/* Timeline */}
-        <div className="rounded-md border border-border-solid bg-surface p-4">
+        <div className="task-detail-timeline min-w-0 rounded-md border border-border-solid bg-surface p-4">
           <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("business.company.tasks.detail.timeline")}</h2>
           {timelineEvents.length === 0 ? (
             <p className="text-sm text-muted">
@@ -256,7 +269,7 @@ export default function TaskDetail() {
           ) : (
             <ul className="space-y-2 text-xs">
               {timelineEvents.map((evt, index) => (
-                <li key={"id" in evt ? evt.id : `${evt.ts}-${index}`} className="flex gap-2">
+                <li key={`${evt.ts}-${index}`} className="flex gap-2">
                   <span className="text-muted shrink-0 w-12">{new Date(evt.ts).toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" })}</span>
                   <span className="text-body">{evt.text}</span>
                 </li>
@@ -265,8 +278,24 @@ export default function TaskDetail() {
           )}
         </div>
 
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t("workspace.tasks.detail-resize")}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(detailSplit * 100)}
+          tabIndex={0}
+          title={t("workspace.tasks.detail-resize")}
+          onPointerDown={startDetailSplit}
+          onKeyDown={onDetailSplitKeyDown}
+          className="group hidden w-2 shrink-0 cursor-col-resize items-center justify-center hover:bg-primary/10 focus-visible:bg-primary/10 lg:flex"
+        >
+          <span className="h-10 w-0.5 rounded-full bg-border-solid transition-colors group-hover:bg-primary group-focus-visible:bg-primary" />
+        </div>
+
         {/* Artifacts */}
-        <div className="rounded-md border border-border-solid bg-surface p-4">
+        <div className="min-w-0 flex-1 rounded-md border border-border-solid bg-surface p-4">
           <h2 className="text-xs uppercase tracking-widest text-muted mb-3">{t("business.company.tasks.detail.artifacts", { count: task.artifacts.length })}</h2>
           {task.artifacts.length === 0 || !selected ? (
             <p className="text-sm text-muted">

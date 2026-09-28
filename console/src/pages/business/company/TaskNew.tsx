@@ -1,160 +1,151 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-
+import { useNavigate, useOutletContext, useSearchParams } from "react-router-dom";
 import { api, apiErrorMessage } from "../../../lib/api";
-import type { Company, DeptCatalogItem, ArtifactType } from "../../../lib/api";
-import { useToast } from "../../../components/ui/Toast";
+import type { Company, DeptCatalogItem } from "../../../lib/api";
+import { companyScope } from "../../../lib/workspaceScope";
 
 type Ctx = { company: Company };
 
-// Labels resolved via i18n (artifact.type.<value>); emoji stays in code.
-const ARTIFACT_TYPES: { value: ArtifactType; emoji: string }[] = [
-  { value: "markdown", emoji: "📄" },
-  { value: "code", emoji: "📑" },
-  { value: "image", emoji: "🖼" },
-  { value: "video", emoji: "🎬" },
-  { value: "audio", emoji: "🎵" },
-  { value: "table", emoji: "📊" },
-  { value: "json", emoji: "🔢" },
-  { value: "pdf", emoji: "📕" },
-];
+const OUTPUTS = ["markdown", "pptx", "html", "xlsx", "image", "csv", "pdf"];
 
 export default function TaskNew() {
   const { company } = useOutletContext<Ctx>();
+  const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const toast = useToast();
-  const [depts, setDepts] = useState<DeptCatalogItem[]>([]);
+  const scope = companyScope(company.id);
+  const initialKind = params.get("kind") === "scheduled" ? "scheduled" : "long";
+  const [kind, setKind] = useState<"long" | "scheduled">(initialKind);
   const [title, setTitle] = useState("");
-  const [brief, setBrief] = useState("");
-  const [deptId, setDeptId] = useState("");
-  const [expected, setExpected] = useState<ArtifactType[]>(["markdown"]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [goal, setGoal] = useState("");
+  const [lead, setLead] = useState(params.get("dept") || "");
+  const [depts, setDepts] = useState<DeptCatalogItem[]>([]);
+  const [outputs, setOutputs] = useState<string[]>(["markdown"]);
+  const [preset, setPreset] = useState("weekdays");
+  const [time, setTime] = useState("08:00");
+  const [cron, setCron] = useState("0 8 * * 1-5");
+  const [preview, setPreview] = useState<string[]>([]);
+  const [skip, setSkip] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api
-      .get<{ items: DeptCatalogItem[] }>(`/v1/companies/${company.id}/depts`)
-      .then((r) => {
-        setDepts(r.items);
-        if (r.items.length > 0) setDeptId(r.items[0].id);
-      })
-      .catch((e) => toast.error(apiErrorMessage(e, t("business.company.tasks.new.depts-error"))));
-  }, [company.id, toast, t]);
-
-  const toggleArtifact = (a: ArtifactType) =>
-    setExpected((cur) => (cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]));
-
-  const submit = async () => {
-    setSubmitting(true);
-    setError(null);
+    const raw = sessionStorage.getItem("lgh.taskDraft");
+    if (!raw) return;
     try {
-      const newTask = await api.post<{ id: string }>(`/v1/companies/${company.id}/tasks`, {
-        title, brief, dept_id: deptId, expected_artifacts: expected,
-      });
-      toast.success(t("business.company.tasks.new.success"));
-      navigate(`/business/c/${company.id}/tasks/${newTask.id}`);
+      const draft = JSON.parse(raw) as { goal?: string; deptId?: string };
+      if (draft.goal && !goal) setGoal(draft.goal);
+      if (draft.deptId && !lead) setLead(draft.deptId);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    api.get<{ items: DeptCatalogItem[] }>(`/v1/companies/${company.id}/depts`)
+      .then((res) => {
+        const items = res.items || [];
+        setDepts(items);
+        if (!lead && items[0]) setLead(items[0].id);
+      })
+      .catch(() => {});
+  }, [company.id]);
+
+  useEffect(() => {
+    if (kind !== "scheduled") return;
+    const handle = window.setTimeout(() => {
+      api.post<{ times: string[] }>(`${scope.base}/tasks/schedule/preview`, { cron, tz: "Asia/Shanghai" })
+        .then((res) => setPreview(res.times || []))
+        .catch(() => setPreview([]));
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [cron, kind, scope.base]);
+
+  function syncCron(nextPreset: string, nextTime: string) {
+    const [hh, mm] = nextTime.split(":");
+    const map: Record<string, string> = {
+      daily: `${mm} ${hh} * * *`,
+      weekdays: `${mm} ${hh} * * 1-5`,
+      weekly: `${mm} ${hh} * * 1`,
+      monthly: `${mm} ${hh} 1 * *`,
+    };
+    if (map[nextPreset]) setCron(map[nextPreset]);
+  }
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    try {
+      const body: Record<string, unknown> = {
+        kind,
+        title: title || goal.slice(0, 24) || "未命名任务",
+        goal,
+        lead_dept_id: lead,
+        participant_dept_ids: depts.map((d) => d.id),
+        expected_outputs: outputs,
+        skip_clarify: kind === "long" ? skip : false,
+        clarify_first: kind === "scheduled" ? skip : false,
+      };
+      if (kind === "scheduled") {
+        body.schedule = { cron, tz: "Asia/Shanghai", preset: { type: preset, time }, overlap: "skip" };
+      }
+      const task = await api.post<{ id: string }>(`${scope.base}/tasks`, body);
+      sessionStorage.removeItem("lgh.taskDraft");
+      navigate(`${scope.routeBase}/tasks?kind=${kind}&task=${task.id}`);
     } catch (e) {
-      const msg = apiErrorMessage(e, t("business.company.tasks.new.error"));
-      setError(msg);
-      toast.error(msg);
-      setSubmitting(false);
+      setError(apiErrorMessage(e, "创建失败"));
+    } finally {
+      setBusy(false);
     }
-  };
+  }
 
   return (
-    <section className="p-6 max-w-2xl space-y-6">
-      <header>
-        <h1 className="font-display text-2xl text-heading">{t("business.company.tasks.new.title")}</h1>
-        <p className="text-sm text-muted mt-1">{t("business.company.tasks.new.subtitle", { company: company.name })}</p>
-      </header>
-
-      <div className="space-y-4">
-        <Field label={t("business.company.tasks.new.field.title")}>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t("business.company.tasks.new.title-placeholder")}
-            className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm text-body focus:border-primary outline-none"
-          />
-        </Field>
-
-        <Field label={t("business.company.tasks.new.field.brief")}>
-          <textarea
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            rows={4}
-            placeholder={t("business.company.tasks.new.brief-placeholder")}
-            className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm text-body focus:border-primary outline-none"
-          />
-        </Field>
-
-        <Field label={t("business.company.tasks.new.field.dept")}>
-          <select
-            value={deptId}
-            onChange={(e) => setDeptId(e.target.value)}
-            className="w-full bg-surface border border-border-solid rounded px-3 py-2 text-sm text-body focus:border-primary outline-none"
-          >
-            {depts.map((d) => (
-              <option key={d.id} value={d.id}>{d.emoji} {d.name} ({d.id})</option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label={t("business.company.tasks.new.field.artifacts")}>
-          <div className="flex flex-wrap gap-2">
-            {ARTIFACT_TYPES.map((a) => (
-              <button
-                key={a.value}
-                type="button"
-                onClick={() => toggleArtifact(a.value)}
-                className={`px-3 py-1.5 rounded text-xs border transition-colors ${
-                  expected.includes(a.value)
-                    ? "bg-primary text-bg border-primary"
-                    : "bg-surface text-body border-border-solid hover:border-primary"
-                }`}
-              >
-                {a.emoji} {t(`artifact.type.${a.value}`)}
-              </button>
-            ))}
-          </div>
-        </Field>
+    <div className="max-w-xl mx-auto p-6 space-y-4">
+      <h1 className="font-display text-lg text-heading">新建任务</h1>
+      <div className="flex gap-2 text-sm">
+        <button type="button" className={kind === "long" ? "text-primary" : "text-muted"} onClick={() => setKind("long")}>长程：先澄清再分步执行</button>
+        <button type="button" className={kind === "scheduled" ? "text-primary" : "text-muted"} onClick={() => setKind("scheduled")}>定时：到点自动跑</button>
       </div>
-
-      {error && (
-        <p className="rounded-md border border-fusion/40 bg-fusion/10 px-3 py-2 text-xs text-fusion" role="alert">
-          {error}
-        </p>
+      <label className="block text-sm">标题
+        <input className="mt-1 w-full bg-surface border border-border-solid rounded px-2 py-1" value={title} onChange={(e) => setTitle(e.target.value)} />
+      </label>
+      <label className="block text-sm">目标
+        <textarea className="mt-1 w-full bg-surface border border-border-solid rounded px-2 py-1" rows={4} value={goal} onChange={(e) => setGoal(e.target.value)} />
+      </label>
+      <label className="block text-sm">主部门
+        <select className="mt-1 w-full bg-surface border border-border-solid rounded px-2 py-1" value={lead} onChange={(e) => setLead(e.target.value)}>
+          {depts.map((d) => <option key={d.id} value={d.id}>{d.name || d.id}</option>)}
+        </select>
+      </label>
+      <div className="flex flex-wrap gap-2 text-xs">
+        {OUTPUTS.map((item) => (
+          <label key={item} className="flex items-center gap-1">
+            <input type="checkbox" checked={outputs.includes(item)} onChange={() => setOutputs(outputs.includes(item) ? outputs.filter((x) => x !== item) : [...outputs, item])} />
+            {item}
+          </label>
+        ))}
+      </div>
+      {kind === "scheduled" && (
+        <div className="space-y-2 text-sm">
+          <label>周期
+            <select className="ms-2 bg-surface border border-border-solid rounded px-2 py-1" value={preset} onChange={(e) => { setPreset(e.target.value); syncCron(e.target.value, time); }}>
+              <option value="daily">每天</option>
+              <option value="weekdays">工作日</option>
+              <option value="weekly">每周一</option>
+              <option value="monthly">每月 1 日</option>
+              <option value="cron">高级 cron</option>
+            </select>
+            <input type="time" className="ms-2 bg-surface border border-border-solid rounded px-2 py-1" value={time} onChange={(e) => { setTime(e.target.value); syncCron(preset, e.target.value); }} />
+          </label>
+          <input className="w-full bg-surface border border-border-solid rounded px-2 py-1 font-mono text-xs" value={cron} onChange={(e) => { setPreset("cron"); setCron(e.target.value); }} />
+          <ul className="text-xs text-muted">{preview.map((t) => <li key={t}>{t}</li>)}</ul>
+        </div>
       )}
-
-      <div className="flex gap-3 pt-4 border-t border-border-solid">
-        <button
-          type="button"
-          onClick={() => navigate(`/business/c/${company.id}/tasks`)}
-          className="rounded-md border border-border-solid px-4 py-2 text-sm text-body hover:border-primary hover:text-primary"
-        >
-          {t("common.cancel")}
-        </button>
-        <button
-          type="button"
-          onClick={submit}
-          disabled={!title.trim() || !deptId || submitting}
-          className="rounded-md bg-primary text-bg px-5 py-2 text-sm font-medium hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {submitting ? t("business.company.tasks.new.submitting") : t("business.company.tasks.new.submit")}
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <div className="text-xs uppercase tracking-widest text-muted mb-1.5">{label}</div>
-      {children}
-    </label>
+      <label className="flex items-center gap-2 text-xs text-muted">
+        <input type="checkbox" checked={skip} onChange={(e) => setSkip(e.target.checked)} />
+        {kind === "long" ? "跳过澄清直接规划" : "首次也澄清"}
+      </label>
+      {error && <p className="text-xs text-fusion">{error}</p>}
+      <button type="button" disabled={busy || !goal.trim()} onClick={() => void submit()} className="rounded bg-primary text-bg px-4 py-2 text-sm disabled:opacity-50">
+        {busy ? "提交中…" : "创建"}
+      </button>
+    </div>
   );
 }

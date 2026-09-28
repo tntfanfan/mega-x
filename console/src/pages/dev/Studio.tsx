@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
@@ -33,6 +33,7 @@ import {
   usePaneResize,
 } from "../../components/studio";
 import { useToast } from "../../components/ui/Toast";
+import { TestWorkspace } from "../../components/dev/TestWorkspace";
 
 type RStatus = "pass" | "warn" | "fail" | "info";
 interface Check { key: string; label: string; status: RStatus; detail?: string }
@@ -117,6 +118,8 @@ function draftCanTry(d: BuilderDraft | null): boolean {
 
 export default function DevStudio() {
   const { deptId } = useParams<{ deptId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const testMode = searchParams.get("mode") === "test";
   const navigate = useNavigate();
   const { t } = useTranslation();
   const toast = useToast();
@@ -732,8 +735,11 @@ export default function DevStudio() {
                     : t("dev.studio.chat.try-disabled")
                 }
                 onClick={() => {
+                  const next = new URLSearchParams(searchParams);
+                  next.set("mode", testMode ? "develop" : "test");
+                  setSearchParams(next);
                   setView("develop");
-                  setChatMode("try");
+                  setChatMode("recruiter");
                 }}
                 className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border-solid disabled:hover:text-body"
               >
@@ -777,8 +783,9 @@ export default function DevStudio() {
           onSubmit={onSubmit}
         />
       ) : (
-        /* 三栏：文件（最左） | 节点图预览（中间） | 聊天（最右） */
-        <div className="flex-1 flex min-h-0">
+        <>
+        {/* 三栏：文件（最左） | 节点图预览（中间） | 聊天（最右）。测试态只隐藏，不卸载。 */}
+        <div className={testMode ? "hidden" : "flex-1 flex min-h-0"}>
           <FilesPanel draft={draft} width={filesWidth} />
           <div
             role="separator"
@@ -818,6 +825,12 @@ export default function DevStudio() {
             onSendToRecruiter={onSendToRecruiter}
           />
         </div>
+        {deptId && (
+          <div className={testMode ? "flex-1 flex min-h-0" : "hidden"}>
+            <TestWorkspace draftId={deptId} />
+          </div>
+        )}
+        </>
       )}
     </div>
   );
