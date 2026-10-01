@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import type { BuilderDraft, DraftFile } from "../../lib/builderFixtures";
 import { EmptyState } from "../ui/EmptyState";
+import { SourceEditorPane } from "../ui/SourceEditorPane";
 
 const STD_DIRS = ["agents", "config", "hooks", "mcp", "skills"] as const;
 type StdDir = (typeof STD_DIRS)[number];
@@ -72,28 +74,33 @@ export function FileView({ file }: { file: DraftFile }) {
   const prefix = (kind: string) => (kind === "add" ? "+ " : kind === "del" ? "- " : "  ");
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 min-w-0 flex flex-col">
       <div className="px-4 py-2 flex items-center justify-between border-b border-border-solid shrink-0">
-        <span className="text-xs font-mono text-muted">{file.name}</span>
-        {file.diff && (
-          <button
-            type="button"
-            onClick={() => setShowDiff((d) => !d)}
-            className="text-[11px] text-primary hover:underline"
-          >
-            {showDiff ? t("dev.studio.file.diff-off") : t("dev.studio.file.diff-on")}
-          </button>
-        )}
+        <span className="min-w-0 flex-1 truncate text-xs font-mono text-muted">{file.name}</span>
+        <div className="ms-3 flex shrink-0 items-center gap-3">
+          <span className="text-[11px] text-muted">{t("source.readonly")}</span>
+          {file.diff && (
+            <button
+              type="button"
+              onClick={() => setShowDiff((d) => !d)}
+              className="text-[11px] text-primary hover:underline"
+            >
+              {showDiff ? t("dev.studio.file.diff-off") : t("dev.studio.file.diff-on")}
+            </button>
+          )}
+        </div>
       </div>
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 min-h-0">
         {showDiff && file.diff ? (
-          <pre className="font-mono text-xs leading-relaxed">
-            {file.diff.map((l, i) => (
-              <div key={i} className={`px-1 ${diffCls(l.kind)}`}>{prefix(l.kind)}{l.text}</div>
-            ))}
-          </pre>
+          <div className="h-full overflow-auto p-4">
+            <pre className="font-mono text-xs leading-relaxed">
+              {file.diff.map((l, i) => (
+                <div key={i} className={`px-1 ${diffCls(l.kind)}`}>{prefix(l.kind)}{l.text}</div>
+              ))}
+            </pre>
+          </div>
         ) : (
-          <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-body">{file.content}</pre>
+          <SourceEditorPane value={file.content || ""} path={file.name} />
         )}
       </div>
     </div>
@@ -102,11 +109,31 @@ export function FileView({ file }: { file: DraftFile }) {
 
 export function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; initialFile?: string }) {
   const { t } = useTranslation();
+  const [params, setParams] = useSearchParams();
   const leadFallback = t("dev.studio.files.lead", { defaultValue: "部长（主 Agent）" });
   const { lead, dirs } = useMemo(() => groupDraftFiles(draft), [draft]);
   const [selected, setSelected] = useState<string | null>(initialFile ?? null);
+  // Older Studio links use ?file=README.md; output previews use the same key.
+  // Migrate source selection to its own key so both views can coexist.
+  const legacyFile = params.get("file");
+  const sourceFile = params.get("source");
+  const outputPanel = params.get("panel") === "outputs" || params.get("panel") === "tasks";
+  useEffect(() => {
+    if (sourceFile || outputPanel || !legacyFile || !draft.files.some((f) => f.name === legacyFile)) return;
+    const next = new URLSearchParams(params);
+    next.set("source", legacyFile);
+    next.delete("file");
+    setParams(next, { replace: true });
+  }, [draft.files, legacyFile, sourceFile, outputPanel, params, setParams]);
+  const selectedName = sourceFile || (!outputPanel && draft.files.some((f) => f.name === legacyFile) ? legacyFile : null) || selected;
+  const selectFile = (name: string) => {
+    setSelected(name);
+    const next = new URLSearchParams(params);
+    next.set("source", name);
+    setParams(next);
+  };
   const file =
-    draft.files.find((f) => f.name === selected)
+    draft.files.find((f) => f.name === selectedName)
     ?? draft.files.find((f) => f.name === "AGENTS.md")
     ?? draft.files[0];
   const leadAgent = draft.agents.find((a) => a.team_role === "orchestrator");
@@ -119,7 +146,7 @@ export function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; ini
 
   return (
     <div className="h-full flex min-h-0">
-      <aside className="w-48 shrink-0 border-e border-border-solid overflow-y-auto py-2">
+      <aside className="w-32 sm:w-48 shrink-0 border-e border-border-solid overflow-y-auto py-2">
         <div className="mb-1.5">
           <div
             className="px-3 py-1 flex items-center gap-1.5 text-[11px] text-muted uppercase tracking-wider truncate"
@@ -132,7 +159,7 @@ export function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; ini
           {lead.length ? lead.map((f) => (
             <FileBtn
               key={f.name} file={f} indent="md" label={f.name}
-              selected={f.name === file?.name} onSelect={setSelected}
+              selected={f.name === file?.name} onSelect={selectFile}
             />
           )) : emptyRow}
         </div>
@@ -154,7 +181,7 @@ export function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; ini
                     <FileBtn
                       key={f.name} file={f} indent="lg"
                       label={f.name.split("/").pop() ?? f.name}
-                      selected={f.name === file?.name} onSelect={setSelected}
+                      selected={f.name === file?.name} onSelect={selectFile}
                     />
                   ))}
                 </div>
@@ -164,7 +191,7 @@ export function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; ini
                 <FileBtn
                   key={f.name} file={f} indent="md"
                   label={f.name.slice(sec.dir.length + 1)}
-                  selected={f.name === file?.name} onSelect={setSelected}
+                  selected={f.name === file?.name} onSelect={selectFile}
                 />
               )) : emptyRow
             )}
@@ -184,15 +211,15 @@ export function FilesExplorer({ draft, initialFile }: { draft: BuilderDraft; ini
   );
 }
 
-export function FilesPanel({ draft, width }: { draft: BuilderDraft; width: number }) {
+export function FilesPanel({ draft, width, title }: { draft: BuilderDraft; width: number | string; title?: string }) {
   const { t } = useTranslation();
   return (
     <aside
       style={{ width }}
-      className="shrink-0 border-e border-border-solid flex flex-col min-h-0 bg-surface/40"
+      className="shrink-0 max-w-full min-w-0 border-e border-border-solid flex flex-col min-h-0 bg-surface/40"
     >
       <div className="px-4 py-2.5 border-b border-border-solid text-xs uppercase tracking-widest text-muted shrink-0">
-        📄 {t("dev.studio.tab.files", { defaultValue: "文件" })}
+        📄 {title || t("dev.studio.tab.files", { defaultValue: "文件" })}
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
         <FilesExplorer draft={draft} />

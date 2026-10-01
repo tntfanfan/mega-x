@@ -55,6 +55,7 @@ export default function ChatView() {
     pendingRefs,
     removePendingRef,
     sending,
+    streamNote,
     canChat,
     selectedDept,
     selectedDeptLabel,
@@ -91,9 +92,11 @@ export default function ChatView() {
     minEnd: 320,
   });
 
+  const tail = turns[turns.length - 1];
+  const tailText = tail && "text" in tail ? tail.text : "";
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [turns.length, sending]);
+  }, [turns.length, sending, tailText]);
 
   // Live tasks for the selected department (right rail + event cards).
   useEffect(() => {
@@ -338,11 +341,11 @@ export default function ChatView() {
                 resuming={resumingTaskId === (turn.role === "local" && "taskId" in turn ? turn.taskId : "")}
               />
             ))}
-            {sending && (
+            {sending && !turns.some((turn) => turn.role === "assistant" && turn.streaming && turn.text) && (
               <ChatWaitingBubble
                 mark={waitingMark(deptDisplay.emoji, deptDisplay.name)}
                 speaker={deptDisplay.name || t("business.company.chat.speaker.agent")}
-                label={waitingLabel}
+                label={streamNote ? `${waitingLabel} · ${streamNote}` : waitingLabel}
               />
             )}
             <div ref={bottomRef} />
@@ -382,7 +385,7 @@ export default function ChatView() {
                 type="button"
                 onClick={() => {
                   sessionStorage.setItem("lgh.taskDraft", JSON.stringify({ goal: draft, deptId }));
-                  navigate(`/business/c/${company.id}/tasks/new?kind=long&dept=${encodeURIComponent(deptId)}`);
+                  navigate(`/business/c/${company.id}/tasks/new?dept=${encodeURIComponent(deptId)}`);
                 }}
                 disabled={sending || !draft.trim() || !deptId || !canChat}
                 className="shrink-0 whitespace-nowrap rounded-md border border-border-solid px-3 py-2 text-sm text-body hover:text-primary hover:border-primary disabled:opacity-50"

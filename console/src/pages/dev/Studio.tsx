@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ArrowLeft, Pencil, X } from "lucide-react";
 
 import { api, apiErrorMessage, type Me } from "../../lib/api";
 import {
@@ -20,12 +21,11 @@ import type {
   BuilderDraft, ChatMsg, SecurityReviewInfo,
 } from "../../lib/builderFixtures";
 import { estCostPerTask } from "../../lib/builderFixtures";
-import { needsDeptSlug, sanitizeDeptShort } from "../../lib/depts";
+import { sanitizeDeptShort } from "../../lib/depts";
 import { RecruiterWs } from "../../lib/recruiterWs";
 import { TryChatWs } from "../../lib/tryChatWs";
 import { SecurityReviewOverlay } from "../../components/SecurityReviewOverlay";
 import {
-  type ChatMode,
   FilesPanel,
   PreviewPane,
   VibeChat,
@@ -54,7 +54,7 @@ const DRAFT_STATE_COLOR: Record<string, string> = {
   publish_failed: "text-fusion",
 };
 
-function computeReadiness(draft: BuilderDraft, t: (k: string) => string): Check[] {
+function computeReadiness(draft: BuilderDraft, t: (k: string, options?: Record<string, string | number>) => string): Check[] {
   const hasOrch = draft.agents.some((a) => a.team_role === "orchestrator");
   const hasWorkers = draft.agents.some((a) => a.team_role !== "orchestrator");
   const hasWorkflow = Boolean(draft.workflow?.steps?.length);
@@ -126,7 +126,6 @@ export default function DevStudio() {
   const [draft, setDraft] = useState<BuilderDraft | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [tryMessages, setTryMessages] = useState<ChatMsg[]>([]);
-  const [chatMode, setChatMode] = useState<ChatMode>("recruiter");
   // develop = 文件/预览/对话；publish = 整页发布（就绪度）
   const [view, setView] = useState<"develop" | "publish">("develop");
   const [userId, setUserId] = useState("user-dev-0001");
@@ -148,6 +147,10 @@ export default function DevStudio() {
   const [renaming, setRenaming] = useState(false);
   const [renameVal, setRenameVal] = useState("");
   const [renameSlug, setRenameSlug] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+  const [renameError, setRenameError] = useState("");
+  const renameDialogRef = useRef<HTMLDialogElement>(null);
+  const renameNameRef = useRef<HTMLInputElement>(null);
   const wsRef = useRef<RecruiterWs | null>(null);
   const renamedDraftRef = useRef<string | null>(null);
   const streamingIdRef = useRef<string | null>(null);
@@ -236,7 +239,6 @@ export default function DevStudio() {
     const cached = draftId ? loadTryChat(draftId) : null;
     setTryMessages(cached?.messages ?? []);
     setTrySessionId(cached?.session_id ?? (draftId ? `try-${draftId}` : undefined));
-    setChatMode(cached?.mode === "try" ? "try" : "recruiter");
     setTryBusy(false);
     setTryReady(false);
     setTryConnectError(null);
@@ -268,9 +270,9 @@ export default function DevStudio() {
     saveTryChat(draftId, {
       session_id: trySessionId || `try-${draftId}`,
       messages: tryMessages,
-      mode: chatMode,
+      mode: testMode ? "try" : "recruiter",
     });
-  }, [draftId, tryMessages, trySessionId, chatMode]);
+  }, [draftId, tryMessages, trySessionId, testMode]);
 
   useEffect(() => {
     if (!draftId) return;
@@ -367,8 +369,17 @@ export default function DevStudio() {
     };
   }, [draftId, userId, navigate, toast]);
 
+  const canTry = draftCanTry(draft);
+
   useEffect(() => {
-    if (!draftId || !userId || chatMode !== "try") return;
+    if (!testMode) {
+      setTryReady(false);
+      setTryBusy(false);
+      setTryToolStatus(null);
+      return;
+    }
+    if (!draftId || !userId || !canTry) return;
+    setTryReady(false);
     const leadLabel = draft
       ? `${draft.emoji || ""} ${draft.name}`.trim()
       : "部长";
@@ -454,7 +465,7 @@ export default function DevStudio() {
       client.close();
       tryWsRef.current = null;
     };
-  }, [draftId, userId, chatMode]);
+  }, [draftId, userId, testMode, canTry]);
 
   const onSend = useCallback((text: string) => {
     const client = wsRef.current;
@@ -469,14 +480,14 @@ export default function DevStudio() {
   }, [toast, t]);
 
   const onCancel = useCallback(() => {
-    if (chatMode === "try") {
+    if (testMode) {
       tryWsRef.current?.cancel();
       setTryBusy(false);
       setTryToolStatus(null);
       return;
     }
     wsRef.current?.cancel();
-  }, [chatMode]);
+  }, [testMode]);
 
   const onTrySend = useCallback((text: string) => {
     const client = tryWsRef.current;
@@ -494,56 +505,73 @@ export default function DevStudio() {
     const prompt = t("dev.studio.chat.fix-prompt", {
       text: snippet.trim().slice(0, 1200),
     });
-    setChatMode("recruiter");
     setComposeSeed(prompt);
-  }, [t]);
+    const next = new URLSearchParams(searchParams);
+    next.set("mode", "develop");
+    next.delete("panel");
+    setSearchParams(next);
+    setView("develop");
+  }, [t, searchParams, setSearchParams]);
 
   const startRename = useCallback(() => {
     if (!draft) return;
     setRenameVal(draft.name);
-    // Prefill slug from current id when still untitled / non-ascii display.
-    const fromId = draft.id.replace(/^dept-/i, "");
-    const prefill = sanitizeDeptShort(draft.name)
-      || (fromId && !/^untitled(?:-\d+)?$/i.test(fromId) ? fromId : "");
+    // Keep the existing English name when only the display name is edited.
+    const fromId = draft.id.replace(/^dept-(?:3rd-)?/i, "");
+    const prefill = /^untitled(?:-\d+)?$/i.test(fromId) ? "" : fromId;
     setRenameSlug(prefill);
+    setRenameError("");
     setRenaming(true);
   }, [draft]);
 
-  const renameNeedsSlug = needsDeptSlug(renameVal);
+  useEffect(() => {
+    const dialog = renameDialogRef.current;
+    if (!dialog) return;
+    if (renaming) {
+      if (!dialog.open) dialog.showModal();
+      renameNameRef.current?.focus();
+      renameNameRef.current?.select();
+    } else if (dialog.open) {
+      dialog.close();
+    }
+  }, [renaming]);
 
   const onRename = useCallback(async () => {
+    if (renameSaving || !draftId) return;
     const name = renameVal.trim();
-    if (!name || !draftId) {
-      setRenaming(false);
+    if (!name) {
+      setRenameError(t("dev.studio.rename-name-required"));
       return;
     }
-    const slug = sanitizeDeptShort(renameSlug || name);
-    if (needsDeptSlug(name) && !slug) {
-      toast.error(t("dev.studio.rename-slug-required"));
+    const slug = sanitizeDeptShort(renameSlug);
+    if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(renameSlug.trim())) {
+      setRenameError(t("dev.studio.rename-slug-required"));
       return;
     }
     const sameName = name === draft?.name;
-    const sameId = !slug || `dept-${slug}` === draftId;
-    if (sameName && sameId) {
+    const sameSlug = slug === draftId.replace(/^dept-(?:3rd-)?/i, "");
+    if (sameName && sameSlug) {
       setRenaming(false);
       return;
     }
-    setRenaming(false);
+    setRenameSaving(true);
+    setRenameError("");
     try {
-      const body: { name: string; slug?: string } = { name };
-      if (slug) body.slug = slug;
-      const d = await api.patch<BuilderDraft>(`/v1/dev/depts/${draftId}`, body);
+      const d = await api.patch<BuilderDraft>(`/v1/dev/depts/${draftId}`, { name, slug });
+      setRenaming(false);
       toast.info(t("dev.studio.renamed"));
       if (d.id !== draftId) {
         // ascii rename also changes the draft id — rebind URL/WS to the new id
-        navigate(`/dev/depts/${d.id}/studio`, { replace: true });
+        navigate(`/dev/depts/${d.id}/studio?${searchParams.toString()}`, { replace: true });
       } else {
         setDraft(d);
       }
     } catch (e) {
-      toast.error(apiErrorMessage(e, t("dev.studio.rename-failed")));
+      setRenameError(apiErrorMessage(e, t("dev.studio.rename-failed")));
+    } finally {
+      setRenameSaving(false);
     }
-  }, [renameVal, renameSlug, draftId, draft?.name, navigate, toast, t]);
+  }, [renameVal, renameSlug, renameSaving, draftId, draft?.name, navigate, searchParams, toast, t]);
 
   const pollReview = useCallback(async () => {
     if (!draftId) return;
@@ -618,87 +646,67 @@ export default function DevStudio() {
     return <section className="container py-10"><p className="text-body text-sm">{t("common.loading")}…</p></section>;
   }
 
+  const englishName = draft.id.replace(/^dept-(?:3rd-)?/i, "");
+  const unnamed = /^untitled(?:-\d+)?$/i.test(englishName);
+  const cellDetail = cellStatus === "running"
+    ? t("dev.studio.cell.running")
+    : cellFailed
+      ? t("dev.studio.cell.failed", { error: cellError || cellStatus })
+      : cellStatus === "provisioning" || cellStatus === "starting"
+        ? t("dev.studio.cell.provisioning")
+        : t("dev.studio.cell.status", { status: cellStatus || "unknown" });
+
   return (
     // 固定高度（非 min-h）：让左右两栏各自内部滚动，页面本身不滚 —— 否则
     // 聊天一长整页跟着滚，右侧预览也会被带着动。
     <div className="h-[calc(100vh-8rem)] flex flex-col overflow-hidden">
-      <header className="border-b border-border-solid bg-surface px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link to="/dev/home" className="text-xs text-muted hover:text-primary shrink-0">{t("dev.studio.back")}</Link>
-          <span className="text-2xl shrink-0">{draft.emoji}</span>
-          <div className="min-w-0">
-            {renaming ? (
-              <div className="flex flex-col gap-1.5">
-                <input
-                  autoFocus
-                  value={renameVal}
-                  onChange={(e) => setRenameVal(e.target.value)}
-                  onBlur={() => {
-                    if (!renameNeedsSlug) onRename();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !renameNeedsSlug) onRename();
-                    if (e.key === "Escape") setRenaming(false);
-                  }}
-                  placeholder={t("dev.studio.rename")}
-                  className="font-display text-lg text-heading bg-surface border border-primary rounded px-2 py-0.5 outline-none w-56"
-                />
-                {renameNeedsSlug && (
-                  <div className="flex flex-col gap-0.5">
-                    <input
-                      value={renameSlug}
-                      onChange={(e) => setRenameSlug(e.target.value)}
-                      onBlur={onRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") onRename();
-                        if (e.key === "Escape") setRenaming(false);
-                      }}
-                      placeholder={t("dev.studio.rename-slug")}
-                      className="font-mono text-xs text-body bg-surface border border-border-solid rounded px-2 py-1 outline-none w-56 focus:border-primary"
-                    />
-                    <span className="text-[10px] text-muted leading-snug max-w-xs">
-                      {t("dev.studio.rename-slug-hint")}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <h1
-                  className="font-display text-lg text-heading truncate cursor-pointer hover:text-primary"
-                  title={t("dev.studio.rename")}
-                  onClick={startRename}
-                >
-                  {draft.name}
-                </h1>
-                <button
-                  type="button"
-                  onClick={startRename}
-                  title={t("dev.studio.rename")}
-                  aria-label={t("dev.studio.rename")}
-                  className="text-xs text-muted hover:text-primary shrink-0"
-                >
-                  ✏️
-                </button>
-              </div>
-            )}
-            <span className={`text-[11px] ${DRAFT_STATE_COLOR[draft.state] ?? "text-muted"}`}>
-              {t(`dev.dept.state.${draft.state}`, { defaultValue: draft.state })}
+      <header data-studio-toolbar className="flex h-12 shrink-0 items-center gap-2 border-b border-border-solid bg-surface px-3 sm:gap-3 sm:px-4">
+        <Link to="/dev/home" title={t("dev.studio.back")} aria-label={t("dev.studio.back")} className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-1 text-xs text-muted hover:bg-surface-2 hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+          <ArrowLeft size={15} className="rtl:rotate-180" aria-hidden />
+          <span className="hidden xl:inline">{t("dev.studio.back-label")}</span>
+        </Link>
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <h1 className="min-w-0">
+            <button type="button" onClick={startRename} title={t("dev.studio.rename")} aria-label={t("dev.studio.rename")}
+              className="group flex max-w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-start hover:bg-surface-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary">
+              <span className="shrink-0 text-lg" aria-hidden>{draft.emoji}</span>
+              <span className="hidden shrink-0 text-[10px] text-muted sm:inline">{t("dev.studio.name-display")}</span>
+              <span title={draft.name} className="max-w-[8rem] truncate font-display text-base text-heading group-hover:text-primary xl:max-w-[16rem]">{draft.name}</span>
+              <span className="h-3.5 shrink-0 border-s border-border-solid" aria-hidden />
+              <span className="shrink-0 text-[10px] text-muted">{t("dev.studio.name-english")}</span>
+              <span dir="ltr" title={unnamed ? t("dev.studio.name-unset") : englishName} className="max-w-[7rem] truncate font-mono text-xs text-body xl:max-w-[13rem]">{unnamed ? t("dev.studio.name-unset") : englishName}</span>
+              <Pencil size={12} className="shrink-0 text-muted group-hover:text-primary" aria-hidden />
+            </button>
+          </h1>
+          <span className={`hidden shrink-0 rounded-full border border-border-solid px-2 py-0.5 text-[11px] lg:inline-flex ${DRAFT_STATE_COLOR[draft.state] ?? "text-muted"}`}>
+            {t(`dev.dept.state.${draft.state}`, { defaultValue: draft.state })}
+          </span>
+          {cellStatus && (
+            <span title={cellDetail} className={`hidden shrink-0 items-center gap-1.5 text-[11px] xl:inline-flex ${cellFailed ? "text-spark-flare" : "text-muted"}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${cellFailed ? "bg-spark-flare" : cellReady ? "bg-spark-mint" : "bg-spark-blue animate-pulse"}`} aria-hidden />
+              {t(cellFailed ? "dev.studio.header.cell-failed" : cellReady ? "dev.studio.header.cell-ready" : "dev.studio.header.cell-starting")}
             </span>
-            {cellStatus && (
-              <span className={`text-[11px] ${cellFailed ? "text-spark-flare" : "text-muted"}`}>
-                {cellStatus === "running"
-                  ? t("dev.studio.cell.running")
-                  : cellFailed
-                    ? t("dev.studio.cell.failed", { error: cellError || cellStatus })
-                    : cellStatus === "provisioning" || cellStatus === "starting"
-                      ? t("dev.studio.cell.provisioning")
-                      : t("dev.studio.cell.status", { status: cellStatus })}
-              </span>
-            )}
-          </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+
+        <nav className="flex shrink-0 items-center gap-1 rounded-lg bg-bg/60 p-1" aria-label={t("dev.studio.test.mode-nav")}>
+          {(["develop", "test"] as const).map((mode) => (
+            <button key={mode} type="button" aria-current={(mode === "test") === testMode ? "page" : undefined}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.set("mode", mode);
+                setSearchParams(next);
+                setView("develop");
+              }}
+              className={`min-h-8 whitespace-nowrap rounded-md px-2 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:px-3 ${
+                (mode === "test") === testMode ? "bg-primary/10 text-primary ring-1 ring-primary/25" : "text-muted hover:bg-surface-2 hover:text-heading"
+              }`}>
+              {t(mode === "test" ? "dev.studio.chat.mode-try" : "dev.studio.chat.mode-recruiter")}
+            </button>
+          ))}
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-2">
           {view === "publish" ? (
             <button
               type="button"
@@ -707,6 +715,10 @@ export default function DevStudio() {
             >
               {t("dev.studio.publish.back")}
             </button>
+          ) : testMode ? (
+            <span className="hidden items-center rounded-md border border-spark-blue/30 bg-spark-blue/5 px-2 py-1 text-[11px] text-spark-blue 2xl:inline-flex">
+              {t("dev.studio.test.sandbox")}
+            </span>
           ) : (
             <>
               <button
@@ -719,36 +731,44 @@ export default function DevStudio() {
               >
                 {t("dev.studio.readiness.title")} {passes}/{scoreTotal}
               </button>
-              <button
-                type="button"
-                onClick={() => toast.info(t("dev.studio.action.stub"))}
-                className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-primary hover:text-primary"
-              >
-                {t("dev.studio.action.fork")}
-              </button>
-              <button
-                type="button"
-                disabled={!draftCanTry(draft)}
-                title={
-                  draftCanTry(draft)
-                    ? t("dev.studio.chat.mode-try-hint")
-                    : t("dev.studio.chat.try-disabled")
-                }
-                onClick={() => {
-                  const next = new URLSearchParams(searchParams);
-                  next.set("mode", testMode ? "develop" : "test");
-                  setSearchParams(next);
-                  setView("develop");
-                  setChatMode("recruiter");
-                }}
-                className="rounded-md border border-border-solid px-3 py-1.5 text-xs text-body hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border-solid disabled:hover:text-body"
-              >
-                {t("dev.studio.action.testdrive")}
-              </button>
             </>
           )}
         </div>
       </header>
+
+      <dialog ref={renameDialogRef} aria-labelledby="studio-rename-title" aria-describedby="studio-rename-hint"
+        onCancel={(event) => { if (renameSaving) event.preventDefault(); else setRenaming(false); }}
+        onClose={() => setRenaming(false)}
+        className="m-auto w-[calc(100vw_-_2rem)] max-w-sm rounded-xl border border-border-solid bg-surface p-5 text-body shadow-2xl backdrop:bg-black/60">
+        <form noValidate onSubmit={(event) => { event.preventDefault(); void onRename(); }}>
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <h2 id="studio-rename-title" className="font-display text-lg text-heading">{t("dev.studio.rename-title")}</h2>
+            <button type="button" disabled={renameSaving} onClick={() => setRenaming(false)} aria-label={t("common.cancel")}
+              className="rounded p-1 text-muted hover:bg-surface-2 hover:text-heading disabled:opacity-50"><X size={18} /></button>
+          </div>
+          <fieldset disabled={renameSaving} className="space-y-4">
+            <label className="block text-sm">{t("dev.studio.name-display")}
+              <input ref={renameNameRef} autoFocus required value={renameVal}
+                onChange={(event) => { setRenameVal(event.target.value); setRenameError(""); }}
+                className="mt-1.5 w-full rounded-md border border-border-solid bg-bg px-3 py-2 text-heading outline-none focus:border-primary" />
+            </label>
+            <label className="block text-sm">{t("dev.studio.name-english")}
+              <input required dir="ltr" value={renameSlug} autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="baowen"
+                onChange={(event) => { setRenameSlug(event.target.value); setRenameError(""); }}
+                aria-describedby="studio-rename-hint"
+                className="mt-1.5 w-full rounded-md border border-border-solid bg-bg px-3 py-2 font-mono text-heading outline-none focus:border-primary" />
+            </label>
+          </fieldset>
+          <p id="studio-rename-hint" className="mt-2 text-xs leading-relaxed text-muted">{t("dev.studio.rename-hint")}</p>
+          {renameError && <p role="alert" className="mt-3 text-sm text-fusion">{renameError}</p>}
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" disabled={renameSaving} onClick={() => setRenaming(false)}
+              className="min-h-9 rounded-md border border-border-solid px-3 text-sm hover:bg-surface-2 disabled:opacity-50">{t("common.cancel")}</button>
+            <button type="submit" disabled={renameSaving || !renameVal.trim() || !renameSlug.trim()}
+              className="min-h-9 rounded-md bg-primary px-4 text-sm font-medium text-bg hover:opacity-90 disabled:opacity-50">{t(renameSaving ? "dev.studio.rename-saving" : "dev.studio.rename-save")}</button>
+          </div>
+        </form>
+      </dialog>
 
       {(reviewing || (liveReview && ["failed", "error", "stale", "passed"].includes(liveReview.status))) && (
         <SecurityReviewOverlay
@@ -759,7 +779,9 @@ export default function DevStudio() {
             const { notice, prompt } = buildReviewRemediation(sr, t);
             setLiveReview(null);
             setView("develop");
-            setChatMode("recruiter");
+            const next = new URLSearchParams(searchParams);
+            next.set("mode", "develop");
+            setSearchParams(next);
             if (notice) {
               setMessages((cur) => [
                 ...cur,
@@ -784,7 +806,7 @@ export default function DevStudio() {
         />
       ) : (
         <>
-        {/* 三栏：文件（最左） | 节点图预览（中间） | 聊天（最右）。测试态只隐藏，不卸载。 */}
+        {/* 开发：源码、画布、开发对话。切模式时保留开发输入。 */}
         <div className={testMode ? "hidden" : "flex-1 flex min-h-0"}>
           <FilesPanel draft={draft} width={filesWidth} />
           <div
@@ -804,30 +826,35 @@ export default function DevStudio() {
           />
           <VibeChat
             width={chatWidth}
-            mode={chatMode}
-            onModeChange={setChatMode}
-            canTry={draftCanTry(draft) && (chatMode !== "try" || tryReady)}
-            tryDisabledReason={
-              tryConnectError
-                ? tryConnectError
-                : chatMode === "try" && !tryReady
-                  ? t("dev.studio.chat.try-connecting")
-                  : t("dev.studio.chat.try-disabled")
-            }
+            mode="recruiter"
+            onModeChange={() => {}}
+            showModeSwitch={false}
+            canTry={false}
+            tryDisabledReason={t("dev.studio.chat.try-disabled")}
             deptLabel={draft ? `${draft.emoji || ""} ${draft.name}`.trim() : t("dev.studio.chat.mode-try")}
-            messages={chatMode === "try" ? tryMessages : messages}
-            onSend={chatMode === "try" ? onTrySend : onSend}
+            messages={messages}
+            onSend={onSend}
             onCancel={onCancel}
-            busy={chatMode === "try" ? tryBusy : busy}
-            toolStatus={chatMode === "try" ? tryToolStatus : toolStatus}
-            composeSeed={chatMode === "recruiter" ? composeSeed : null}
+            busy={busy}
+            toolStatus={toolStatus}
+            composeSeed={composeSeed}
             onComposeSeedConsumed={() => setComposeSeed(null)}
             onSendToRecruiter={onSendToRecruiter}
           />
         </div>
-        {deptId && (
-          <div className={testMode ? "flex-1 flex min-h-0" : "hidden"}>
-            <TestWorkspace draftId={deptId} />
+        {testMode && (
+          <div className="flex-1 flex min-h-0">
+            <TestWorkspace
+              draft={draft}
+              messages={tryMessages}
+              onSend={onTrySend}
+              onCancel={onCancel}
+              onSendToRecruiter={onSendToRecruiter}
+              busy={tryBusy}
+              ready={canTry && tryReady}
+              connectError={canTry ? tryConnectError : t("dev.studio.chat.try-disabled")}
+              toolStatus={tryToolStatus}
+            />
           </div>
         )}
         </>

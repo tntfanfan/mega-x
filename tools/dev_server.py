@@ -24,10 +24,12 @@ If a proxy target is down, the response is a 502 with a clear hint
 which sibling process needs attention.
 """
 import http.server
+import socket
 import socketserver
 import sys
 import signal
 import os
+import threading
 import urllib.request
 import urllib.error
 from urllib.parse import urlsplit
@@ -89,12 +91,94 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
         return None
 
     def _do_request(self):
+        if (self.headers.get("Upgrade") or "").lower() == "websocket":
+            self._proxy_websocket()
+            return
         tgt = self._proxy_target()
         if tgt is None:
             # Static file
             return super().do_GET() if self.command == "GET" else super().do_HEAD()
         target_base, upstream = tgt
         self._proxy(target_base, upstream)
+
+    def _proxy_websocket(self) -> None:
+        """Byte tunnel so /v1 chat sockets and the Vite HMR socket stay live.
+
+        urllib cannot do the Upgrade handshake, and stripping the Upgrade
+        header made every OpenClaw stream look like a failed GET.
+        """
+        tgt = self._proxy_target()
+        if tgt is None:
+            self.send_error(404, "no websocket upstream for this path")
+            return
+        target_base, upstream_label = tgt
+        parsed = urlsplit(target_base)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        try:
+            upstream = socket.create_connection((host, port), timeout=10)
+        except OSError as exc:
+            self.log_error(f"websocket upstream {upstream_label} down: {exc}")
+            self.send_error(502, f"websocket upstream {upstream_label} not reachable")
+            return
+        lines = [f"{self.command} {self.path} HTTP/1.1"]
+        saw_host = False
+        for key, value in self.headers.items():
+            if key.lower() == "host":
+                saw_host = True
+                lines.append(f"Host: {host}:{port}")
+            else:
+                lines.append(f"{key}: {value}")
+        if not saw_host:
+            lines.append(f"Host: {host}:{port}")
+        try:
+            upstream.sendall(("\r\n".join(lines) + "\r\n\r\n").encode("iso-8859-1"))
+            buf = b""
+            while b"\r\n\r\n" not in buf:
+                chunk = upstream.recv(4096)
+                if not chunk:
+                    break
+                buf += chunk
+            if b"\r\n\r\n" not in buf:
+                raise OSError("upstream closed before the websocket handshake")
+            head, rest = buf.split(b"\r\n\r\n", 1)
+            self.connection.sendall(head + b"\r\n\r\n" + rest)
+        except OSError as exc:
+            self.log_error(f"websocket handshake to {upstream_label} failed: {exc}")
+            try:
+                upstream.close()
+            except OSError:
+                pass
+            self.send_error(502, "websocket handshake failed")
+            return
+
+        self.close_connection = True
+
+        def pump(src: socket.socket, dst: socket.socket) -> None:
+            try:
+                while True:
+                    data = src.recv(65536)
+                    if not data:
+                        break
+                    dst.sendall(data)
+            except OSError:
+                pass
+            try:
+                dst.shutdown(socket.SHUT_WR)
+            except OSError:
+                pass
+
+        client = self.connection
+        forward = threading.Thread(target=pump, args=(client, upstream), daemon=True)
+        backward = threading.Thread(target=pump, args=(upstream, client), daemon=True)
+        forward.start()
+        backward.start()
+        forward.join()
+        backward.join()
+        try:
+            upstream.close()
+        except OSError:
+            pass
 
     def do_GET(self):
         self._do_request()

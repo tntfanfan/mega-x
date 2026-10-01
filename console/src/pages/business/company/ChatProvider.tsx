@@ -29,6 +29,7 @@ import {
 } from "../../../lib/chatRefs";
 import { resolveDeptDisplay } from "../../../lib/depts";
 import { extractTryReply } from "../../../lib/tryChatReply";
+import { CompanyChatWs } from "../../../lib/companyChatWs";
 import { useToast } from "../../../components/ui/Toast";
 
 export { resolveDeptDisplay };
@@ -43,6 +44,8 @@ export type ChatTurn =
       label?: string;
       refs?: ChatRef[];
       pending?: boolean;
+      streamKey?: string;
+      streaming?: boolean;
     }
   | {
       role: "local";
@@ -104,6 +107,7 @@ type ChatContextValue = {
     opts?: { draft?: string },
   ) => void;
   sending: boolean;
+  streamNote: string | null;
   canChat: boolean;
   selectedDept: DeptCatalogItem | undefined;
   selectedDeptLabel: string;
@@ -249,7 +253,11 @@ export function ChatProvider({
   const [deptsLoading, setDeptsLoading] = useState(true);
   const [deptId, setDeptIdState] = useState(company.dept_ids[0] ?? "");
   const [sending, setSending] = useState(false);
+  const [streamNote, setStreamNote] = useState<string | null>(null);
   const [resumingTaskId, setResumingTaskId] = useState<string | null>(null);
+  const wsRef = useRef<CompanyChatWs | null>(null);
+  const streamActive = useRef(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const storeRef = useRef<ChatStore>({});
   const [, bump] = useState(0);
@@ -279,6 +287,67 @@ export function ChatProvider({
       persist({ ...prev, [activeDept]: nextBucket });
     },
     [company.id, persist],
+  );
+
+  const liveWrite = useCallback(
+    (activeDept: string, patch: (cur: DeptChatBucket) => DeptChatBucket) => {
+      if (!activeDept) return;
+      const prev = storeRef.current[company.id] ?? {};
+      const cur = prev[activeDept] ?? emptyBucket();
+      storeRef.current[company.id] = { ...prev, [activeDept]: patch(cur) };
+      rerender();
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        saveCompanyMap(company.id, storeRef.current[company.id] ?? {});
+      }, 400);
+    },
+    [company.id, rerender],
+  );
+
+  const touchStream = useCallback(
+    (activeDept: string, key: string, label: string, text: string, mode: "start" | "append" | "end" | "media") => {
+      liveWrite(activeDept, (cur) => {
+        const idx = cur.turns.findIndex(
+          (t) => t.role === "assistant" && t.streamKey === key,
+        );
+        if (mode === "end" && idx === -1) return cur;
+        if (idx === -1) {
+          return {
+            ...cur,
+            turns: [
+              ...cur.turns,
+              {
+                role: "assistant" as const,
+                text: mode === "append" ? text : "",
+                label,
+                streamKey: key,
+                streaming: mode !== "end",
+                media: mode === "media" && text ? [text] : undefined,
+              },
+            ],
+          };
+        }
+        return {
+          ...cur,
+          turns: cur.turns.map((t, i) => {
+            if (i !== idx || t.role !== "assistant") return t;
+            if (mode === "end") return { ...t, streaming: false };
+            if (mode === "media") {
+              const media = t.media ? [...t.media] : [];
+              if (text && !media.includes(text)) media.push(text);
+              return { ...t, media, streaming: true };
+            }
+            return {
+              ...t,
+              text: t.text + text,
+              label: label || t.label,
+              streaming: true,
+            };
+          }),
+        };
+      });
+    },
+    [liveWrite],
   );
 
   const setDeptId = useCallback((id: string) => {
@@ -437,6 +506,50 @@ export function ChatProvider({
 
   const canChat = company.state === "running" || company.state === "provisioning";
 
+  useEffect(() => {
+    if (company.state !== "running") return;
+    const client = new CompanyChatWs(`/v1/companies/${company.id}/chat/ws`, {
+      onAccepted: (dept, sid) => {
+        if (!dept || !sid) return;
+        updateBucket(dept, (cur) => ({ ...cur, sessionId: sid || cur.sessionId }));
+      },
+      onStart: (dept, key, _source, label) => {
+        touchStream(dept, key, label, "", "start");
+      },
+      onDelta: (dept, key, _source, label, text) => {
+        touchStream(dept, key, label, text, "append");
+      },
+      onTool: (_dept, _key, name) => {
+        if (name && name !== "sessions_yield") setStreamNote(name);
+      },
+      onMedia: (dept, key, url) => {
+        touchStream(dept, key, "", url, "media");
+      },
+      onEnd: (dept, key) => {
+        touchStream(dept, key, "", "", "end");
+      },
+      onIdle: () => {
+        streamActive.current = false;
+        setSending(false);
+        setStreamNote(null);
+        saveCompanyMap(company.id, storeRef.current[company.id] ?? {});
+      },
+      onError: (message) => {
+        if (!streamActive.current) return;
+        streamActive.current = false;
+        setSending(false);
+        setStreamNote(null);
+        toast.error(message);
+      },
+    });
+    wsRef.current = client;
+    client.connect();
+    return () => {
+      client.close();
+      if (wsRef.current === client) wsRef.current = null;
+    };
+  }, [company.id, company.state, toast, touchStream, updateBucket]);
+
   // A dept lead that delegates answers with a progress line, then posts the
   // real deliverable minutes later. Poll for it so the chat doesn't look dead.
   const waitForPendingReply = useCallback(
@@ -495,6 +608,17 @@ export function ChatProvider({
         },
       ],
     }));
+    if (wsRef.current?.ready) {
+      streamActive.current = true;
+      wsRef.current.sendPrompt({
+        message: msg,
+        dept_id: activeDept,
+        session_id: sessionId,
+        label: assistantLabel,
+        refs: refs.length ? refsForApi(refs) : undefined,
+      });
+      return;
+    }
     try {
       const res = await api.post<{
         ok: boolean;
@@ -674,6 +798,7 @@ export function ChatProvider({
       clearPendingRefs,
       bringToChat,
       sending,
+      streamNote,
       canChat,
       selectedDept,
       selectedDeptLabel,
@@ -702,6 +827,7 @@ export function ChatProvider({
       clearPendingRefs,
       bringToChat,
       sending,
+      streamNote,
       canChat,
       selectedDept,
       selectedDeptLabel,

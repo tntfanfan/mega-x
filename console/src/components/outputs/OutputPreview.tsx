@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Markdown } from "../ui/Markdown";
+import { SourceEditorPane } from "../ui/SourceEditorPane";
 import { fetchMeta, rawUrl, requestPreviewUrl, type OutputFile, type OutputMeta } from "../../lib/outputs";
 import type { WorkspaceScope } from "../../lib/workspaceScope";
 
@@ -29,9 +30,11 @@ function TableView({ text }: { text: string }) {
 export function OutputPreview({
   scope,
   file,
+  view = "preview",
 }: {
   scope: WorkspaceScope;
   file: OutputFile | null;
+  view?: "preview" | "source";
 }) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
@@ -78,10 +81,13 @@ export function OutputPreview({
   const src = rawUrl(scope, file.path);
   if (textLoading) return <p className="p-4 text-xs text-muted">{t("common.loading")}…</p>;
   if (textError) return <p className="p-4 text-xs text-muted">{t("outputs.preview-error")}</p>;
-  if (file.kind === "markdown") return <article className="mx-auto max-w-3xl min-w-0 p-4 text-body"><Markdown text={text} variant="article" /></article>;
-  if (file.kind === "table") return <TableView text={text} />;
+  if (file.kind === "markdown" || file.kind === "table") {
+    return view === "source" ? <SourceEditorPane value={text} path={file.path} />
+      : file.kind === "table" ? <TableView text={text} />
+        : <article className="mx-auto max-w-3xl min-w-0 p-4 text-body"><Markdown text={text} variant="article" /></article>;
+  }
   if (file.kind === "json" || file.kind === "yaml" || file.kind === "text" || file.kind === "code") {
-    return <pre className="whitespace-pre-wrap break-words p-4 text-xs leading-relaxed text-body">{text}</pre>;
+    return <SourceEditorPane value={text} path={file.path} />;
   }
   if (file.kind === "image") return <div className="flex h-full items-center justify-center p-4"><img src={src} alt={file.name} className="max-h-full max-w-full rounded-md object-contain" /></div>;
   if (file.kind === "video") return <div className="flex h-full items-center justify-center p-4"><video src={src} controls preload="metadata" className="max-h-full max-w-full rounded-md" /></div>;

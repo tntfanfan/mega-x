@@ -12,7 +12,7 @@ export function VibeChat({
   width, mode, onModeChange, canTry, tryDisabledReason, deptLabel,
   messages, onSend, onCancel, busy, toolStatus,
   composeSeed, onComposeSeedConsumed, onSendToRecruiter,
-  recruiterEmptyKey,
+  recruiterEmptyKey, showModeSwitch = true,
 }: {
   width: number;
   mode: ChatMode;
@@ -29,6 +29,7 @@ export function VibeChat({
   onComposeSeedConsumed?: () => void;
   onSendToRecruiter?: (snippet: string) => void;
   recruiterEmptyKey?: string;
+  showModeSwitch?: boolean;
 }) {
   const { t } = useTranslation();
   const [inputs, setInputs] = useState<Record<ChatMode, string>>({
@@ -88,7 +89,7 @@ export function VibeChat({
       className="shrink-0 border-s border-border-solid flex flex-col min-h-0 bg-surface/40"
     >
       <div className="px-3 py-2 border-b border-border-solid shrink-0 flex items-center gap-2">
-        <div className="inline-flex rounded-md border border-border-solid p-0.5 text-[11px]">
+        {showModeSwitch ? <div className="inline-flex rounded-md border border-border-solid p-0.5 text-[11px]">
           <button
             type="button"
             onClick={() => onModeChange("recruiter")}
@@ -116,28 +117,27 @@ export function VibeChat({
           >
             {t("dev.studio.chat.mode-try")}
           </button>
-        </div>
+        </div> : <span className="text-xs font-medium text-heading">{recruiterLabel}</span>}
         {busy && (
           <span className="ms-auto">
             <TypingDots label={waitingLabel} />
           </span>
         )}
       </div>
-      {isTry ? (
+      {isTry && (
         <div className="px-4 py-1.5 border-b border-border-solid text-[11px] text-muted shrink-0">
           {t("dev.studio.chat.try-banner")}
         </div>
-      ) : (
-        <div className="px-4 py-1.5 border-b border-border-solid text-[11px] text-muted shrink-0">
-          {t("dev.studio.chat.recruiter-banner")}
-        </div>
       )}
       <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3">
-        {messages.length === 0 && !busy && (
+        {messages.length === 0 && !busy && isTry && (
           <p className="text-[11px] text-muted leading-relaxed">
-            {isTry
-              ? t("dev.studio.chat.try-empty")
-              : t(recruiterEmptyKey || "dev.studio.chat.recruiter-empty")}
+            {t("dev.studio.chat.try-empty")}
+          </p>
+        )}
+        {messages.length === 0 && !busy && !isTry && recruiterEmptyKey && (
+          <p className="text-[11px] text-muted leading-relaxed">
+            {t(recruiterEmptyKey)}
           </p>
         )}
         {messages.map((m) => {
