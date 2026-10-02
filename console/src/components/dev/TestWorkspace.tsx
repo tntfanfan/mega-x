@@ -230,6 +230,10 @@ function TestChat({ draft, messages, onSend, onCancel,
   const { draft: chatDraft, setText: setInput, removeReference, toggleReferencePin, referenceOutput, focusToken, beginSubmission } = useOutputInteractions();
   const sessionOptions = sessions.some(session => session.session_id === sessionId) ? sessions : [{ session_id: sessionId }, ...sessions];
   const input = chatDraft.text;
+  const submittedMessage = messages.find(message => message.clientMessageId === chatDraft.submission?.id);
+  // Unknown delivery keeps the draft for a safe retry, but must not lock the
+  // composer forever after the connection and current turn have recovered.
+  const awaitingReceipt = !!chatDraft.submission && submittedMessage?.status !== "delivery_unknown";
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const [mention, setMention] = useState<MentionQuery | null>(null);
@@ -251,12 +255,13 @@ function TestChat({ draft, messages, onSend, onCancel,
   };
   const submit = () => {
     const text = input.trim() || (chatDraft.refs.length ? t("outputs.refs.default-message") : "");
-    if (!text || !ready || busy || chatDraft.submission) return;
+    if (!text || !ready || busy || awaitingReceipt) return;
     const keys = JSON.stringify(chatDraft.refs.map(refKey).sort());
-    const failed = [...messages].reverse().find(m => m.status === "failed" && m.text === text &&
+    const previous = [...messages].reverse().find(m => m.clientMessageId &&
+      (m.status === "failed" || m.status === "delivery_unknown") && m.text === text &&
       JSON.stringify((m.refs || []).map(refKey).sort()) === keys);
-    const id = failed?.clientMessageId || messageId();
-    const message = { clientMessageId: id, text, refs: chatDraft.refs, retry: !!failed };
+    const id = previous?.clientMessageId || messageId();
+    const message = { clientMessageId: id, text, refs: chatDraft.refs, retry: !!previous };
     if (onSend(message)) beginSubmission(message);
   };
 
@@ -299,7 +304,7 @@ function TestChat({ draft, messages, onSend, onCancel,
                 </> : <OutputAwareMarkdown text={message.text} refs={message.refs} user />}
                 {!!message.refs?.length && <div className="mt-2 flex flex-wrap gap-1.5">{message.refs.map(ref => <OutputRefChip key={refKey(ref)} refItem={ref}
                   showParent={message.refs.filter(item => item.label === ref.label).length > 1} />)}</div>}
-                {message.status && message.status !== "accepted" && message.status !== "delivery_unknown" && <div className="mt-1 text-[11px] text-muted" role="status">
+                {message.status && message.status !== "accepted" && <div className="mt-1 text-[11px] text-muted" role="status">
                   {t(`outputs.refs.status-${message.status}`)}
                 </div>}
               </div>
@@ -351,7 +356,7 @@ function TestChat({ draft, messages, onSend, onCancel,
             className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-border-solid text-body transition-colors hover:text-fusion">
             <Square size={14} aria-hidden />
           </button>
-            : <button type="button" disabled={!ready || (!input.trim() && !chatDraft.refs.length) || !!chatDraft.submission} onClick={submit}
+            : <button type="button" disabled={!ready || (!input.trim() && !chatDraft.refs.length) || awaitingReceipt} onClick={submit}
               aria-label={t("dev.studio.chat.send")} title={t("dev.studio.chat.send")}
               className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-bg transition-opacity hover:opacity-90 disabled:opacity-30">
               <ArrowUp size={18} aria-hidden />

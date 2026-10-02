@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Clock3, Pause, Plus, Search, Square } from "lucide-react";
+import { ArrowLeft, Pause, Plus, Search, Square } from "lucide-react";
 import { api, apiErrorMessage } from "../../lib/api";
 import type { WorkspaceScope } from "../../lib/workspaceScope";
-import { describeSchedule, formatTaskTime, mergeTaskEvents, outputTaskForContext, planSteps, preparationState, scheduleExecutionPolicy, taskDisplayState, taskIsLive, taskListState, type Run, type Schedule, type TaskEvent, type TaskRecord } from "../../lib/tasks";
+import { mergeTaskEvents, outputTaskForContext, planSteps, preparationState, scheduleExecutionPolicy, taskDisplayState, taskIsLive, type Run, type Schedule, type TaskEvent, type TaskRecord } from "../../lib/tasks";
 import { usePoll } from "../../hooks/usePoll";
 import { useTaskEvents } from "../../hooks/useTaskEvents";
 import { useHorizontalSplit } from "../../hooks/useHorizontalSplit";
@@ -15,13 +15,13 @@ import { postTaskCommand, patchTaskCommand } from "../../lib/taskCommands";
 import { TaskActivation } from "./TaskActivation";
 import { defaultSchedule, ScheduleFields } from "./ScheduleFields";
 import { ClarificationPanel, PlanReview, RunHistory, RunTimeline } from "./TaskPanels";
-import { TaskActivity, TaskStatus, WorkingIndicator } from "./TaskActivity";
+import { TaskActivity, TaskScheduleStatus, TaskStatus, WorkingIndicator } from "./TaskActivity";
 import { DeleteTaskButton } from "./DeleteTaskButton";
 
 const button = "min-h-9 rounded-lg border border-border-solid px-3 py-2 text-sm text-body hover:border-primary disabled:opacity-50";
 const primary = "min-h-9 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-bg disabled:opacity-50";
 const quiet = "inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded px-2 text-xs text-muted hover:bg-surface-2 hover:text-heading disabled:opacity-50";
-const active = (task: TaskRecord) => taskListState(task) === "running";
+const active = (task: TaskRecord) => taskIsLive(taskDisplayState(task)) || Boolean(task.schedule?.enabled);
 
 export function WorkspaceTasks({ scope, onCreate, className, showOutputs = true }: { scope: WorkspaceScope; onCreate?: () => void; className?: string; showOutputs?: boolean }) {
   const { t } = useTranslation();
@@ -105,7 +105,7 @@ export function WorkspaceTasks({ scope, onCreate, className, showOutputs = true 
           : <div className="p-5">
             <div className="relative mb-4"><Search size={15} aria-hidden className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted" /><input type="search" aria-label="搜索任务" placeholder="搜索任务" value={query} onChange={e => setQuery(e.target.value)} className="min-h-10 w-full rounded-lg border border-border-solid bg-surface/40 py-2 pe-3 ps-9 text-sm focus:border-primary/60" /></div>
             {loading ? <WorkingIndicator label="加载任务" /> : items.length === 0 ? <p className="py-8 text-center text-sm text-muted">暂无任务</p> : filtered.length === 0 ? <p className="py-8 text-center text-sm text-muted">没有找到任务</p> : <ul className="divide-y divide-border-solid">{filtered.map(task => <li key={task.id} className="flex min-w-0 items-center gap-1 py-1">
-              <button type="button" onClick={() => select(task)} className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-3 text-start hover:bg-surface-2"><span className="min-w-0 flex-1 break-words text-sm text-heading">{task.title}</span><TaskStatus task={task} /></button>
+              <button type="button" onClick={() => select(task)} className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-3 text-start hover:bg-surface-2"><span className="min-w-0 flex-1 space-y-1 break-words"><span className="block text-sm text-heading">{task.title}</span><TaskScheduleStatus task={task} /></span><TaskStatus task={task} /></button>
               <DeleteTaskButton base={scope.base} task={task} onDeleted={deleted} />
             </li>)}</ul>}
           </div>}
@@ -176,8 +176,7 @@ function TaskDetail({ scope, task, events, onChange, onDeleted, onOpenFile, init
     {run && <RunTimeline run={{ ...run, events: mergeTaskEvents(run.events, task.events?.filter(event => event.run_id === run.id), events.filter(event => event.run_id === run.id)) }} onOpenFile={onOpenFile} />}
     {historyId && <button type="button" className={quiet} onClick={() => setHistoryId("")}>返回当前执行</button>}
     {ready && <section className="space-y-3 border-t border-border-solid pt-4">
-      {task.schedule?.mode === "scheduled" && <p className="flex items-center gap-2 text-xs text-muted"><Clock3 size={13} aria-hidden />{describeSchedule(task.schedule)}{task.schedule.enabled ? ` · 下次 ${formatTaskTime(task.schedule.next_run_at, task.schedule.tz)}` : " · 已暂停"}</p>}
-      {task.schedule?.block_reason && <p className="text-xs text-fusion">定时已暂停，请检查执行记录</p>}
+      <TaskScheduleStatus task={task} />
       <div className="flex flex-wrap gap-2"><button type="button" disabled={busy || blocked} className={primary} onClick={() => void action(() => postTaskCommand(`${base}/runs`, {}))}>{current ? "重新执行" : "执行"}</button><button type="button" disabled={busy} className={button} onClick={() => { setSchedule(task.schedule?.type ? task.schedule : defaultSchedule); setEditing(!editing); }}>定时</button>{task.schedule?.mode !== "immediate" && task.schedule && <button type="button" disabled={busy} className={quiet} onClick={() => void action(() => patchTaskCommand(`${base}/schedule`, { enabled: !task.schedule?.enabled, revision: task.revision, schedule_revision: task.schedule?.revision }))}>{task.schedule.enabled ? "暂停定时" : "开启定时"}</button>}</div>
       {editing && <div className="space-y-3 rounded-lg border border-border-solid p-4"><ScheduleFields base={scope.base} value={schedule} onChange={setSchedule} onValidity={setValidSchedule} /><label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={schedule.enabled ?? task.schedule?.enabled ?? false} onChange={e => setSchedule(value => ({ ...value, enabled: e.target.checked }))} />开启定时</label><div className="flex gap-2"><button type="button" disabled={busy || !validSchedule} className={primary} onClick={() => void action(async () => { await patchTaskCommand(`${base}/schedule`, { schedule: { ...schedule, mode: "scheduled", enabled: schedule.enabled ?? task.schedule?.enabled ?? false, ...scheduleExecutionPolicy }, revision: task.revision, schedule_revision: task.schedule?.revision }); setEditing(false); })}>保存</button><button type="button" className={quiet} onClick={() => setEditing(false)}>取消</button></div></div>}
     </section>}

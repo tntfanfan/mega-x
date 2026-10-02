@@ -217,12 +217,30 @@ export function taskDisplayState(task: TaskRecord): string {
   return task.current_run?.state || task.run?.state || task.last_run?.state || String(task.state);
 }
 
-/** Three user-facing states; preparation and execution keep their own controls. */
+export function taskStatusLabel(task: TaskRecord): string {
+  const state = taskDisplayState(task);
+  if (task.schedule?.enabled && ["ready", "active", "pending"].includes(state)) return "等待定时执行";
+  if (task.schedule?.enabled && ["done", "review", "skipped"].includes(state)) return "等待下轮执行";
+  return taskStateLabel(state);
+}
+
+export function taskScheduleLabel(task: TaskRecord): string | null {
+  const schedule = task.schedule;
+  if (!schedule || schedule.mode === "immediate" || schedule.mode !== "scheduled" && !schedule.type && !schedule.preset) return null;
+  const frequency = describeSchedule(schedule);
+  if (schedule.block_reason) {
+    const reason = { consecutive_failures: "连续失败 3 次", max_runs: "已达执行次数上限", end_at: "已到结束时间" }[schedule.block_reason];
+    return `${frequency} · 定时已暂停${reason ? ` · ${reason}` : ""}`;
+  }
+  if (!schedule.enabled) return `${frequency} · ${schedule.last_fired_at && !schedule.next_run_at ? "定时已结束" : "定时已暂停"}`;
+  return `${frequency} · 下次执行：${schedule.next_run_at ? formatTaskTime(schedule.next_run_at, schedule.tz) : "待更新"}`;
+}
+
+/** Used for activity styling and controls; waiting for a timer is idle. */
 export function taskListState(task: TaskRecord): "pending" | "running" | "done" {
   const state = taskDisplayState(task);
   if (["clarifying", "planning", "queued", "running", "verifying", "in_progress"].includes(state)) return "running";
   if (["draft", "awaiting_input", "plan_review", "schedule_setup", "waiting_input", "failed", "interrupted", "paused", "cancelled", "blocked"].includes(state)) return "pending";
-  if (task.schedule?.enabled || state === "active" || state === "pending") return "running";
   if (state === "done" || state === "review" || state === "archived" && task.last_run?.state === "done") return "done";
   return "pending";
 }

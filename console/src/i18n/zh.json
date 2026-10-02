@@ -26,6 +26,7 @@
   "outputs.refs.count": "已引用 {{count}} 个产出物",
   "outputs.refs.default-message": "请查看这些产出物。",
   "outputs.refs.status-sending": "发送中…",
+  "outputs.refs.status-delivery_unknown": "发送状态待确认，草稿已保留，可重试。",
   "outputs.refs.status-failed": "发送失败，草稿已保留，可修正后重发。",
   "outputs.refs.unsupported": "当前环境尚不支持产出物引用，引用草稿已保留。",
   "business.company.chat.ref.output": "文件",

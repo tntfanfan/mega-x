@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { LoaderCircle } from "lucide-react";
-import { mergeTaskEvents, preparationState, taskListState, type TaskEvent, type TaskRecord } from "../../lib/tasks";
+import { Clock3, LoaderCircle } from "lucide-react";
+import { mergeTaskEvents, preparationState, taskListState, taskScheduleLabel, taskStatusLabel, type TaskEvent, type TaskRecord } from "../../lib/tasks";
 
 export function TaskStatus({ task }: { task: TaskRecord }) {
   const state = taskListState(task);
-  const label = { pending: "待完善", running: "运行中", done: "已完成" }[state];
+  const label = taskStatusLabel(task);
   return <span className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs ${state === "running" ? "text-primary" : state === "done" ? "text-primary/80" : "text-muted"}`}>
     {state === "running" && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-pulse" />}{label}
   </span>;
+}
+
+export function TaskScheduleStatus({ task }: { task: TaskRecord }) {
+  const label = taskScheduleLabel(task);
+  if (!label) return null;
+  return <span className="flex items-start gap-1.5 text-xs leading-relaxed text-muted"><Clock3 size={13} aria-hidden className="mt-0.5 shrink-0" /><span>{label}</span></span>;
 }
 
 export function WorkingIndicator({ label, since, actions }: { label: string; since?: string | number; actions?: ReactNode }) {

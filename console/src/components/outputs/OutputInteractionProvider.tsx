@@ -195,7 +195,7 @@ export function OutputInteractionProvider({ scope, workspaceKey, messages, busy,
     removeReference: ref => updateDraft(d => removeDraftReference(d, ref)),
     toggleReferencePin: ref => updateDraft(d => toggleDraftReferencePin(d, ref)),
     referenceToChat: file => { if (referenceOutput(file)) { onFocusChat(); setFocusToken(v => v + 1); } },
-    beginSubmission: (message, consumeDraft = true) => updateDraft(d => d.submission?.id === message.clientMessageId ? d : ({ ...d,
+    beginSubmission: (message, consumeDraft = true) => updateDraft(d => ({ ...d,
       submission: { id: message.clientMessageId, text: message.text, refs: message.refs,
         textRevision: consumeDraft ? d.textRevision : -1, refRevisions: consumeDraft ? { ...d.refRevisions } : {} } })),
   }}>{children}</Context.Provider>;

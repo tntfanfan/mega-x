@@ -26,6 +26,7 @@
   "outputs.refs.count": "{{count}} outputs referenced",
   "outputs.refs.default-message": "Please review these outputs.",
   "outputs.refs.status-sending": "Sending…",
+  "outputs.refs.status-delivery_unknown": "Delivery is unconfirmed. Your draft was kept; you can retry.",
   "outputs.refs.status-failed": "Send failed. Your draft was kept; edit it and retry.",
   "outputs.refs.unsupported": "This environment does not support output references yet. Your draft was kept.",
   "business.company.chat.ref.output": "File",
