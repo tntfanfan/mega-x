@@ -459,6 +459,7 @@ export const DEPT_CATALOG: DeptCatalogItem[] = [
   { id: "dept-organic",    name: "社媒部",         emoji: "🌱", short_desc: "X/Reddit/小红书养号",      source_type: "builtin", price_monthly: 0, role_count: 6,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 0 }, category: "marketing" },
   // ── 自家垂直业务（仅行业模板） ──
   { id: "dept-drama",      name: "短剧部",           emoji: "🎭", short_desc: "脚本 + 分镜 + 字幕",        source_type: "builtin", price_monthly: 0, role_count: 9,  tier_breakdown: { HIGH: 2, MEDIUM: 6, LOW: 1 }, category: "creative" },
+  { id: "dept-film",       name: "短片工作室",       emoji: "🎞️", short_desc: "故事 + 视觉资产 + 精品成片", source_type: "builtin", price_monthly: 0, role_count: 9, tier_breakdown: { HIGH: 3, MEDIUM: 5, LOW: 1 }, category: "creative" },
   { id: "dept-cinematic",  name: "动画部",            emoji: "🎬", short_desc: "开场 CG / 剧情动画",       source_type: "builtin", price_monthly: 0, role_count: 10, tier_breakdown: { HIGH: 2, MEDIUM: 7, LOW: 1 }, category: "creative" },
   { id: "dept-game",       name: "游戏部",         emoji: "🎮", short_desc: "玩法 + 关卡 + 平衡",        source_type: "builtin", price_monthly: 0, role_count: 8,  tier_breakdown: { HIGH: 2, MEDIUM: 5, LOW: 1 }, category: "creative" },
   { id: "dept-quant",      name: "量化部",           emoji: "📈", short_desc: "信号 + 风险 + 执行",        source_type: "builtin", price_monthly: 0, role_count: 8,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 2 }, category: "vertical" },

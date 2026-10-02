@@ -13,6 +13,7 @@ import type { WorkspaceScope } from "../../lib/workspaceScope";
 import { treeWithOutput } from "../../lib/outputRefs";
 import { useHorizontalSplit } from "../../hooks/useHorizontalSplit";
 import { OutputPreview } from "./OutputPreview";
+import { FilmBoardView } from "./FilmBoardView";
 
 function flatten(nodes: OutputNode[]): OutputFile[] {
   const out: OutputFile[] = [];
@@ -174,6 +175,7 @@ export function OutputsPane({
   const [scopeMode, setScopeMode] = useState<"dept" | "all">("all");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [view, setView] = useState<"preview" | "source">("preview");
+  const [boardOpen, setBoardOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [folderPath, setFolderPath] = useState("");
   const [compact, setCompact] = useState(false);
@@ -254,6 +256,7 @@ export function OutputsPane({
     [nodes, taskId, scopeMode, deptId, locatedFile, selectedPath],
   );
   const files = useMemo(() => flatten(visible), [visible]);
+  const boardAvailable = deptId === "dept-film" || files.some(file => /^board\/dept-film(?:\/|$)/.test(file.path));
   const folder = useMemo(() => folderPath ? findDirectory(visible, folderPath) : undefined, [visible, folderPath]);
   const treeNodes = useMemo(() => folder ? folder.children || [] : visible, [folder, visible]);
   const dirPaths = useMemo(() => directories(treeNodes), [treeNodes]);
@@ -307,6 +310,7 @@ export function OutputsPane({
 
   useEffect(() => {
     if (!revealToken) return;
+    setBoardOpen(false);
     setQuery(""); setFolderPath(""); setScopeMode("all");
     setTreeOpen(!compact);
     revealSelectedRef.current = true;
@@ -335,6 +339,7 @@ export function OutputsPane({
   }, [selectedPath, folderPath, query, expanded, visible, showTree, revealToken]);
 
   function choose(file: OutputFile) {
+    setBoardOpen(false);
     const next = new URLSearchParams(params);
     next.set("file", file.path);
     setParams(next, { replace: true });
@@ -394,6 +399,7 @@ export function OutputsPane({
         </button>
         <h2 className="min-w-0 flex-1 truncate text-xs uppercase tracking-widest text-muted">{t("outputs.title")}</h2>
         <span className="text-xs text-muted" aria-label={t("outputs.file-count", { count: files.length })}>{files.length}</span>
+        {boardAvailable && <button type="button" onClick={() => setBoardOpen(open => !open)} aria-pressed={boardOpen} className={`rounded px-2 py-1 text-xs ${boardOpen ? "bg-primary/15 text-primary" : "text-muted hover:text-primary"}`}>{t(boardOpen ? "film.files" : "film.board")}</button>}
         {!taskId && deptId && (
           <select
             aria-label={t("outputs.scope-label")}
@@ -408,7 +414,7 @@ export function OutputsPane({
         {headerActions && <div className="outputs-header-actions flex shrink-0 items-center gap-2">{headerActions}</div>}
       </div>
 
-      <div ref={treeSplitRef} data-tree-overlay={compact && showTree || undefined} className="outputs-layout relative flex min-h-0 min-w-0 flex-1" style={{ "--tree-split": `${treeSplit * 100}%` } as CSSProperties}>
+      {boardOpen ? <div className="min-h-0 flex-1"><FilmBoardView scope={scope} initialSlug={selectedPath.match(/^board\/dept-film\/projects\/([^/]+)/)?.[1]} /></div> : <div ref={treeSplitRef} data-tree-overlay={compact && showTree || undefined} className="outputs-layout relative flex min-h-0 min-w-0 flex-1" style={{ "--tree-split": `${treeSplit * 100}%` } as CSSProperties}>
         {compact && showTree && <button type="button" aria-label={t("outputs.hide-tree")} onClick={() => setTreeOpen(false)} className="absolute inset-0 z-10 bg-bg/60" />}
         <nav aria-label={t("outputs.files")} className={`outputs-tree ${showTree ? "flex" : "hidden"} min-h-0 min-w-0 shrink-0 flex-col bg-surface`}>
           <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border-solid px-2 text-xs text-muted">
@@ -500,7 +506,7 @@ export function OutputsPane({
             </div> : <OutputPreview scope={scope} file={selected} view={view} />}
           </div>
         </section>
-      </div>
+      </div>}
     </aside>
   );
 }
