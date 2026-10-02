@@ -112,6 +112,9 @@ export interface ChatMsg {
   media?: string[];
   source?: "lead" | "sub";
   label?: string;
+  refs?: import("./chatRefs").ChatRef[];
+  clientMessageId?: string;
+  status?: "sending" | "accepted" | "failed" | "delivery_unknown";
 }
 
 export interface BuilderDraft {

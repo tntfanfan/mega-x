@@ -8,29 +8,36 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { ComponentProps, ReactNode } from "react";
 
 export function Markdown({
   text,
   variant = "compact",
+  renderLink,
+  remarkPlugins = [],
+  preserveWhitespace = false,
 }: {
   text: string;
   /** compact = chat bubbles; article = artifact / document preview */
   variant?: "compact" | "article";
+  renderLink?: (href: string, children: ReactNode) => ReactNode;
+  remarkPlugins?: ComponentProps<typeof ReactMarkdown>["remarkPlugins"];
+  preserveWhitespace?: boolean;
 }) {
   const article = variant === "article";
   return (
     <div className="space-y-2 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, ...remarkPlugins]}
         components={{
           p: ({ children }) => (
-            <p className={article ? "leading-relaxed text-sm" : "leading-relaxed"}>
+            <p className={`${article ? "leading-relaxed text-sm" : "leading-relaxed"}${preserveWhitespace ? " whitespace-pre-wrap" : ""}`}>
               {children}
             </p>
           ),
           strong: ({ children }) => <strong className="font-semibold text-heading">{children}</strong>,
           em: ({ children }) => <em>{children}</em>,
-          a: ({ href, children }) => (
+          a: ({ href, children }) => renderLink?.(href || "", children) ?? (
             <a href={href} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2">
               {children}
             </a>

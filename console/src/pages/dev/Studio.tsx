@@ -15,7 +15,10 @@ import {
   loadTryChat,
   mergeTryHistory,
   saveTryChat,
+  selectedTrySession,
   turnsToMessages,
+  type TryHistoryTurn,
+  type TryChatSession,
 } from "../../lib/tryChatReply";
 import type {
   BuilderDraft, ChatMsg, SecurityReviewInfo,
@@ -23,7 +26,9 @@ import type {
 import { estCostPerTask } from "../../lib/builderFixtures";
 import { sanitizeDeptShort } from "../../lib/depts";
 import { RecruiterWs } from "../../lib/recruiterWs";
-import { TryChatWs } from "../../lib/tryChatWs";
+import { TryChatWs, type SendTryMessage } from "../../lib/tryChatWs";
+import { outputWorkspaceKey } from "../../lib/outputRefs";
+import { sandboxScope } from "../../lib/workspaceScope";
 import { SecurityReviewOverlay } from "../../components/SecurityReviewOverlay";
 import {
   FilesPanel,
@@ -126,9 +131,10 @@ export default function DevStudio() {
   const [draft, setDraft] = useState<BuilderDraft | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [tryMessages, setTryMessages] = useState<ChatMsg[]>([]);
+  const [tryLoadedKey, setTryLoadedKey] = useState<string | null>(null);
   // develop = 文件/预览/对话；publish = 整页发布（就绪度）
   const [view, setView] = useState<"develop" | "publish">("develop");
-  const [userId, setUserId] = useState("user-dev-0001");
+  const [userId, setUserId] = useState("");
   const [cellStatus, setCellStatus] = useState<string | null>(null);
   const [cellReady, setCellReady] = useState(false);
   const [cellError, setCellError] = useState<string | null>(null);
@@ -138,7 +144,8 @@ export default function DevStudio() {
   const [tryBusy, setTryBusy] = useState(false);
   const [tryReady, setTryReady] = useState(false);
   const [tryConnectError, setTryConnectError] = useState<string | null>(null);
-  const [trySessionId, setTrySessionId] = useState<string | undefined>();
+  const [trySessions, setTrySessions] = useState<TryChatSession[]>([]);
+  const [creatingTrySession, setCreatingTrySession] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [liveReview, setLiveReview] = useState<SecurityReviewInfo | null>(null);
@@ -156,6 +163,8 @@ export default function DevStudio() {
   const streamingIdRef = useRef<string | null>(null);
   const tryWsRef = useRef<TryChatWs | null>(null);
   const tryStreamIds = useRef<Record<string, string>>({});
+  const tryMessagesRef = useRef(tryMessages);
+  tryMessagesRef.current = tryMessages;
   const [chatWidth, setChatWidth] = useState<number>(
     () => loadPaneWidth(CHAT_WIDTH_KEY, CHAT_MIN_W, CHAT_MAX_W, 420),
   );
@@ -172,6 +181,12 @@ export default function DevStudio() {
 
   // "new" is never used as a draft id — a fresh one is allocated server-side below.
   const draftId = deptId && deptId !== "new" ? deptId : null;
+  const defaultTrySessionId = draftId ? `try-${draftId}` : "";
+  const trySessionId = draftId ? selectedTrySession(draftId, searchParams.get("session")) : "";
+  const tryCacheBaseKey = draftId && userId ? outputWorkspaceKey(userId, sandboxScope(draftId)) : null;
+  const tryCacheKey = tryCacheBaseKey && (trySessionId === defaultTrySessionId ? tryCacheBaseKey : `${tryCacheBaseKey}:session:${trySessionId}`);
+  const tryScopeRef = useRef(tryCacheBaseKey);
+  tryScopeRef.current = tryCacheBaseKey;
   const creatingRef = useRef(false);
 
   useEffect(() => {
@@ -236,43 +251,54 @@ export default function DevStudio() {
   useEffect(() => {
     setDraft(null);
     setMessages([]);
-    const cached = draftId ? loadTryChat(draftId) : null;
+    setView("develop");
+  }, [draftId]);
+
+  useEffect(() => {
+    const cached = tryCacheKey ? loadTryChat(tryCacheKey) : null;
+    setTryLoadedKey(tryCacheKey);
     setTryMessages(cached?.messages ?? []);
-    setTrySessionId(cached?.session_id ?? (draftId ? `try-${draftId}` : undefined));
     setTryBusy(false);
     setTryReady(false);
     setTryConnectError(null);
     setTryToolStatus(null);
     tryStreamIds.current = {};
-    setView("develop");
-  }, [draftId]);
+  }, [tryCacheKey]);
 
   useEffect(() => {
-    if (!draftId) return;
+    if (!draftId || !tryCacheKey) return;
     let cancelled = false;
     api
-      .get<{ session_id?: string; messages?: { role: string; text: string; media?: string[] }[] }>(
-        `/v1/dev/depts/${draftId}/try_chat`,
+      .get<{ session_id?: string; messages?: TryHistoryTurn[] }>(
+        `/v1/dev/depts/${draftId}/try_chat?session_id=${encodeURIComponent(trySessionId)}`,
       )
       .then((r) => {
         if (cancelled || !r.messages?.length) return;
         const msgs = turnsToMessages(r.messages);
         setTryMessages((cur) => mergeTryHistory(cur, msgs));
-        const sid = r.session_id || `try-${draftId}`;
-        setTrySessionId(sid);
       })
       .catch(() => { /* keep local cache */ });
     return () => { cancelled = true; };
-  }, [draftId]);
+  }, [draftId, tryCacheKey, trySessionId]);
+
+  useEffect(() => { setTrySessions([]); }, [tryCacheBaseKey]);
+  useEffect(() => {
+    if (!draftId || !tryCacheBaseKey) return;
+    let cancelled = false;
+    api.get<{ sessions: TryChatSession[] }>(`/v1/dev/depts/${draftId}/try_chat/sessions`).then(result => {
+      if (!cancelled) setTrySessions(result.sessions || []);
+    }).catch(() => { /* default session remains available */ });
+    return () => { cancelled = true; };
+  }, [draftId, tryCacheBaseKey, trySessionId, tryBusy]);
 
   useEffect(() => {
-    if (!draftId || tryMessages.length === 0) return;
-    saveTryChat(draftId, {
+    if (!draftId || !tryCacheKey || tryLoadedKey !== tryCacheKey || tryMessages.length === 0) return;
+    saveTryChat(tryCacheKey, {
       session_id: trySessionId || `try-${draftId}`,
       messages: tryMessages,
       mode: testMode ? "try" : "recruiter",
     });
-  }, [draftId, tryMessages, trySessionId, testMode]);
+  }, [draftId, tryCacheKey, tryLoadedKey, tryMessages, trySessionId, testMode]);
 
   useEffect(() => {
     if (!draftId) return;
@@ -378,19 +404,45 @@ export default function DevStudio() {
       setTryToolStatus(null);
       return;
     }
-    if (!draftId || !userId || !canTry) return;
+    if (!draftId || !userId || !canTry || !tryCacheKey || tryLoadedKey !== tryCacheKey) return;
     setTryReady(false);
     const leadLabel = draft
       ? `${draft.emoji || ""} ${draft.name}`.trim()
       : "部长";
-    const client = new TryChatWs(`/v1/dev/depts/${draftId}/try_ws`, {
+    let disposed = false;
+    const client = new TryChatWs(`/v1/dev/depts/${draftId}/try_ws?session_id=${encodeURIComponent(trySessionId)}`, {
       onReady: (info) => {
+        if (disposed) return;
+        if (info.session_id && info.session_id !== trySessionId) {
+          setTryConnectError(t("dev.studio.chat.session-unavailable"));
+          client.close();
+          return;
+        }
         setTryReady(true);
         setTryConnectError(null);
-        if (info.session_id) setTrySessionId(info.session_id);
+        for (const message of tryMessagesRef.current) {
+          if (message.clientMessageId && ["sending", "delivery_unknown"].includes(message.status)) client.requestStatus(message.clientMessageId);
+        }
+        api.get<{ messages?: TryHistoryTurn[] }>(`/v1/dev/depts/${draftId}/try_chat?session_id=${encodeURIComponent(trySessionId)}`).then(result => {
+          if (!disposed && result.messages?.length) setTryMessages(current => mergeTryHistory(current, turnsToMessages(result.messages)));
+        }).catch(() => {});
       },
-      onClose: () => setTryReady(false),
+      onClose: () => {
+        setTryReady(false);
+        setTryMessages(current => current.map(message => message.status === "sending" ? { ...message, status: "delivery_unknown" } : message));
+      },
+      onDelivery: (info) => {
+        const status = info.status === "submitting" ? "delivery_unknown" : info.status;
+        if (status === "failed") {
+          setTryBusy(false);
+          setTryToolStatus(null);
+        }
+        setTryMessages(current => current.map(message => message.clientMessageId === info.clientMessageId
+          ? { ...message, id: info.turnId || message.id, ...(status === "accepted" ? { refs: info.refs } : {}), status } : message));
+      },
       onStart: (key, source, label) => {
+        setTryBusy(true);
+        if (!client.supportsOutputRefs) setTryMessages(current => current.map(message => message.status === "sending" ? { ...message, status: "accepted" } : message));
         if (tryStreamIds.current[key]) return;
         const id = `t-${key}-${Date.now()}`;
         tryStreamIds.current[key] = id;
@@ -400,6 +452,8 @@ export default function DevStudio() {
         ]);
       },
       onDelta: (key, source, label, text) => {
+        setTryBusy(true);
+        if (!client.supportsOutputRefs) setTryMessages(current => current.map(message => message.status === "sending" ? { ...message, status: "accepted" } : message));
         let id = tryStreamIds.current[key];
         if (!id) {
           id = `t-${key}-${Date.now()}`;
@@ -450,22 +504,25 @@ export default function DevStudio() {
         setTryToolStatus(null);
         setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
       },
-      onError: (message) => {
+      onError: (message, info) => {
         setTryBusy(false);
         setTryToolStatus(null);
         setTryConnectError(message);
         tryStreamIds.current = {};
         setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
+        if (info?.clientMessageId) setTryMessages(current => current.map(m => m.clientMessageId === info.clientMessageId ? { ...m, status: "failed" } : m));
         toast.error(message);
       },
     });
     tryWsRef.current = client;
     client.connect();
     return () => {
+      disposed = true;
       client.close();
       tryWsRef.current = null;
+      setTryMessages(current => current.map(message => message.status === "sending" ? { ...message, status: "delivery_unknown" } : message));
     };
-  }, [draftId, userId, testMode, canTry]);
+  }, [draftId, userId, testMode, canTry, tryCacheKey, tryLoadedKey, trySessionId]);
 
   const onSend = useCallback((text: string) => {
     const client = wsRef.current;
@@ -489,29 +546,56 @@ export default function DevStudio() {
     wsRef.current?.cancel();
   }, [testMode]);
 
-  const onTrySend = useCallback((text: string) => {
+  const onTrySend = useCallback((payload: SendTryMessage): boolean => {
     const client = tryWsRef.current;
     if (!client || !client.ready) {
       toast.error(t("dev.studio.chat.not-connected"));
-      return;
+      return false;
     }
-    setTryMessages((cur) => [...cur, { id: `tu-${Date.now()}`, role: "user", text }]);
+    if (client.busy) return false;
+    if (payload.refs.length && !client.supportsOutputRefs) {
+      toast.error(t("outputs.refs.unsupported"));
+      return false;
+    }
+    if (!client.sendPrompt(payload)) return false;
+    const message: ChatMsg = { id: `try-user-${payload.clientMessageId}`, clientMessageId: payload.clientMessageId,
+      role: "user", text: payload.text, refs: payload.refs, status: "sending" };
+    setTryMessages(current => current.some(m => m.clientMessageId === payload.clientMessageId)
+      ? current.map(m => m.clientMessageId === payload.clientMessageId ? message : m) : [...current, message]);
     setTryBusy(true);
     setTryToolStatus(null);
-    client.sendPrompt(text);
+    setTryConnectError(null);
+    return true;
   }, [toast, t]);
 
-  const onSendToRecruiter = useCallback((snippet: string) => {
-    const prompt = t("dev.studio.chat.fix-prompt", {
-      text: snippet.trim().slice(0, 1200),
+  const onTrySessionChange = useCallback((id: string) => {
+    if (!draftId || id === trySessionId) return;
+    if (tryCacheKey && tryLoadedKey === tryCacheKey) saveTryChat(tryCacheKey, {
+      session_id: trySessionId,
+      messages: tryMessagesRef.current.map(message => message.status === "sending" ? { ...message, status: "delivery_unknown" } : message),
     });
-    setComposeSeed(prompt);
-    const next = new URLSearchParams(searchParams);
-    next.set("mode", "develop");
-    next.delete("panel");
-    setSearchParams(next);
-    setView("develop");
-  }, [t, searchParams, setSearchParams]);
+    tryWsRef.current?.close();
+    tryWsRef.current = null;
+    setTryReady(false);
+    setSearchParams(current => {
+      const next = new URLSearchParams(current);
+      next.set("session", id); next.set("panel", "chat"); next.set("focus", "main");
+      return next;
+    });
+  }, [draftId, trySessionId, tryCacheKey, tryLoadedKey, setSearchParams]);
+
+  const onTrySessionCreate = useCallback(async () => {
+    if (!draftId || !tryCacheBaseKey || creatingTrySession) return;
+    setCreatingTrySession(true);
+    try {
+      const session = await api.post<TryChatSession>(`/v1/dev/depts/${draftId}/try_chat/sessions`, {});
+      if (tryScopeRef.current !== tryCacheBaseKey) return;
+      setTrySessions(current => [session, ...current]);
+      onTrySessionChange(session.session_id);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, t("dev.studio.chat.session-create-failed")));
+    } finally { setCreatingTrySession(false); }
+  }, [draftId, tryCacheBaseKey, creatingTrySession, onTrySessionChange, toast, t]);
 
   const startRename = useCallback(() => {
     if (!draft) return;
@@ -839,17 +923,27 @@ export default function DevStudio() {
             toolStatus={toolStatus}
             composeSeed={composeSeed}
             onComposeSeedConsumed={() => setComposeSeed(null)}
-            onSendToRecruiter={onSendToRecruiter}
           />
         </div>
-        {testMode && (
+        {testMode && tryCacheKey && tryLoadedKey === tryCacheKey && draft.id === draftId && (
           <div className="flex-1 flex min-h-0">
             <TestWorkspace
               draft={draft}
+              workspaceKey={tryCacheKey || `pending:${draft.id}`}
+              sessionId={trySessionId}
+              sessions={trySessions}
+              onSessionChange={onTrySessionChange}
+              onSessionCreate={onTrySessionCreate}
+              creatingSession={creatingTrySession}
               messages={tryMessages}
               onSend={onTrySend}
+              onRecoverSubmission={payload => {
+                setTryMessages(current => current.some(m => m.clientMessageId === payload.clientMessageId) ? current : [...current,
+                  { id: `try-user-${payload.clientMessageId}`, clientMessageId: payload.clientMessageId,
+                    role: "user", text: payload.text, refs: payload.refs, status: "delivery_unknown" }]);
+                if (tryWsRef.current?.ready) tryWsRef.current.requestStatus(payload.clientMessageId);
+              }}
               onCancel={onCancel}
-              onSendToRecruiter={onSendToRecruiter}
               busy={tryBusy}
               ready={canTry && tryReady}
               connectError={canTry ? tryConnectError : t("dev.studio.chat.try-disabled")}

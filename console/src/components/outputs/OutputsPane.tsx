@@ -5,11 +5,12 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowLeft, ArrowUpRight, ChevronRight, ChevronsDownUp, ChevronsUpDown, Download,
   File, FileCode2, FileSpreadsheet, FileText, Film, Folder, FolderInput, FolderOpen,
-  Home, Image, LocateFixed, Music2, PanelLeftClose, PanelLeftOpen, Search, X,
+  Home, Image, LocateFixed, MessageSquarePlus, Music2, PanelLeftClose, PanelLeftOpen, Search, X,
 } from "lucide-react";
 
 import { fetchMeta, fetchTree, rawUrl, type OutputFile, type OutputNode } from "../../lib/outputs";
 import type { WorkspaceScope } from "../../lib/workspaceScope";
+import { treeWithOutput } from "../../lib/outputRefs";
 import { useHorizontalSplit } from "../../hooks/useHorizontalSplit";
 import { OutputPreview } from "./OutputPreview";
 
@@ -72,7 +73,7 @@ function FileIcon({ kind }: { kind: string }) {
 }
 
 function Tree({
-  nodes, selected, onSelect, expanded, onToggle, onOpenFolder, depth = 0,
+  nodes, selected, onSelect, expanded, onToggle, onOpenFolder, referencedPaths, depth = 0,
 }: {
   nodes: OutputNode[];
   selected: string;
@@ -80,6 +81,7 @@ function Tree({
   expanded: Set<string>;
   onToggle: (paths: string[]) => void;
   onOpenFolder: (path: string) => void;
+  referencedPaths?: Set<string>;
   depth?: number;
 }) {
   const { t } = useTranslation();
@@ -122,6 +124,7 @@ function Tree({
                   {parentLabel && <><span className="max-w-[35%] truncate text-muted">{parentLabel}</span><span className="shrink-0 text-muted">/</span></>}
                   <span className="min-w-0 flex-1 truncate">{terminal.label || terminal.name}</span>
                 </span> : <span className="min-w-0 flex-1 break-all line-clamp-2 leading-4">{node.label || node.name}</span>}
+                {!dir && referencedPaths?.has(node.path) && <MessageSquarePlus size={12} className="shrink-0 text-primary" aria-label={t("outputs.refs.referenced")} />}
               </button>
               {dir && <button type="button" onClick={() => onOpenFolder(terminal.path)}
                 aria-label={t("outputs.open-folder", { name: terminal.label || terminal.name })}
@@ -131,7 +134,7 @@ function Tree({
               </button>}
             </div>
             {dir && isExpanded && terminal.children?.length ? (
-              <Tree nodes={terminal.children} selected={selected} onSelect={onSelect} expanded={expanded} onToggle={onToggle} onOpenFolder={onOpenFolder} depth={depth + 1} />
+              <Tree nodes={terminal.children} selected={selected} onSelect={onSelect} expanded={expanded} onToggle={onToggle} onOpenFolder={onOpenFolder} referencedPaths={referencedPaths} depth={depth + 1} />
             ) : null}
           </li>
         );
@@ -146,12 +149,24 @@ export function OutputsPane({
   taskId,
   headerActions,
   className = "",
+  onUserSelect,
+  referencedPaths,
+  sharedNodes,
+  revealToken = 0,
+  selectedError,
+  onRetryOutput,
 }: {
   scope: WorkspaceScope;
   deptId?: string;
   taskId?: string;
   headerActions?: ReactNode;
   className?: string;
+  onUserSelect?: (file: OutputFile) => void;
+  referencedPaths?: Set<string>;
+  sharedNodes?: OutputNode[];
+  revealToken?: number;
+  selectedError?: string;
+  onRetryOutput?: (path: string) => void;
 }) {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
@@ -181,6 +196,8 @@ export function OutputsPane({
   });
   const selectedPath = params.get("file") || "";
   const [locatedFile, setLocatedFile] = useState<OutputFile | null>(null);
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const pane = paneRef.current;
@@ -200,6 +217,7 @@ export function OutputsPane({
     initializedRoots.current.clear();
     revealSelectedRef.current = true;
     const load = () => {
+      if (sharedNodes !== undefined) return;
       if (document.visibilityState !== "visible") return;
       const prefix = taskId ? `tasks/${taskId}` : "";
       // Task outputs are nested under runs/steps; four levels leaves them invisible.
@@ -215,11 +233,25 @@ export function OutputsPane({
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", load);
     };
-  }, [scope.base, taskId]);
+  }, [scope.base, taskId, sharedNodes !== undefined]);
+
+  useEffect(() => {
+    if (sharedNodes === undefined) return;
+    const prefix = taskId ? `tasks/${taskId}` : "";
+    const filter = (items: OutputNode[]): OutputNode[] => items.flatMap(node => {
+      if (!prefix || node.path === prefix || node.path.startsWith(prefix + "/")) return [node];
+      const children = filter(node.children || []);
+      return children.length ? [{ ...node, children }] : [];
+    });
+    setNodes(filter(sharedNodes));
+  }, [sharedNodes, taskId]);
 
   const visible = useMemo(
-    () => !taskId && scopeMode === "dept" && deptId ? forDept(nodes, deptId) : nodes,
-    [nodes, taskId, scopeMode, deptId],
+    () => {
+      const complete = locatedFile && locatedFile.path === selectedPath ? treeWithOutput(nodes, locatedFile) : nodes;
+      return !taskId && scopeMode === "dept" && deptId ? forDept(complete, deptId) : complete;
+    },
+    [nodes, taskId, scopeMode, deptId, locatedFile, selectedPath],
   );
   const files = useMemo(() => flatten(visible), [visible]);
   const folder = useMemo(() => folderPath ? findDirectory(visible, folderPath) : undefined, [visible, folderPath]);
@@ -236,12 +268,16 @@ export function OutputsPane({
   const selected = files.find((file) => file.path === selectedPath) || (locatedFile?.path === selectedPath ? locatedFile : null);
   useEffect(() => {
     let cancelled = false;
-    setLocatedFile(null);
-    if (selectedPath && !files.some(file => file.path === selectedPath)) {
-      fetchMeta(scope, selectedPath).then(file => { if (!cancelled) setLocatedFile(file); }).catch(() => {});
+    setMetaError(null);
+    if (!selectedPath) setLocatedFile(null);
+    if (selectedPath && !flatten(nodes).some(file => file.path === selectedPath)) {
+      fetchMeta(scope, selectedPath).then(file => { if (!cancelled) setLocatedFile(file); }).catch(error => {
+        if (!cancelled) setMetaError(t(`outputs.refs.${[401, 403].includes(error?.status) ? "forbidden" : error?.status === 404 ?
+          locatedFile?.path === selectedPath ? "deleted" : "not-ready" : "error"}`));
+      });
     }
     return () => { cancelled = true; };
-  }, [scope.base, selectedPath]);
+  }, [scope.base, selectedPath, nodes, revealToken, retryKey]);
 
   useEffect(() => {
     const fresh = visible.filter((node) => node.kind === "dir" && !initializedRoots.current.has(node.path));
@@ -267,7 +303,18 @@ export function OutputsPane({
       }
       return next.size === current.size ? current : next;
     });
-  }, [selectedPath, scope.base, taskId]);
+  }, [selectedPath, scope.base, taskId, revealToken]);
+
+  useEffect(() => {
+    if (!revealToken) return;
+    setQuery(""); setFolderPath(""); setScopeMode("all");
+    setTreeOpen(!compact);
+    revealSelectedRef.current = true;
+    const row = treeScrollRef.current?.querySelector<HTMLElement>('[aria-current="true"]');
+    row?.classList.add("animate-pulse");
+    const timer = window.setTimeout(() => row?.classList.remove("animate-pulse"), 1800);
+    return () => { window.clearTimeout(timer); row?.classList.remove("animate-pulse"); };
+  }, [revealToken]);
 
   useEffect(() => {
     revealSelectedRef.current = true;
@@ -285,12 +332,13 @@ export function OutputsPane({
     if (row.top < viewport.top || row.bottom > viewport.bottom) {
       container.scrollTop += row.top - viewport.top - (viewport.height - row.height) / 2;
     }
-  }, [selectedPath, folderPath, query, expanded, visible, showTree]);
+  }, [selectedPath, folderPath, query, expanded, visible, showTree, revealToken]);
 
   function choose(file: OutputFile) {
     const next = new URLSearchParams(params);
     next.set("file", file.path);
     setParams(next, { replace: true });
+    onUserSelect?.(file);
     if (compact) setTreeOpen(false);
   }
 
@@ -395,10 +443,11 @@ export function OutputsPane({
                   className={`flex w-full min-w-0 items-start gap-2 rounded border-s-2 px-2 py-1.5 text-start text-xs ${selectedPath === file.path ? "border-primary bg-surface-2 text-primary" : "border-transparent text-body hover:bg-surface-2"}`}>
                   <FileIcon kind={file.kind} />
                   <span className="min-w-0 flex-1"><span className="block break-all line-clamp-2">{file.label || file.name}</span><span className="block truncate text-[10px] text-muted">{parentPath(file.path) || "/"}</span></span>
+                  {referencedPaths?.has(file.path) && <MessageSquarePlus size={12} className="shrink-0 text-primary" aria-label={t("outputs.refs.referenced")} />}
                 </button>
               </li>)}</ul> : <p role="status" className="px-2 py-3 text-xs text-muted">{t("outputs.no-matches")}</p>
             ) : (
-              <Tree nodes={treeNodes} selected={selectedPath} onSelect={choose} expanded={expanded} onToggle={toggle} onOpenFolder={openFolder} />
+              <Tree nodes={treeNodes} selected={selectedPath} onSelect={choose} expanded={expanded} onToggle={toggle} onOpenFolder={openFolder} referencedPaths={referencedPaths} />
             )}
           </div>
         </nav>
@@ -421,7 +470,7 @@ export function OutputsPane({
 
         <section aria-label={t("outputs.preview")} className="outputs-preview flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="outputs-file-toolbar flex h-10 shrink-0 items-center gap-1.5 border-b border-border-solid px-2">
-            <span className="min-w-0 flex-1 truncate text-xs font-medium text-heading" title={selected?.path}>{selected?.name || t("outputs.preview")}</span>
+            <span className="min-w-0 flex-1 truncate text-xs font-medium text-heading" title={selectedPath}>{selected?.name || selectedPath.split("/").pop() || t("outputs.preview")}</span>
             {selected && ["markdown", "table"].includes(selected.kind) && <div role="group" aria-label={t("outputs.view-label")} className="flex shrink-0 items-center gap-0.5 rounded bg-bg/50 p-0.5">
               {(["preview", "source"] as const).map((mode) => <button key={mode} type="button" aria-pressed={view === mode} onClick={() => setView(mode)}
                 title={mode === "source" ? t("source.readonly") : undefined}
@@ -445,7 +494,10 @@ export function OutputsPane({
             )}
           </div>
           <div className="min-h-0 min-w-0 flex-1 overflow-auto">
-            <OutputPreview scope={scope} file={selected} view={view} />
+            {selectedError || metaError ? <div className="p-4 text-xs">
+              <p role="alert" className="text-fusion">{selectedError || metaError}</p>
+              <button type="button" onClick={() => { setRetryKey(v => v + 1); onRetryOutput?.(selectedPath); }} className="mt-2 text-primary hover:underline">{t("outputs.refs.retry")}</button>
+            </div> : <OutputPreview scope={scope} file={selected} view={view} />}
           </div>
         </section>
       </div>

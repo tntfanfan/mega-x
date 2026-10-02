@@ -38,12 +38,34 @@ export async function fetchTree(scope: WorkspaceScope, prefix = "", depth = 3): 
 }
 
 export async function fetchList(scope: WorkspaceScope, query: Record<string, string | number | undefined> = {}): Promise<OutputFile[]> {
+  return (await fetchListPage(scope, query)).items;
+}
+
+export type OutputListPage = { items: OutputFile[]; has_more: boolean; offset?: number };
+
+export async function fetchListPage(scope: WorkspaceScope, query: Record<string, string | number | undefined> = {}): Promise<OutputListPage> {
   const q = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
     if (value !== undefined && value !== "") q.set(key, String(value));
   }
-  const res = await api.get<{ items: OutputFile[] }>(`${scope.base}/outputs/list?${q}`);
-  return res.items || [];
+  const res = await api.get<OutputListPage>(`${scope.base}/outputs/list?${q}`);
+  return { ...res, items: res.items || [], has_more: !!res.has_more };
+}
+
+export type OutputMention = { value: string; match: "name" | "path" };
+export type ResolvedMention = OutputMention & {
+  status: "resolved" | "ambiguous" | "missing" | "invalid";
+  candidates: OutputFile[];
+  code?: string;
+};
+
+export async function resolveOutputs(scope: WorkspaceScope, items: OutputMention[]): Promise<ResolvedMention[]> {
+  const result: ResolvedMention[] = [];
+  for (let i = 0; i < items.length; i += 32) {
+    const batch = await api.post<{ items: ResolvedMention[] }>(`${scope.base}/outputs/resolve`, { items: items.slice(i, i + 32) });
+    result.push(...batch.items);
+  }
+  return result;
 }
 
 export async function fetchMeta(scope: WorkspaceScope, path: string): Promise<OutputMeta> {

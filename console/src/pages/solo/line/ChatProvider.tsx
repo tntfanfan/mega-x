@@ -201,7 +201,7 @@ export function ChatProvider({
       if (!deptId || refs.length === 0) return;
       updateBucket(deptId, (cur) => ({
         ...cur,
-        pendingRefs: mergeRefs(cur.pendingRefs, refs),
+        pendingRefs: mergeRefs(cur.pendingRefs, refs, () => toast.error(t("outputs.refs.limit"))),
       }));
     },
     [deptId, updateBucket],
@@ -231,7 +231,7 @@ export function ChatProvider({
       setDeptIdState(targetDeptId);
       updateBucket(targetDeptId, (cur) => ({
         ...cur,
-        pendingRefs: mergeRefs(cur.pendingRefs, refs),
+        pendingRefs: mergeRefs(cur.pendingRefs, refs, () => toast.error(t("outputs.refs.limit"))),
         draft: opts?.draft !== undefined ? opts.draft : cur.draft,
       }));
       navigate(`/solo/l/${line.id}/chat`);

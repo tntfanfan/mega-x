@@ -1,9 +1,18 @@
 import type { ChatMsg } from "./builderFixtures";
+import { normalizeRefs, refKey } from "./chatRefs";
 
 type StoredTryChat = { session_id?: string; messages: ChatMsg[]; mode?: "recruiter" | "try" };
 
+export type TryChatSession = { session_id: string; title?: string; created_at?: number; updated_at?: number; is_default?: boolean };
+
+export function selectedTrySession(draftId: string, selected?: string | null): string {
+  const fallback = `try-${draftId}`;
+  const suffix = selected?.startsWith(`${fallback}-`) ? selected.slice(fallback.length + 1) : "";
+  return selected && (selected === fallback || /^[a-f0-9]{32}$/.test(suffix)) ? selected : fallback;
+}
+
 function storageKey(deptId: string): string {
-  return `dev.tryChat.${deptId}`;
+  return `dev.tryChat.v2.${deptId}`;
 }
 
 export function loadTryChat(deptId: string): StoredTryChat | null {
@@ -31,7 +40,10 @@ export function mergeTryHistory(current: ChatMsg[], incoming: ChatMsg[]): ChatMs
   const matched = new Set<number>();
   for (const old of current) {
     const index = merged.findIndex((m, i) =>
-      !matched.has(i) && m.role === old.role && m.text === old.text &&
+      !matched.has(i) && (m.clientMessageId && old.clientMessageId
+        ? m.clientMessageId === old.clientMessageId
+        : (!m.id.startsWith("th-") && m.id === old.id) || (m.role === old.role && m.text === old.text &&
+          JSON.stringify((m.refs || []).map(refKey).sort()) === JSON.stringify((old.refs || []).map(refKey).sort()))) &&
       (!old.media?.length || !m.media?.length || old.media.some((url) => m.media?.includes(url))),
     );
     if (index < 0) {
@@ -46,14 +58,21 @@ export function mergeTryHistory(current: ChatMsg[], incoming: ChatMsg[]): ChatMs
   return merged;
 }
 
-export function turnsToMessages(turns: { role?: string; text?: string; media?: string[] }[]): ChatMsg[] {
+export type TryHistoryTurn = { role?: string; text?: string; media?: string[]; id?: string; refs?: unknown;
+  client_message_id?: string; status?: string };
+
+export function turnsToMessages(turns: TryHistoryTurn[]): ChatMsg[] {
   return turns
     .filter((t) => ((t.text || "").trim() || t.media?.length) && !isTryContinue(t.text || ""))
     .map((t, i) => ({
-      id: `th-${i}-${t.role || "copilot"}`,
+      id: t.id || `th-${i}-${t.role || "copilot"}`,
       role: t.role === "user" ? "user" : "copilot",
       text: (t.text || "").trim(),
       media: Array.isArray(t.media) ? t.media.filter((url) => typeof url === "string") : undefined,
+      refs: normalizeRefs(t.refs),
+      clientMessageId: t.client_message_id,
+      status: t.status === "submitting" ? "delivery_unknown" :
+        ["accepted", "failed", "delivery_unknown"].includes(t.status) ? t.status as ChatMsg["status"] : undefined,
     }));
 }
 

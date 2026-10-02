@@ -113,17 +113,6 @@
   }
 }
 
-@container studio-test-chat (max-width: 420px) {
-  .studio-test-compose-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-  }
-
-  .studio-test-compose-input {
-    grid-column: 1 / -1;
-  }
-}
-
 .outputs-pane {
   container: outputs-pane / inline-size;
 }
