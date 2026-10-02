@@ -26,7 +26,11 @@ import { ChatMedia } from "../ui/ChatMedia";
 import { TypingDots } from "../ui/ChatWaiting";
 
 type Panel = "department" | "chat" | "tasks";
-type Props = {
+export type TestWorkspaceProps = {
+  onChatFocus?: () => void;
+  scope?: import("../../lib/workspaceScope").WorkspaceScope;
+  panel?: "chat" | "tasks";
+  chatActions?: import("react").ReactNode;
   draft: BuilderDraft;
   workspaceKey: string;
   sessionId: string;
@@ -45,16 +49,16 @@ type Props = {
 };
 
 /** Sandbox workspace: department source; chat and task outputs on the right. */
-export function TestWorkspace(props: Props) {
+export function TestWorkspace(props: TestWorkspaceProps) {
   const [params, setParams] = useSearchParams();
   const [expanded, setExpanded] = useState<"right" | null>(null);
-  const scope = useMemo(() => sandboxScope(props.draft.id), [props.draft.id]);
+  const scope = useMemo(() => props.scope || sandboxScope(props.draft.id), [props.scope?.base, props.draft.id]);
   const open = (path: string) => {
     setExpanded(null);
     const next = new URLSearchParams(params);
     if (!next.get("panel") || ["department", "outputs"].includes(next.get("panel"))) next.set("panel", "chat");
     next.set("file", path); next.set("focus", "right"); next.delete("right");
-    if (next.get("panel") === "tasks") {
+    if ((props.panel || next.get("panel")) === "tasks") {
       const match = /^tasks\/([^/]+)\/runs\/([^/]+)\//.exec(path);
       if (match) { next.set("task", match[1]); next.set("run", match[2]); }
       else { next.delete("task"); next.delete("run"); }
@@ -62,6 +66,7 @@ export function TestWorkspace(props: Props) {
     setParams(next);
   };
   const focusChat = () => {
+    if (props.onChatFocus) { props.onChatFocus(); return; }
     setExpanded(null);
     const next = new URLSearchParams(params);
     next.set("panel", "chat"); next.set("focus", "main"); next.delete("right");
@@ -69,25 +74,25 @@ export function TestWorkspace(props: Props) {
   };
   return <OutputInteractionProvider key={props.workspaceKey} scope={scope} workspaceKey={props.workspaceKey}
     selectedPath={params.get("file") || undefined}
-    messages={props.messages} busy={props.busy} taskId={params.get("panel") === "tasks" ? params.get("task") || undefined : undefined}
+    messages={props.messages} busy={props.busy} taskId={(props.panel || params.get("panel")) === "tasks" ? params.get("task") || undefined : undefined}
     onRecoverSubmission={props.onRecoverSubmission}
     onOpen={open} onFocusChat={focusChat}>
     <TestWorkspaceContent {...props} expanded={expanded} setExpanded={setExpanded} />
   </OutputInteractionProvider>;
 }
 
-function TestWorkspaceContent(props: Props & { expanded: "right" | null; setExpanded: Dispatch<SetStateAction<"right" | null>> }) {
+function TestWorkspaceContent(props: TestWorkspaceProps & { expanded: "right" | null; setExpanded: Dispatch<SetStateAction<"right" | null>> }) {
   const { draft } = props;
   const { scope, draft: chatDraft, nodes, referenceOutput, revealToken, fileStates, openOutput } = useOutputInteractions();
   const { expanded, setExpanded } = props;
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const panelParam = params.get("panel");
-  const panel: Panel = panelParam === "chat" || panelParam === "outputs" ? "chat"
-    : panelParam === "tasks" ? "tasks" : "department";
+  const panel: Panel = props.panel || (panelParam === "chat" || panelParam === "outputs" ? "chat"
+    : panelParam === "tasks" ? "tasks" : "department");
   const mobileRight = params.get("focus") === "right" || (panel === "department" && params.get("focus") !== "main");
   const selectedTask = params.get("task") || undefined;
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(params.get("create") === "1");
   const { containerRef, ratio, onPointerDown, onKeyDown } = useHorizontalSplit({
     storageKey: "lgh.studioTest.split", initialRatio: 0.6, minStart: 300, minEnd: 340,
   });
@@ -110,6 +115,7 @@ function TestWorkspaceContent(props: Props & { expanded: "right" | null; setExpa
     next.delete("right");
     next.set("focus", "main");
     next.delete("kind");
+    next.delete("create");
     next.set("task", id);
     setParams(next);
   };
@@ -132,7 +138,7 @@ function TestWorkspaceContent(props: Props & { expanded: "right" | null; setExpa
 
   return (
     <div className="flex-1 flex min-h-0 min-w-0 bg-bg">
-      <aside className={`${expanded ? "hidden" : "block"} w-12 shrink-0 border-e border-border-solid bg-surface/60 py-3 sm:w-36`} aria-label={t("dev.studio.test.workspace-nav")}>
+      {!props.scope && <aside className={`${expanded ? "hidden" : "block"} w-12 shrink-0 border-e border-border-solid bg-surface/60 py-3 sm:w-36`} aria-label={t("dev.studio.test.workspace-nav")}>
         <nav className="flex flex-col">
           {nav.map((item) => (
             <button key={item.id} type="button" aria-current={panel === item.id ? "page" : undefined}
@@ -145,7 +151,7 @@ function TestWorkspaceContent(props: Props & { expanded: "right" | null; setExpa
             </button>
           ))}
         </nav>
-      </aside>
+      </aside>}
 
       <div ref={containerRef} data-expanded={expanded || undefined}
         className="studio-test-panes flex flex-1 min-w-0 min-h-0"
@@ -159,7 +165,7 @@ function TestWorkspaceContent(props: Props & { expanded: "right" | null; setExpa
             </button>
           </div>}
           <div className={`${panel === "chat" ? "flex" : "hidden"} flex-1 min-h-0 min-w-0`}>
-            <TestChat {...props} onShowOutputs={() => setFocus("right")} />
+            <WorkspaceChat {...props} onShowOutputs={() => setFocus("right")} />
           </div>
           {panel === "department" && <div className="flex flex-1 min-h-0 min-w-0 flex-col">
             <header className="shrink-0 border-b border-border-solid bg-surface/60 px-5 py-3">
@@ -169,8 +175,8 @@ function TestWorkspaceContent(props: Props & { expanded: "right" | null; setExpa
             <PreviewPane draft={draft} />
           </div>}
           {panel === "tasks" ? (
-            creating ? <SandboxTaskNew draftId={draft.id}
-              onCancel={() => setCreating(false)} onCreated={createdTask} />
+            creating ? <SandboxTaskNew scope={scope} draftId={draft.id}
+              onCancel={() => { setCreating(false); const next = new URLSearchParams(params); next.delete("create"); setParams(next); }} onCreated={createdTask} />
               : <WorkspaceTasks scope={scope} className="h-full" showOutputs={false}
                 onCreate={() => setCreating(true)} />
           ) : null}
@@ -223,12 +229,13 @@ function PaneSizeButton({ name, expanded, onClick }: { name: string; expanded: b
   </button>;
 }
 
-function TestChat({ draft, messages, onSend, onCancel,
-  busy, ready, connectError, toolStatus, sessionId, sessions, onSessionChange, onSessionCreate, creatingSession, onShowOutputs,
-}: Props & { onShowOutputs: () => void }) {
+export function WorkspaceChat({ draft, messages, onSend, onCancel,
+  busy, ready, connectError, toolStatus, sessionId, sessions, onSessionChange, onSessionCreate, creatingSession, chatActions, scope: workspaceScope, onShowOutputs,
+}: TestWorkspaceProps & { onShowOutputs: () => void }) {
   const { t } = useTranslation();
   const { draft: chatDraft, setText: setInput, removeReference, toggleReferencePin, referenceOutput, focusToken, beginSubmission } = useOutputInteractions();
-  const sessionOptions = sessions.some(session => session.session_id === sessionId) ? sessions : [{ session_id: sessionId }, ...sessions];
+  const displaySessions = workspaceScope ? sessions.map(session => session.is_default ? { ...session, session_id: "" } : session) : sessions;
+  const sessionOptions = displaySessions.some(session => session.session_id === sessionId) ? displaySessions : [{ session_id: sessionId }, ...displaySessions];
   const input = chatDraft.text;
   const submittedMessage = messages.find(message => message.clientMessageId === chatDraft.submission?.id);
   // Unknown delivery keeps the draft for a safe retry, but must not lock the
@@ -268,12 +275,13 @@ function TestChat({ draft, messages, onSend, onCancel,
   return (
     <div className="studio-test-chat flex flex-1 min-h-0 min-w-0 flex-col">
       <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border-solid bg-surface/60 px-3">
-        <h2 className="min-w-0 flex-1 truncate text-xs uppercase tracking-widest text-muted">{t("dev.studio.test.chat")}</h2>
+        {chatActions}
+        <h2 className="min-w-0 flex-1 truncate text-xs uppercase tracking-widest text-muted">{t("shell.nav.chat", { defaultValue: "聊天" })}</h2>
         <select value={sessionId} onChange={event => onSessionChange(event.target.value)} disabled={creatingSession}
           aria-label={t("dev.studio.chat.sessions")}
           className="h-7 min-w-0 max-w-36 rounded-md border border-border-solid bg-surface px-2 text-xs text-body disabled:opacity-50">
           {sessionOptions.map(session => <option key={session.session_id} value={session.session_id}>
-            {session.title || (session.session_id === `try-${draft.id}` ? t("dev.studio.chat.session-default") :
+            {session.title || ((session.is_default || !session.session_id || session.session_id === `try-${draft.id}`) ? t("dev.studio.chat.session-default") :
               `${t("dev.studio.chat.session-new")}${session.created_at ? ` · ${new Date(session.created_at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}`)}
           </option>)}
         </select>
@@ -348,8 +356,8 @@ function TestChat({ draft, messages, onSend, onCancel,
             }}
             aria-controls={mention ? "output-mention-list" : undefined}
             aria-expanded={!!mention} aria-autocomplete="list" aria-activedescendant={mention && mentionFiles.current.length ? `output-mention-${mentionIndex}` : undefined}
-            aria-label={t("dev.studio.chat.try-placeholder")}
-            placeholder={ready ? t("dev.studio.chat.try-placeholder") : t("dev.studio.chat.try-connecting")}
+            aria-label={(workspaceScope ? t("business.company.chat.placeholder", { defaultValue: "输入消息，或用 @ 引用产出物" }) : t("dev.studio.chat.try-placeholder"))}
+            placeholder={ready ? (workspaceScope ? t("business.company.chat.placeholder", { defaultValue: "输入消息，或用 @ 引用产出物" }) : t("dev.studio.chat.try-placeholder")) : t("dev.studio.chat.try-connecting")}
             rows={2}
             className="studio-test-compose-input min-w-0 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm leading-6 text-body placeholder:text-muted outline-none" />
           {busy ? <button type="button" onClick={onCancel} aria-label={t("dev.studio.chat.cancel")} title={t("dev.studio.chat.cancel")}
@@ -367,12 +375,13 @@ function TestChat({ draft, messages, onSend, onCancel,
   );
 }
 
-function SandboxTaskNew({ draftId, onCancel, onCreated }: {
+function SandboxTaskNew({ draftId, scope: providedScope, onCancel, onCreated }: {
+  scope?: import("../../lib/workspaceScope").WorkspaceScope;
   draftId: string;
   onCancel: () => void; onCreated: (id: string) => void;
 }) {
-  const scope = useMemo(() => sandboxScope(draftId), [draftId]);
+  const scope = useMemo(() => providedScope || sandboxScope(draftId), [providedScope?.base, draftId]);
   return <div className="flex-1 min-w-0 overflow-auto"><TaskCreateFlow scope={scope}
-    leadDeptId={draftId}
+    leadDeptId={scope.kind === "sandbox" ? draftId : undefined}
     onCancel={onCancel} onCreated={onCreated} /></div>;
 }

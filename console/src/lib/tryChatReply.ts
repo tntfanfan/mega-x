@@ -58,7 +58,7 @@ export function mergeTryHistory(current: ChatMsg[], incoming: ChatMsg[]): ChatMs
   return merged;
 }
 
-export type TryHistoryTurn = { role?: string; text?: string; media?: string[]; id?: string; refs?: unknown;
+export type TryHistoryTurn = { label?: string; source?: "lead" | "sub"; role?: string; text?: string; media?: string[]; id?: string; refs?: unknown;
   client_message_id?: string; status?: string };
 
 export function turnsToMessages(turns: TryHistoryTurn[]): ChatMsg[] {
@@ -70,6 +70,8 @@ export function turnsToMessages(turns: TryHistoryTurn[]): ChatMsg[] {
       text: (t.text || "").trim(),
       media: Array.isArray(t.media) ? t.media.filter((url) => typeof url === "string") : undefined,
       refs: normalizeRefs(t.refs),
+      label: t.label,
+      source: t.source,
       clientMessageId: t.client_message_id,
       status: t.status === "submitting" ? "delivery_unknown" :
         ["accepted", "failed", "delivery_unknown"].includes(t.status) ? t.status as ChatMsg["status"] : undefined,
