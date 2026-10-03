@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined) ?? "";
 
-function imageSrc(value: string): string | null {
+function mediaSrc(value: string): string | null {
   const source = value.trim();
   if (/^https?:\/\//i.test(source)) return source;
   if (source.startsWith("/v1/")) return `${API_BASE.replace(/\/$/, "")}${source}`;
@@ -35,13 +35,15 @@ function ChatImage({ src }: { src: string }) {
   );
 }
 
-/** Images attached to an OpenClaw reply, separate from its Markdown text. */
+/** Media attached to an OpenClaw reply, separate from its Markdown text. */
 export function ChatMedia({ media }: { media?: string[] }) {
-  const urls = [...new Set((media || []).map(imageSrc).filter((url): url is string => Boolean(url)))];
+  const urls = [...new Set((media || []).map(mediaSrc).filter((url): url is string => Boolean(url)))];
   if (!urls.length) return null;
   return (
     <div className="mt-2 flex flex-col gap-2">
-      {urls.map((url) => <ChatImage key={url} src={url} />)}
+      {urls.map((url) => /\.mp4(?:[?#]|$)/i.test(url)
+        ? <video key={url} src={url} controls playsInline preload="metadata" className="max-h-96 max-w-full rounded-md border border-border-solid" />
+        : <ChatImage key={url} src={url} />)}
     </div>
   );
 }
