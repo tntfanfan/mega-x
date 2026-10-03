@@ -16,6 +16,7 @@ import { WorkspaceTasks } from "../tasks/WorkspaceTasks";
 import { OutputsPane } from "../outputs/OutputsPane";
 import { OutputInteractionProvider, useOutputInteractions } from "../outputs/OutputInteractionProvider";
 import { OutputRefChip } from "../chat/OutputRefChip";
+import { AssistantText } from "../chat/AssistantText";
 import { OutputAwareMarkdown } from "../chat/OutputAwareMarkdown";
 import { OutputMentionMenu } from "../chat/OutputMentionMenu";
 import { activeMention, messageId, type MentionQuery } from "../../lib/outputRefs";
@@ -307,7 +308,7 @@ export function WorkspaceChat({ draft, messages, onSend, onCancel,
                   <div className={`mb-1 text-[11px] font-medium ${message.source === "sub" ? "text-spark-blue" : "text-primary"}`}>
                     {message.label || `${draft.emoji || ""} ${draft.name}`.trim()}
                   </div>
-                  {message.text && <OutputAwareMarkdown text={extractTryReply(message.text) || message.text} refs={message.refs} />}
+                  {message.text && <AssistantText text={extractTryReply(message.text) || message.text} render={part => <OutputAwareMarkdown text={part} refs={message.refs} />} />}
                   <ChatMedia media={message.media} />
                 </> : <OutputAwareMarkdown text={message.text} refs={message.refs} user />}
                 {!!message.refs?.length && <div className="mt-2 flex flex-wrap gap-1.5">{message.refs.map(ref => <OutputRefChip key={refKey(ref)} refItem={ref}

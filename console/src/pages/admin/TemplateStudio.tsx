@@ -246,6 +246,16 @@ export default function AdminTemplateStudio() {
           { id, role: "copilot", text: "", source, label: label || leadLabel },
         ]);
       },
+      onReplace: (key, source, label, text) => {
+        let id = tryStreamIds.current[key];
+        if (!id) {
+          id = `t-${key}-${Date.now()}`;
+          tryStreamIds.current[key] = id;
+          setTryMessages((cur) => [...cur, { id, role: "copilot", text, source, label: label || leadLabel }]);
+          return;
+        }
+        setTryMessages((cur) => cur.map((m) => m.id === id ? { ...m, text, label: m.label || label || leadLabel, source } : m));
+      },
       onDelta: (key, source, label, text) => {
         let id = tryStreamIds.current[key];
         if (!id) {

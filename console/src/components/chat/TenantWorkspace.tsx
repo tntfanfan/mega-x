@@ -69,14 +69,14 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
     if (!workspaceKey || loaded !== identity || tenant.state !== "running") return;
     let disposed = false;
     const streams: Record<string, string> = {};
-    const write = (key: string, source: "lead" | "sub", speaker: string, text = "", media?: string) => {
+    const write = (key: string, source: "lead" | "sub", speaker: string, text = "", media?: string, mode: "append" | "replace" = "append") => {
       if (disposed) return;
       const id = streams[key] ||= `stream-${key}-${Date.now()}`;
       setBusy(true);
       setMessages(rows => {
         const existing = rows.find(m => m.id === id);
         if (!existing) return [...rows, { id, role: "copilot", text, source, label: speaker || label.name, media: media ? [media] : undefined }];
-        return rows.map(m => m.id === id ? { ...m, text: m.text + text, media: media ? [...new Set([...(m.media || []), media])] : m.media } : m);
+        return rows.map(m => m.id === id ? { ...m, text: mode === "replace" ? text : m.text + text, media: media ? [...new Set([...(m.media || []), media])] : m.media } : m);
       });
     };
     const ws = new TryChatWs(`${scope.base}/chat/ws?${query}`, {
@@ -94,6 +94,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
       },
       onStart: (key, source, speaker) => write(key, source, speaker),
       onDelta: (key, source, speaker, text) => write(key, source, speaker, text),
+      onReplace: (key, source, speaker, text) => write(key, source, speaker, text, undefined, "replace"),
       onMedia: (key, source, speaker, url) => write(key, source, speaker, "", url),
       onTool: (_key, _source, speaker, name) => { if (!disposed) setToolStatus(speaker ? `${speaker} · ${name}` : name); },
       onEnd: key => { delete streams[key]; },

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ChatMsg } from "../../lib/builderFixtures";
+import { AssistantText } from "../chat/AssistantText";
 import { Markdown } from "../ui/Markdown";
 import { ChatMedia } from "../ui/ChatMedia";
 import { RecruiterWaiting, TypingDots } from "../ui/ChatWaiting";
@@ -176,7 +177,7 @@ export function VibeChat({
                     }`}>
                       {m.label || assistantLabel}
                     </div>
-                    {m.text ? <Markdown text={m.text} /> : null}
+                    {m.text ? <AssistantText text={m.text} render={part => <Markdown text={part} />} /> : null}
                     <ChatMedia media={m.media} />
                     {isTry && m.text && onSendToRecruiter && (
                       <button

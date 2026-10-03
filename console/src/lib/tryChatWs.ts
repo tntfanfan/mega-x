@@ -3,7 +3,7 @@
  * every OpenClaw sub-agent.
  *
  *   C→S: prompt | request_status | cancel | ping
- *   S→C: ready | accepted | delivery_status | start | delta | tool | end | idle | error | pong
+ *   S→C: ready | accepted | delivery_status | start | delta | replace | tool | end | idle | error | pong
  */
 
 export type TryChatSource = "lead" | "sub";
@@ -19,6 +19,7 @@ export type TryChatWsHandlers = {
   onDelivery?: (info: TryDelivery) => void;
   onStart?: (key: string, source: TryChatSource, label: string) => void;
   onDelta?: (key: string, source: TryChatSource, label: string, text: string) => void;
+  onReplace?: (key: string, source: TryChatSource, label: string, text: string) => void;
   onMedia?: (key: string, source: TryChatSource, label: string, url: string) => void;
   onTool?: (key: string, source: TryChatSource, label: string, name: string) => void;
   onEnd?: (key: string) => void;
@@ -175,9 +176,11 @@ export class TryChatWs {
       this.handlers.onStart?.(key, source, label);
       return;
     }
-    if (t === "delta" && key) {
+    if ((t === "delta" || t === "replace") && key) {
       this.busy = true;
-      this.handlers.onDelta?.(key, source, label, String(msg.text ?? ""));
+      const text = String(msg.text ?? "");
+      if (t === "replace") this.handlers.onReplace?.(key, source, label, text);
+      else this.handlers.onDelta?.(key, source, label, text);
       return;
     }
     if (t === "media" && key && typeof msg.url === "string") {
