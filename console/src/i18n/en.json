@@ -907,6 +907,7 @@
   "dev.studio.chat.try-connecting": "Connecting to the department…",
   "dev.studio.chat.try-placeholder": "Message…",
   "dev.studio.chat.try-waiting": "Lead and sub-agents are streaming…",
+  "dev.studio.chat.thinking": "Thinking",
   "dev.studio.chat.try-banner": "Dept test: the lead and every sub-agent stream live. Read-only. Use “Send to Dept develop” if something looks wrong.",
   "dev.studio.chat.try-empty": "No Dept test run yet — send a business-style message and see how this new department responds.",
   "dev.studio.chat.try-error": "Department test failed. Please retry.",

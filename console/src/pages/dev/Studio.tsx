@@ -26,6 +26,7 @@ import type {
 import { estCostPerTask } from "../../lib/builderFixtures";
 import { sanitizeDeptShort } from "../../lib/depts";
 import { RecruiterWs } from "../../lib/recruiterWs";
+import { applyThinking, isEmptyCopilot } from "../../lib/thinkingBrief";
 import { TryChatWs, type SendTryMessage } from "../../lib/tryChatWs";
 import { outputWorkspaceKey } from "../../lib/outputRefs";
 import { sandboxScope } from "../../lib/workspaceScope";
@@ -466,6 +467,21 @@ export default function DevStudio() {
         }
         setTryMessages((cur) => cur.map((m) => m.id === id ? { ...m, text, label: m.label || label || leadLabel, source } : m));
       },
+      onThinking: (key, source, label, text, opts) => {
+        setTryBusy(true);
+        let id = tryStreamIds.current[key];
+        if (!id) {
+          id = `t-${key}-${Date.now()}`;
+          tryStreamIds.current[key] = id;
+        }
+        setTryMessages((cur) => {
+          const idx = cur.findIndex((m) => m.id === id);
+          if (idx === -1) {
+            return [...cur, { id, role: "copilot", text: "", thinking: applyThinking("", text, opts), source, label: label || leadLabel }];
+          }
+          return cur.map((m) => m.id === id ? { ...m, thinking: applyThinking(m.thinking || "", text, opts), label: m.label || label || leadLabel, source } : m);
+        });
+      },
       onDelta: (key, source, label, text) => {
         setTryBusy(true);
         if (!client.supportsOutputRefs) setTryMessages(current => current.map(message => message.status === "sending" ? { ...message, status: "accepted" } : message));
@@ -517,14 +533,14 @@ export default function DevStudio() {
         tryStreamIds.current = {};
         setTryBusy(false);
         setTryToolStatus(null);
-        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
+        setTryMessages((cur) => cur.filter((m) => !isEmptyCopilot(m)));
       },
       onError: (message, info) => {
         setTryBusy(false);
         setTryToolStatus(null);
         setTryConnectError(message);
         tryStreamIds.current = {};
-        setTryMessages((cur) => cur.filter((m) => !(m.role === "copilot" && !m.text && !m.media?.length)));
+        setTryMessages((cur) => cur.filter((m) => !isEmptyCopilot(m)));
         if (info?.clientMessageId) setTryMessages(current => current.map(m => m.clientMessageId === info.clientMessageId ? { ...m, status: "failed" } : m));
         toast.error(message);
       },

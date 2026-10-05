@@ -109,6 +109,8 @@ export interface ChatMsg {
   id: string;
   role: "user" | "copilot";
   text: string;
+  /** Live thinking brief. Lines are separated by newlines; the last line may still be growing. */
+  thinking?: string;
   media?: string[];
   source?: "lead" | "sub";
   label?: string;

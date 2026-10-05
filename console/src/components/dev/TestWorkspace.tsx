@@ -17,6 +17,7 @@ import { OutputsPane } from "../outputs/OutputsPane";
 import { OutputInteractionProvider, useOutputInteractions } from "../outputs/OutputInteractionProvider";
 import { OutputRefChip } from "../chat/OutputRefChip";
 import { AssistantText } from "../chat/AssistantText";
+import { ThinkingBrief } from "../chat/ThinkingBrief";
 import { OutputAwareMarkdown } from "../chat/OutputAwareMarkdown";
 import { OutputMentionMenu } from "../chat/OutputMentionMenu";
 import { activeMention, messageId, type MentionQuery } from "../../lib/outputRefs";
@@ -257,7 +258,7 @@ export function WorkspaceChat({ draft, messages, onSend, onCancel,
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length, lastMessage?.text, busy, toolStatus]);
+  }, [messages.length, lastMessage?.text, lastMessage?.thinking, busy, toolStatus]);
   useEffect(() => { if (focusToken) inputRef.current?.focus(); }, [focusToken]);
   const chooseMention = (file: OutputFile) => {
     if (!mention || !referenceOutput(file)) return;
@@ -302,7 +303,7 @@ export function WorkspaceChat({ draft, messages, onSend, onCancel,
       </header>
       <div ref={scrollRef} role="log" aria-live="polite" aria-busy={busy} className="flex-1 min-h-0 space-y-4 overflow-y-auto px-5 py-3">
         {messages.map((message) => {
-          if (message.role === "copilot" && !message.text && !message.media?.length) return null;
+          if (message.role === "copilot" && !message.text && !message.media?.length && !message.thinking) return null;
           const assistant = message.role === "copilot";
           return (
             <div key={message.id} className={`flex ${assistant ? "justify-start" : "justify-end"}`}>
@@ -313,6 +314,7 @@ export function WorkspaceChat({ draft, messages, onSend, onCancel,
                   <div className={`mb-1 text-[11px] font-medium ${message.source === "sub" ? "text-spark-blue" : "text-primary"}`}>
                     {message.label || `${draft.emoji || ""} ${draft.name}`.trim()}
                   </div>
+                  <ThinkingBrief text={message.thinking} />
                   {message.text && <AssistantText text={extractTryReply(message.text) || message.text} render={part => <OutputAwareMarkdown text={part} refs={message.refs} />} />}
                   <ChatMedia media={message.media} />
                 </> : <OutputAwareMarkdown text={message.text} refs={message.refs} user />}

@@ -3,7 +3,7 @@
  * every OpenClaw sub-agent.
  *
  *   C→S: prompt | request_status | cancel | ping
- *   S→C: startup | ready | accepted | delivery_status | start | delta | replace | tool | end | idle | error | pong
+ *   S→C: startup | ready | accepted | delivery_status | start | delta | replace | thinking | tool | end | idle | error | pong
  */
 
 export type TryChatSource = "lead" | "sub";
@@ -22,6 +22,7 @@ export type TryChatWsHandlers = {
   onStart?: (key: string, source: TryChatSource, label: string) => void;
   onDelta?: (key: string, source: TryChatSource, label: string, text: string) => void;
   onReplace?: (key: string, source: TryChatSource, label: string, text: string) => void;
+  onThinking?: (key: string, source: TryChatSource, label: string, text: string, opts?: { open?: boolean; replace?: boolean }) => void;
   onMedia?: (key: string, source: TryChatSource, label: string, url: string) => void;
   onTool?: (key: string, source: TryChatSource, label: string, name: string) => void;
   onEnd?: (key: string) => void;
@@ -231,6 +232,14 @@ export class TryChatWs {
       const text = String(msg.text ?? "");
       if (t === "replace") this.handlers.onReplace?.(key, source, label, text);
       else this.handlers.onDelta?.(key, source, label, text);
+      return;
+    }
+    if (t === "thinking" && key) {
+      this.busy = true;
+      this.handlers.onThinking?.(key, source, label, String(msg.text ?? ""), {
+        open: msg.open === true,
+        replace: msg.replace === true,
+      });
       return;
     }
     if (t === "media" && key && typeof msg.url === "string") {

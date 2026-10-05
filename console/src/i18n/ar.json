@@ -853,6 +853,7 @@
   "dev.studio.chat.try-disabled": "أنشئ SOUL / AGENTS في تطوير القسم أولاً ثم ادخل اختبار القسم",
   "dev.studio.chat.try-placeholder": "اكتب رسالة…",
   "dev.studio.chat.try-waiting": "القسم الجديد يردّ…",
+  "dev.studio.chat.thinking": "تفكير",
   "dev.studio.chat.try-banner": "اختبار القسم: تحقق من شخصية القسم المُولَّد وطريقة استقباله. للقراءة فقط. استخدم «أرسل إلى تطوير القسم» إن وجدت مشكلة.",
   "dev.studio.chat.try-empty": "لا اختبار بعد — أرسل رسالة عملية وانظر كيف يرد القسم الجديد.",
   "dev.studio.chat.try-error": "فشل اختبار القسم. أعد المحاولة.",

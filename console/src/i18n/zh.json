@@ -907,6 +907,7 @@
   "dev.studio.chat.try-connecting": "正在接通部门，稍等…",
   "dev.studio.chat.try-placeholder": "输入消息…",
   "dev.studio.chat.try-waiting": "部长和子代理正在实时回复…",
+  "dev.studio.chat.thinking": "思考",
   "dev.studio.chat.try-banner": "部门测试：部长和子代理都会边写边显示。只读，不改草稿。有问题可点「发给部门开发」。",
   "dev.studio.chat.try-empty": "还没有部门测试记录——发一条业务向消息，看看这个新部门怎么接。",
   "dev.studio.chat.try-error": "部门测试失败，请稍后重试",

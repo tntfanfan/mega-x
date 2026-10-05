@@ -5,6 +5,7 @@ import type { BuilderDraft, ChatMsg } from "../../lib/builderFixtures";
 import { resolveDeptDisplay } from "../../lib/depts";
 import { outputWorkspaceKey } from "../../lib/outputRefs";
 import { loadTryChat, saveTryChat, mergeTryHistory, turnsToMessages, type TryChatSession, type TryHistoryTurn } from "../../lib/tryChatReply";
+import { applyThinking } from "../../lib/thinkingBrief";
 import { TryChatWs, type SendTryMessage } from "../../lib/tryChatWs";
 import type { WorkspaceScope } from "../../lib/workspaceScope";
 import { workspaceStartupReason, type WorkspaceStartupProgress } from "../../lib/workspaceStartup";
@@ -104,6 +105,17 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
       onStart: (key, source, speaker) => write(key, source, speaker),
       onDelta: (key, source, speaker, text) => write(key, source, speaker, text),
       onReplace: (key, source, speaker, text) => write(key, source, speaker, text, undefined, "replace"),
+      onThinking: (key, source, speaker, text, opts) => {
+        if (disposed) return;
+        const id = streams[key] ||= `stream-${key}-${Date.now()}`;
+        setBusy(true);
+        setMessages(rows => {
+          const existing = rows.find(m => m.id === id);
+          const thinking = applyThinking(existing?.thinking || "", text, opts);
+          if (!existing) return [...rows, { id, role: "copilot", text: "", thinking, source, label: speaker || label.name }];
+          return rows.map(m => m.id === id ? { ...m, thinking } : m);
+        });
+      },
       onMedia: (key, source, speaker, url) => write(key, source, speaker, "", url),
       onTool: (_key, _source, speaker, name) => { if (!disposed) setToolStatus(speaker ? `${speaker} · ${name}` : name); },
       onEnd: key => { delete streams[key]; },
