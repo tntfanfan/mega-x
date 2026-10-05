@@ -7,6 +7,7 @@ import { outputWorkspaceKey } from "../../lib/outputRefs";
 import { loadTryChat, saveTryChat, mergeTryHistory, turnsToMessages, type TryChatSession, type TryHistoryTurn } from "../../lib/tryChatReply";
 import { TryChatWs, type SendTryMessage } from "../../lib/tryChatWs";
 import type { WorkspaceScope } from "../../lib/workspaceScope";
+import { workspaceStartupReason, type WorkspaceStartupProgress } from "../../lib/workspaceStartup";
 import { TestWorkspace } from "../dev/TestWorkspace";
 import { WorkspaceAvailabilityGate } from "../ui/WorkspaceAvailabilityGate";
 
@@ -27,6 +28,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
   const [deptsLoaded, setDeptsLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<WorkspaceStartupProgress | null>(null);
   const [toolStatus, setToolStatus] = useState<string | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
   const client = useRef<TryChatWs | null>(null);
@@ -54,7 +56,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
   useEffect(() => {
     if (!workspaceKey) return;
     let alive = true;
-    setConnectedIdentity(""); setBusy(false); setLoaded(""); setConnectError(null);
+    setConnectedIdentity(""); setBusy(false); setLoaded(""); setConnectError(null); setProgress(null);
     setMessages(loadTryChat(workspaceKey)?.messages || []);
     api.get<{ items: TryHistoryTurn[] }>(`${scope.base}/chat?${query}`).then(r => {
       if (alive) setMessages(current => mergeTryHistory(current, turnsToMessages(r.items || [])));
@@ -86,6 +88,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
       });
     };
     const ws = new TryChatWs(`${scope.base}/chat/ws?${query}`, {
+      onProgress: value => { if (!disposed) setProgress(value); },
       onReady: () => {
         if (disposed) return;
         setConnectedIdentity(identity); setConnectError(null);
@@ -148,7 +151,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
   const draft = useMemo(() => ({ id: deptId, name: label.name, emoji: label.emoji } as BuilderDraft), [deptId, label.name, label.emoji]);
   return { scope, draft, workspaceKey, sessionId, sessions, messages, onSend, onRecoverSubmission,
     onCancel: () => client.current?.cancel(), busy, ready, connectError, toolStatus,
-    tenantState: tenant.state, deptsLoaded,
+    tenantState: tenant.state, startup: tenant.startup, deptsLoaded, userLoaded: !!userId, progress,
     retry: () => { setConnectedIdentity(""); setConnectError(null); setRetryAttempt(value => value + 1); },
     creatingSession: creatingSession || busy, onSessionChange: (id: string) => change(deptId, id), onSessionCreate,
     onChatFocus: () => { const next = new URLSearchParams(params); next.set("dept", deptId); if (sessionId) next.set("session", sessionId); next.set("focus", "main"); navigate(`${scope.routeBase}/chat?${next}`); },
@@ -171,13 +174,16 @@ export function TenantWorkspace({ panel }: { panel: "chat" | "tasks" }) {
   const failed = chat.tenantState === "error";
   const paused = chat.tenantState === "paused";
   const waiting = !failed && !paused && !noDepts;
+  const reason = workspaceStartupReason(chat.tenantState === "provisioning" ? chat.startup?.step
+    : !chat.userLoaded ? "loading_account" : !chat.deptsLoaded ? "loading_departments" : !chat.loaded ? "loading_history"
+    : chat.progress?.stage || (chat.connectError ? "reconnecting" : "connecting"));
   const title = failed ? "初始化未成功" : paused ? "实例已暂停" : noDepts ? "请先添加部门"
-    : chat.tenantState === "provisioning" ? "等待实例化完成"
-    : chat.connectError ? "正在恢复服务连接" : "正在连接聊天与任务服务";
+    : reason.title;
   const detail = failed ? "聊天和任务暂时不可用，请重新初始化实例。" : paused ? "恢复实例后，聊天和任务会自动启用。"
     : noDepts ? "添加部门并完成初始化后，即可开始聊天和创建任务。"
-    : "服务确认就绪后，界面会自动亮起。";
-  const availability = { title, detail, waiting, onRetry: !noDepts && !paused ? chat.retry : undefined };
+    : reason.detail;
+  const availability = { title, detail, waiting, attempt: chat.tenantState === "running" ? chat.progress?.attempt : undefined,
+    onRetry: !noDepts && !paused ? chat.retry : undefined };
   return <div className="flex h-[calc(100dvh-8rem-72px)] min-h-0 min-w-0 flex-col">
     {chat.workspaceKey && chat.loaded ? <TestWorkspace key={chat.workspaceKey} {...chat} panel={panel}
       availability={availability}

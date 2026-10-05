@@ -29,6 +29,7 @@ import { RecruiterWs } from "../../lib/recruiterWs";
 import { TryChatWs, type SendTryMessage } from "../../lib/tryChatWs";
 import { outputWorkspaceKey } from "../../lib/outputRefs";
 import { sandboxScope } from "../../lib/workspaceScope";
+import { workspaceStartupReason, type WorkspaceStartupProgress } from "../../lib/workspaceStartup";
 import { SecurityReviewOverlay } from "../../components/SecurityReviewOverlay";
 import {
   FilesPanel,
@@ -145,6 +146,7 @@ export default function DevStudio() {
   const [tryBusy, setTryBusy] = useState(false);
   const [tryReady, setTryReady] = useState(false);
   const [tryConnectError, setTryConnectError] = useState<string | null>(null);
+  const [tryProgress, setTryProgress] = useState<WorkspaceStartupProgress | null>(null);
   const [trySessions, setTrySessions] = useState<TryChatSession[]>([]);
   const [creatingTrySession, setCreatingTrySession] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -412,6 +414,7 @@ export default function DevStudio() {
       : "部长";
     let disposed = false;
     const client = new TryChatWs(`/v1/dev/depts/${draftId}/try_ws?session_id=${encodeURIComponent(trySessionId)}`, {
+      onProgress: progress => { if (!disposed) setTryProgress(progress); },
       onReady: (info) => {
         if (disposed) return;
         if (info.session_id && info.session_id !== trySessionId) {
@@ -737,6 +740,7 @@ export default function DevStudio() {
   const scoreTotal = checks.filter((c) => c.status !== "info").length;
 
   const cellFailed = cellStatus === "unavailable" || cellStatus === "error" || cellStatus === "frozen";
+  const tryStartup = workspaceStartupReason(!cellReady ? "waiting_instance" : tryProgress?.stage || "connecting");
 
   if (!draft) {
     return <section className="container py-10"><p className="text-body text-sm">{t("common.loading")}…</p></section>;
@@ -960,16 +964,17 @@ export default function DevStudio() {
               ready={canTry && tryReady && cellReady}
               availability={{
                 waiting: canTry && !cellFailed,
+                attempt: cellReady ? tryProgress?.attempt : undefined,
                 title: cellFailed ? "测试环境初始化未成功" : !canTry ? "部门尚未准备就绪"
-                  : !cellReady ? "等待测试环境初始化" : tryConnectError ? "正在恢复服务连接" : "正在连接聊天与任务服务",
+                  : tryStartup.title,
                 detail: cellFailed ? "请重新初始化测试环境，聊天和任务暂时不可用。"
-                  : !canTry ? t("dev.studio.chat.try-disabled") : "服务确认就绪后，界面会自动亮起。",
+                  : !canTry ? t("dev.studio.chat.try-disabled") : tryStartup.detail,
               }}
               connectError={canTry ? tryConnectError : t("dev.studio.chat.try-disabled")}
               toolStatus={tryToolStatus}
             />
           </div>
-        ) : <WorkspaceAvailabilityGate ready={false} title="正在准备测试工作区" detail="服务确认就绪后，界面会自动亮起。">
+        ) : <WorkspaceAvailabilityGate ready={false} {...workspaceStartupReason(userId ? "loading_history" : "loading_account")}>
           <div className="min-h-0 flex-1 bg-bg" />
         </WorkspaceAvailabilityGate>)}
         </>

@@ -3,18 +3,20 @@
  * every OpenClaw sub-agent.
  *
  *   C→S: prompt | request_status | cancel | ping
- *   S→C: ready | accepted | delivery_status | start | delta | replace | tool | end | idle | error | pong
+ *   S→C: startup | ready | accepted | delivery_status | start | delta | replace | tool | end | idle | error | pong
  */
 
 export type TryChatSource = "lead" | "sub";
 import { normalizeRefs, refsForApi, type ChatRef } from "./chatRefs";
 import { messageId } from "./outputRefs";
+import type { WorkspaceStartupProgress } from "./workspaceStartup";
 
 export type SendTryMessage = { clientMessageId: string; text: string; refs: ChatRef[]; retry?: boolean };
 export type TryDelivery = { clientMessageId: string; turnId?: string; refs: ChatRef[];
   status: "accepted" | "failed" | "delivery_unknown" | "submitting"; code?: string };
 
 export type TryChatWsHandlers = {
+  onProgress?: (progress: WorkspaceStartupProgress) => void;
   onReady?: (info: { session_id: string; agent: string; capabilities?: { output_refs?: boolean } }) => void;
   onDelivery?: (info: TryDelivery) => void;
   onStart?: (key: string, source: TryChatSource, label: string) => void;
@@ -50,6 +52,7 @@ export class TryChatWs {
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatDeadline: ReturnType<typeof setTimeout> | null = null;
   private intentionalClose = false;
+  private connectAttempt = 0;
   private lastError = "";
   private lastErrorAt = 0;
   ready = false;
@@ -67,11 +70,14 @@ export class TryChatWs {
       return;
     }
     const url = wsUrl(this.wsPath);
+    this.connectAttempt += 1;
+    this.progress("connecting");
     this.handlers.onStatus?.(`connecting ${url}`);
     const ws = new WebSocket(url);
     this.ws = ws;
     this.readinessTimer = setTimeout(() => this.disconnect("服务连接超时，正在重试"), 45000);
     ws.onopen = () => {
+      this.progress("waiting_services");
       this.handlers.onStatus?.("connected");
     };
     ws.onmessage = (ev) => {
@@ -93,6 +99,7 @@ export class TryChatWs {
       this.handlers.onClose?.();
       if (wasBusy) this.handlers.onIdle?.();
       if (!this.intentionalClose) {
+        this.progress("reconnecting");
         this.handlers.onStatus?.("disconnected — reconnecting…");
         this.reconnectTimer = setTimeout(() => this.connect(), 4000);
       }
@@ -131,6 +138,7 @@ export class TryChatWs {
     this.ready = false;
     this.busy = false;
     this.clearConnectionTimers();
+    this.progress("reconnecting");
     this.handlers.onError?.(message, { code: "gateway_unavailable" });
     this.ws?.close();
   }
@@ -186,6 +194,10 @@ export class TryChatWs {
 
   private dispatch(msg: Record<string, unknown>): void {
     const t = msg.type;
+    if (t === "startup") {
+      if (!this.ready && typeof msg.stage === "string") this.progress(msg.stage);
+      return;
+    }
     const key = String(msg.key ?? "");
     const source = (msg.source === "sub" ? "sub" : "lead") as TryChatSource;
     const label = String(msg.label ?? "");
@@ -261,5 +273,9 @@ export class TryChatWs {
       this.handlers.onError?.(message, { clientMessageId: msg.client_message_id as string | undefined,
         code: msg.code as string | undefined, path: msg.path as string | undefined });
     }
+  }
+
+  private progress(stage: string): void {
+    this.handlers.onProgress?.({ stage, attempt: this.connectAttempt });
   }
 }
