@@ -39,6 +39,7 @@ import {
 } from "../../components/studio";
 import { useToast } from "../../components/ui/Toast";
 import { TestWorkspace } from "../../components/dev/TestWorkspace";
+import { WorkspaceAvailabilityGate } from "../../components/ui/WorkspaceAvailabilityGate";
 
 type RStatus = "pass" | "warn" | "fail" | "info";
 interface Check { key: string; label: string; status: RStatus; detail?: string }
@@ -936,7 +937,7 @@ export default function DevStudio() {
             onComposeSeedConsumed={() => setComposeSeed(null)}
           />
         </div>
-        {testMode && tryCacheKey && tryLoadedKey === tryCacheKey && draft.id === draftId && (
+        {testMode && (tryCacheKey && tryLoadedKey === tryCacheKey && draft.id === draftId ? (
           <div className="flex-1 flex min-h-0">
             <TestWorkspace
               draft={draft}
@@ -956,12 +957,21 @@ export default function DevStudio() {
               }}
               onCancel={onCancel}
               busy={tryBusy}
-              ready={canTry && tryReady}
+              ready={canTry && tryReady && cellReady}
+              availability={{
+                waiting: canTry && !cellFailed,
+                title: cellFailed ? "测试环境初始化未成功" : !canTry ? "部门尚未准备就绪"
+                  : !cellReady ? "等待测试环境初始化" : tryConnectError ? "正在恢复服务连接" : "正在连接聊天与任务服务",
+                detail: cellFailed ? "请重新初始化测试环境，聊天和任务暂时不可用。"
+                  : !canTry ? t("dev.studio.chat.try-disabled") : "服务确认就绪后，界面会自动亮起。",
+              }}
               connectError={canTry ? tryConnectError : t("dev.studio.chat.try-disabled")}
               toolStatus={tryToolStatus}
             />
           </div>
-        )}
+        ) : <WorkspaceAvailabilityGate ready={false} title="正在准备测试工作区" detail="服务确认就绪后，界面会自动亮起。">
+          <div className="min-h-0 flex-1 bg-bg" />
+        </WorkspaceAvailabilityGate>)}
         </>
       )}
     </div>

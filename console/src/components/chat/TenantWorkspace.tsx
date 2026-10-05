@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { LoaderCircle, RefreshCw, CircleAlert } from "lucide-react";
 import { api, apiErrorMessage, type Company, type DeptCatalogItem } from "../../lib/api";
 import type { BuilderDraft, ChatMsg } from "../../lib/builderFixtures";
 import { resolveDeptDisplay } from "../../lib/depts";
@@ -9,6 +8,7 @@ import { loadTryChat, saveTryChat, mergeTryHistory, turnsToMessages, type TryCha
 import { TryChatWs, type SendTryMessage } from "../../lib/tryChatWs";
 import type { WorkspaceScope } from "../../lib/workspaceScope";
 import { TestWorkspace } from "../dev/TestWorkspace";
+import { WorkspaceAvailabilityGate } from "../ui/WorkspaceAvailabilityGate";
 
 const Context = createContext<ReturnType<typeof useTenantChat> | null>(null);
 
@@ -177,30 +177,20 @@ export function TenantWorkspace({ panel }: { panel: "chat" | "tasks" }) {
   const detail = failed ? "聊天和任务暂时不可用，请重新初始化实例。" : paused ? "恢复实例后，聊天和任务会自动启用。"
     : noDepts ? "添加部门并完成初始化后，即可开始聊天和创建任务。"
     : "服务确认就绪后，界面会自动亮起。";
-  return <div className="relative flex h-[calc(100dvh-8rem-72px)] min-h-0 min-w-0 flex-col" aria-busy={!chat.ready && waiting}>
-    <div ref={node => node?.toggleAttribute("inert", !chat.ready)} aria-disabled={!chat.ready}
-      className={`flex min-h-0 min-w-0 flex-1 transition-opacity duration-200 ${chat.ready ? "opacity-100" : "pointer-events-none opacity-30 grayscale select-none"}`}>
+  const availability = { title, detail, waiting, onRetry: !noDepts && !paused ? chat.retry : undefined };
+  return <div className="flex h-[calc(100dvh-8rem-72px)] min-h-0 min-w-0 flex-col">
     {chat.workspaceKey && chat.loaded ? <TestWorkspace key={chat.workspaceKey} {...chat} panel={panel}
+      availability={availability}
       chatActions={<select aria-label="部门" value={chat.deptId} disabled={chat.busy} onChange={e => chat.change(e.target.value)} className="h-7 min-w-0 max-w-40 rounded border border-border-solid bg-surface px-2 text-xs text-body">
         {chat.depts.map(dept => <option key={dept.id} value={dept.id}>{resolveDeptDisplay(dept.id, chat.depts).label}</option>)}
-      </select>} /> : <div className="grid min-h-0 flex-1 grid-cols-1 divide-x divide-border-solid bg-bg lg:grid-cols-2">
+      </select>} /> : <WorkspaceAvailabilityGate ready={false} {...availability}>
+      <div className="grid min-h-0 flex-1 grid-cols-1 divide-x divide-border-solid bg-bg lg:grid-cols-2">
         {[panel === "chat" ? "聊天" : "任务", "产出物"].map((label, i) => <div key={label} className={`flex flex-col ${i ? "hidden lg:flex" : ""}`}>
           <div className="h-10 border-b border-border-solid bg-surface/60 px-4 py-3 text-xs text-muted">{label}</div>
           <div className="flex-1 space-y-4 p-5"><div className="h-4 w-1/3 rounded bg-surface-2" /><div className="h-20 rounded-xl bg-surface" /><div className="h-12 w-2/3 rounded-xl bg-surface" /></div>
           {!i && <div className="m-4 h-20 rounded-2xl border border-border-solid bg-surface" />}
         </div>)}
-      </div>}
-    </div>
-    {!chat.ready && <div className="absolute inset-0 z-30 flex items-center justify-center bg-bg/50 px-5">
-      <div role="status" aria-live="polite" className="max-w-sm rounded-2xl border border-border-solid bg-surface p-6 text-center shadow-xl">
-        {waiting ? <LoaderCircle size={28} aria-hidden className="mx-auto mb-4 animate-spin text-primary" />
-          : <CircleAlert size={28} aria-hidden className="mx-auto mb-4 text-muted" />}
-        <p className="text-sm font-medium text-heading">{title}</p>
-        <p className="mt-2 text-xs leading-6 text-muted">{detail}</p>
-        {!noDepts && !paused && <button type="button" onClick={chat.retry} className="mx-auto mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs text-muted hover:bg-surface-2 hover:text-heading">
-          <RefreshCw size={13} aria-hidden />重新检查
-        </button>}
       </div>
-    </div>}
+    </WorkspaceAvailabilityGate>}
   </div>;
 }

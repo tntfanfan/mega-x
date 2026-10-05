@@ -25,6 +25,7 @@ import type { OutputFile } from "../../lib/outputs";
 import type { SendTryMessage } from "../../lib/tryChatWs";
 import { ChatMedia } from "../ui/ChatMedia";
 import { TypingDots } from "../ui/ChatWaiting";
+import { WorkspaceAvailabilityGate, type WorkspaceAvailability } from "../ui/WorkspaceAvailabilityGate";
 
 type Panel = "department" | "chat" | "tasks";
 export type TestWorkspaceProps = {
@@ -45,6 +46,7 @@ export type TestWorkspaceProps = {
   onCancel: () => void;
   busy: boolean;
   ready: boolean;
+  availability?: WorkspaceAvailability;
   connectError: string | null;
   toolStatus: string | null;
 };
@@ -154,6 +156,8 @@ function TestWorkspaceContent(props: TestWorkspaceProps & { expanded: "right" | 
         </nav>
       </aside>}
 
+      <WorkspaceAvailabilityGate ready={panel === "department" || props.ready}
+        title="正在连接聊天与任务服务" detail="服务确认就绪后，界面会自动亮起。" {...props.availability}>
       <div ref={containerRef} data-expanded={expanded || undefined}
         className="studio-test-panes flex flex-1 min-w-0 min-h-0"
         style={{ "--studio-test-split": `${ratio * 100}%` } as CSSProperties}
@@ -216,6 +220,7 @@ function TestWorkspaceContent(props: TestWorkspaceProps & { expanded: "right" | 
           </div>
         </div>
       </div>
+      </WorkspaceAvailabilityGate>
     </div>
   );
 }
