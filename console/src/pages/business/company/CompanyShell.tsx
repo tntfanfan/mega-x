@@ -14,6 +14,7 @@ import type { Company } from "../../../lib/api";
 import { useToast } from "../../../components/ui/Toast";
 import { CompanySwitcher } from "../../../components/layout/CompanySwitcher";
 import { ChatProvider } from "./ChatProvider";
+import { useTenantWorkspaceReady } from "../../../components/chat/TenantWorkspace";
 
 export type CompanyOutlet = {
   company: Company;
@@ -55,11 +56,7 @@ function useCompany(companyId: string | undefined): {
       if (cancelledRef.current || companyIdRef.current !== id) return;
       companiesCacheRef.current = all.items;
       setS({ kind: "ok", company: co, companies: all.items });
-      if (co.state === "provisioning") {
-        timerRef.current = setTimeout(() => {
-          void load(false);
-        }, 3000);
-      }
+      timerRef.current = setTimeout(() => { void load(false); }, co.state === "provisioning" ? 3000 : 5000);
     } catch (e) {
       if (cancelledRef.current || companyIdRef.current !== id) return;
       const status = e && typeof e === "object" && "status" in e ? (e as { status: number }).status : 0;
@@ -123,6 +120,7 @@ function CompanyHeader({
   const { t } = useTranslation();
   const toast = useToast();
   const [restarting, setRestarting] = useState(false);
+  const workspaceReady = useTenantWorkspaceReady();
 
   // 手动重建容器（后端复用装/删部门那条 reconcile 链）。发起后公司会进入
   // provisioning 态，useCompany 里的 3s 轮询会自动跟进到 running。
@@ -141,7 +139,7 @@ function CompanyHeader({
   }, [company.id, company.name, t, toast, onRefresh]);
 
   const stateBadge = {
-    running: { label: t("business.company.subtitle.running"), color: "text-spark-mint" },
+    running: { label: workspaceReady ? t("business.company.subtitle.running") : "等待服务就绪", color: workspaceReady ? "text-spark-mint" : "text-muted" },
     paused: { label: t("business.company.subtitle.paused"), color: "text-spark-flare" },
     provisioning: { label: t("business.overview.company.state.provisioning"), color: "text-spark-blue" },
     error: { label: t("business.overview.company.state.error"), color: "text-fusion" },

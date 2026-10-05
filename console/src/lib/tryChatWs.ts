@@ -46,6 +46,9 @@ export class TryChatWs {
   private handlers: TryChatWsHandlers;
   private wsPath: string;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private readinessTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatTimer: ReturnType<typeof setTimeout> | null = null;
+  private heartbeatDeadline: ReturnType<typeof setTimeout> | null = null;
   private intentionalClose = false;
   private lastError = "";
   private lastErrorAt = 0;
@@ -67,6 +70,7 @@ export class TryChatWs {
     this.handlers.onStatus?.(`connecting ${url}`);
     const ws = new WebSocket(url);
     this.ws = ws;
+    this.readinessTimer = setTimeout(() => this.disconnect("服务连接超时，正在重试"), 45000);
     ws.onopen = () => {
       this.handlers.onStatus?.("connected");
     };
@@ -80,6 +84,8 @@ export class TryChatWs {
       this.dispatch(msg);
     };
     ws.onclose = () => {
+      if (this.ws !== ws) return;
+      this.clearConnectionTimers();
       this.ws = null;
       this.ready = false;
       const wasBusy = this.busy;
@@ -93,12 +99,14 @@ export class TryChatWs {
     };
     ws.onerror = () => {
       this.handlers.onStatus?.("WebSocket error");
+      this.disconnect("服务连接中断，正在重新连接");
     };
   }
 
   close(): void {
     this.intentionalClose = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.clearConnectionTimers();
     if (this.ws) {
       this.ws.onopen = null;
       this.ws.onmessage = null;
@@ -110,6 +118,33 @@ export class TryChatWs {
     this.ready = false;
     this.busy = false;
     this.supportsOutputRefs = false;
+  }
+
+  private clearConnectionTimers(): void {
+    for (const timer of [this.readinessTimer, this.heartbeatTimer, this.heartbeatDeadline]) {
+      if (timer) clearTimeout(timer);
+    }
+    this.readinessTimer = this.heartbeatTimer = this.heartbeatDeadline = null;
+  }
+
+  private disconnect(message: string): void {
+    this.ready = false;
+    this.busy = false;
+    this.clearConnectionTimers();
+    this.handlers.onError?.(message, { code: "gateway_unavailable" });
+    this.ws?.close();
+  }
+
+  private scheduleHeartbeat(): void {
+    if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
+    this.heartbeatTimer = setTimeout(() => {
+      if (!this.ready) return;
+      if (!this.send({ type: "ping" })) {
+        this.disconnect("服务连接中断，正在重新连接");
+        return;
+      }
+      this.heartbeatDeadline = setTimeout(() => this.disconnect("服务没有响应，正在重新连接"), 8000);
+    }, 10000);
   }
 
   sendPrompt(value: string | SendTryMessage): boolean {
@@ -155,7 +190,10 @@ export class TryChatWs {
     const source = (msg.source === "sub" ? "sub" : "lead") as TryChatSource;
     const label = String(msg.label ?? "");
     if (t === "ready") {
+      if (this.readinessTimer) clearTimeout(this.readinessTimer);
+      this.readinessTimer = null;
       this.ready = true;
+      this.scheduleHeartbeat();
       this.supportsOutputRefs = !!(msg.capabilities as { output_refs?: boolean } | undefined)?.output_refs;
       this.handlers.onReady?.({
         session_id: String(msg.session_id ?? ""),
@@ -198,6 +236,11 @@ export class TryChatWs {
       return;
     }
     if (t === "idle" || t === "pong") {
+      if (t === "pong") {
+        if (this.heartbeatDeadline) clearTimeout(this.heartbeatDeadline);
+        this.heartbeatDeadline = null;
+        this.scheduleHeartbeat();
+      }
       if (t === "idle") {
         this.busy = false;
         this.handlers.onIdle?.();
@@ -207,6 +250,10 @@ export class TryChatWs {
     if (t === "error") {
       this.busy = false;
       const message = String(msg.message ?? "error");
+      if (msg.code === "gateway_unavailable" || !this.ready || /^流式通道(不可用|已断开)/.test(message)) {
+        this.disconnect("服务正在启动或恢复连接，请稍候");
+        return;
+      }
       const now = Date.now();
       if (!msg.client_message_id && message === this.lastError && now - this.lastErrorAt < 8000) return;
       this.lastError = message;

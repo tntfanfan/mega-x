@@ -13,6 +13,7 @@ import { api } from "../../../lib/api";
 import type { Company } from "../../../lib/api";
 import { CompanySwitcher } from "../../../components/layout/CompanySwitcher";
 import { ChatProvider } from "./ChatProvider";
+import { useTenantWorkspaceReady } from "../../../components/chat/TenantWorkspace";
 
 export type LineOutlet = {
   line: Company;
@@ -54,11 +55,7 @@ function useLine(id: string | undefined): {
       if (cancelledRef.current || idRef.current !== lineId) return;
       linesCacheRef.current = all.items;
       setS({ kind: "ok", line, lines: all.items });
-      if (line.state === "provisioning") {
-        timerRef.current = setTimeout(() => {
-          void load(false);
-        }, 3000);
-      }
+      timerRef.current = setTimeout(() => { void load(false); }, line.state === "provisioning" ? 3000 : 5000);
     } catch (e) {
       if (cancelledRef.current || idRef.current !== lineId) return;
       const status =
@@ -121,8 +118,9 @@ export default function LineShell() {
 
 function LineHeader({ line, lines }: { line: Company; lines: Company[] }) {
   const { t } = useTranslation();
+  const workspaceReady = useTenantWorkspaceReady();
   const stateBadge = {
-    running: { label: t("solo.overview.lines.state.running"), color: "text-spark-mint" },
+    running: { label: workspaceReady ? t("solo.overview.lines.state.running") : "等待服务就绪", color: workspaceReady ? "text-spark-mint" : "text-muted" },
     paused: { label: t("solo.overview.lines.state.paused"), color: "text-spark-flare" },
     provisioning: { label: t("solo.overview.lines.state.provisioning"), color: "text-spark-blue" },
     error: { label: t("solo.overview.lines.state.error"), color: "text-fusion" },
