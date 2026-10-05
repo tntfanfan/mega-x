@@ -37,7 +37,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
   const deptId = depts.some(d => d.id === (params.get("dept") || selection.dept)) ? (params.get("dept") || selection.dept) : depts[0]?.id || "";
   const sessionId = params.has("dept") ? params.get("session") || "" : selection.session;
   const identity = `${scope.base}:${deptId}:${sessionId}`;
-  const ready = connectedIdentity === identity && loaded === identity && tenant.state === "running";
+  const ready = connectedIdentity === identity && loaded === identity && tenant.state === "running" && client.current?.ready === true;
   const workspaceKey = userId && deptId ? `${outputWorkspaceKey(userId, scope)}:dept:${deptId}:session:${sessionId || "default"}` : "";
   const label = resolveDeptDisplay(deptId, depts);
   const query = `dept_id=${encodeURIComponent(deptId)}${sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : ""}`;
@@ -88,7 +88,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
       });
     };
     const ws = new TryChatWs(`${scope.base}/chat/ws?${query}`, {
-      onProgress: value => { if (!disposed) setProgress(value); },
+      onProgress: value => { if (!disposed) { setProgress(value); setConnectedIdentity(""); } },
       onReady: () => {
         if (disposed) return;
         setConnectedIdentity(identity); setConnectError(null);
