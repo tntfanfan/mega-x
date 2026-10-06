@@ -54,7 +54,7 @@ export function OutputPreview({
     const textual = ["markdown", "text", "code", "json", "yaml", "table"].includes(file.kind);
     if (textual) {
       setTextLoading(true);
-      fetch(rawUrl(scope, file.path))
+      fetch(rawUrl(scope, file.path), { credentials: "include" })
         .then((r) => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.text();

@@ -225,6 +225,34 @@ test("old servers preserve reference drafts and retain plain-string sends", () =
   client.close();
 });
 
+test("output file URLs use the configured API host and stay relative when it is empty", async () => {
+  const source = readFileSync(new URL("../src/lib/outputs.ts", import.meta.url), "utf8");
+  const scope = { base: "/v1/companies/c-1" };
+  const load = (apiBase) => {
+    const js = ts.transpileModule(
+      source.replaceAll("import.meta.env.VITE_API_BASE", apiBase),
+      { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+    ).outputText;
+    const posted = [];
+    const context = vm.createContext({
+      exports: {},
+      require: () => ({ api: { post: async (_path, body) => { posted.push(body); return { url: "/v1/outputs/s/token/report.html" }; } } }),
+    });
+    vm.runInContext(js, context);
+    return context.exports;
+  };
+  const remote = load(JSON.stringify("https://api.example.test/"));
+  assert.equal(
+    remote.rawUrl(scope, "chat/a.md", true),
+    "https://api.example.test/v1/companies/c-1/outputs/raw?path=chat%2Fa.md&download=1",
+  );
+  assert.equal(await remote.requestPreviewUrl(scope, "chat/a.md"), "https://api.example.test/v1/outputs/s/token/report.html");
+  const local = load("undefined");
+  assert.equal(local.rawUrl(scope, "chat/a.md"), "/v1/companies/c-1/outputs/raw?path=chat%2Fa.md");
+  const preview = readFileSync(new URL("../src/components/outputs/OutputPreview.tsx", import.meta.url), "utf8");
+  assert.match(preview, /fetch\(rawUrl\(scope, file\.path\), \{ credentials: "include" \}\)/);
+});
+
 test("session queries reach both same-origin and configured WebSocket API routes", () => {
   const { TryChatWs } = lib("tryChatWs");
   const path = `/v1/dev/depts/dept-a/try_ws?session_id=try-dept-a-${"a".repeat(32)}`;

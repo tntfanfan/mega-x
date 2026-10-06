@@ -1,6 +1,13 @@
 import { api } from "./api";
 import type { WorkspaceScope } from "./workspaceScope";
 
+/** Empty in dev (same-origin proxy). Production Console is on Amplify, API is api.mega-x.ai. */
+const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? "").replace(/\/$/, "");
+
+function withApiBase(path: string): string {
+  return path.startsWith("/") ? `${API_BASE}${path}` : path;
+}
+
 export type OutputKind =
   | "markdown" | "text" | "code" | "json" | "yaml" | "table"
   | "image" | "video" | "audio" | "pdf" | "html"
@@ -73,12 +80,12 @@ export async function fetchMeta(scope: WorkspaceScope, path: string): Promise<Ou
 }
 
 export function rawUrl(scope: WorkspaceScope, path: string, download = false): string {
-  return `${scope.base}/outputs/raw?path=${encodeURIComponent(path)}${download ? "&download=1" : ""}`;
+  return withApiBase(`${scope.base}/outputs/raw?path=${encodeURIComponent(path)}${download ? "&download=1" : ""}`);
 }
 
 export async function requestPreviewUrl(scope: WorkspaceScope, path: string): Promise<string> {
   const res = await api.post<{ url: string }>(`${scope.base}/outputs/preview-url`, { path });
-  return res.url;
+  return withApiBase(res.url);
 }
 
 export async function fetchKinds(scope: WorkspaceScope): Promise<Record<string, string>> {
