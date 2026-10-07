@@ -218,4 +218,10 @@ Playwright in your local test environment, then run against a running dev server
 RESEARCH_PREVIEW_URL=http://127.0.0.1:5174 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs node console/tests/research-browser.mjs
 ```
 
+Run focused slow-network/race checks with `RESEARCH_RACE_ONLY=1` and actual
+client deadline/retry checks with `RESEARCH_TIMEOUT_ONLY=1`; run the full
+browser regression with `RESEARCH_NO_UUID=1` to cover HTTP origins where
+`crypto.randomUUID` is unavailable. Set `RESEARCH_CAPTURE=1` and
+`RESEARCH_ARTIFACT_DIR=/your/local/path` to capture both viewport sizes.
+
 No deployment or remote Git push is part of this migration.

@@ -68,7 +68,7 @@ backend `/workbench/` static dependency is included in the new build.
 
 ## Validation
 
-- `node --test console/tests/*.test.mjs`: 47 passing tests, including 18 new research
+- `node --test console/tests/*.test.mjs`: 48 passing tests, including 19 new research
   tests. The prior baseline was 36/37 passing after adding the first research tests;
   the failed existing WebSocket test had an incomplete VM timer environment.
 - `pnpm exec tsc --noEmit`: passes after restoring the existing baseline type checks.
@@ -94,4 +94,6 @@ operator's configured services and capability flags.
 
 See README for setup and browser-regression commands. The local migration preview
 uses port 5190 to avoid existing services on 5173/5174, with `/v1` proxied to 8002.
+Independent whole-branch review found and the fix pass verified delayed-bootstrap draft loss, stale history overwrites, HTTP-origin UUID fallback and unchanged-persona selection. Browser race tests cover accepted turns continuing to poll, bootstrap draft preservation, unchanged-persona selection, actual client deadline/retry identity and SPA company switching with overlapping write responses. Shared company-shell polling while hidden remains the existing Console behavior; research-specific polling stops.
+
 No remote push, PR, website publish or deployment is performed. User owns pushing.

@@ -75,7 +75,9 @@ export function useResearchDialogue(
     contextReads = useRef(new AbortController()),
     epoch = useRef(0),
     polling = useRef(""),
-    listVersion = useRef(0);
+    listVersion = useRef(0),
+    turnRevision = useRef(0),
+    messageEdits = useRef(0);
   const update = (changes: Partial<typeof state>) => {
     ref.current = { ...ref.current, ...changes };
     setState(ref.current);
@@ -137,18 +139,24 @@ export function useResearchDialogue(
   async function loadTurns() {
     const ctx = { ...ref.current },
       signal = contextReads.current.signal,
-      key = `${ctx.cid}:${ctx.generation}`;
+      key = `${ctx.cid}:${ctx.generation}`,
+      revision = turnRevision.current;
     if (!ctx.cid || polling.current === key) return;
     polling.current = key;
     try {
       const turns: DialogueTurn[] = [];
       for (let offset = 0; offset < 200; offset += 50) {
         const page = await client.turns(companyId, ctx.cid, offset, signal);
-        if (!current(ctx) || signal.aborted) return;
+        if (
+          !current(ctx) ||
+          signal.aborted ||
+          revision !== turnRevision.current
+        )
+          return;
         turns.push(...page);
         if (page.length < 50) break;
       }
-      if (current(ctx)) update({ turns });
+      if (current(ctx) && revision === turnRevision.current) update({ turns });
     } catch (error) {
       if (current(ctx) && !signal.aborted)
         update({ error: dialogueError(apiErrorMessage(error)) });
@@ -209,7 +217,9 @@ export function useResearchDialogue(
     contextReads.current = new AbortController();
     const signal = lifetime.current.signal;
     ref.current = initial(companyId);
+    ref.current.message = stored(dialogueDraftKey(ref.current, null));
     setState(ref.current);
+    const initialEdits = messageEdits.current;
     const bootstrap = { ...ref.current };
     void (async () => {
       try {
@@ -225,9 +235,13 @@ export function useResearchDialogue(
           error: capability.can_send ? "" : dialogueError(capability.reason),
         });
         normalize();
-        update({ message: stored(dialogueDraftKey(ref.current, bound())) });
         await loadList();
-        if (signal.aborted || epoch.current !== e || !current(bootstrap))
+        if (
+          signal.aborted ||
+          epoch.current !== e ||
+          !current(bootstrap) ||
+          messageEdits.current !== initialEdits
+        )
           return;
         const id = stored(activeKey());
         if (id) await openConversation(id);
@@ -301,6 +315,7 @@ export function useResearchDialogue(
       const turn = await client.sendTurn(companyId, ctx.cid, body, key);
       if (!current(ctx)) return;
       forgetKey(sessionStorage, companyId, action, body);
+      turnRevision.current++;
       update({
         turns: [...ref.current.turns.filter((t) => t.id !== turn.id), turn],
         message: "",
@@ -322,6 +337,8 @@ export function useResearchDialogue(
       normalize();
     },
     selectPersona(persona: string) {
+      if (ref.current.kind === "single" && ref.current.persona === persona)
+        return;
       if (
         ref.current.busy ||
         !availablePersonas(ref.current.personas, languageRef.current).some(
@@ -364,8 +381,9 @@ export function useResearchDialogue(
       normalize();
     },
     setMessage(message: string) {
+      messageEdits.current++;
       update({ message });
-      keepDraft();
+      save(dialogueDraftKey(ref.current, bound()), message);
     },
     send,
     loadMore: () => loadList(true),

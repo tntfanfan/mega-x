@@ -43,7 +43,12 @@ export function requestKey(
   const name = keyName(company, action, body);
   let key = store.getItem(name);
   if (!key) {
-    key = crypto.randomUUID();
+    key =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+            byte.toString(16).padStart(2, "0"),
+          ).join("");
     store.setItem(name, key);
   }
   return key;

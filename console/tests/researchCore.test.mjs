@@ -141,3 +141,21 @@ test("messages and late responses are bounded by their context", () => {
   ])
     assert(!acceptsContext(c, { ...c, ...v }));
 });
+
+test("request keys work on HTTP origins without crypto.randomUUID and remain unique/retryable", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto"),
+    crypto = globalThis.crypto;
+  try {
+    Object.defineProperty(globalThis, "crypto", {
+      configurable: true,
+      value: { getRandomValues: (values) => crypto.getRandomValues(values) },
+    });
+    const s = memory(),
+      first = requestKey(s, "c", "submit", { ticker: "AAPL" });
+    assert.match(first, /^[a-z0-9-]+$/i);
+    assert.equal(requestKey(s, "c", "submit", { ticker: "AAPL" }), first);
+    assert.notEqual(requestKey(s, "c", "submit", { ticker: "MSFT" }), first);
+  } finally {
+    Object.defineProperty(globalThis, "crypto", descriptor);
+  }
+});
