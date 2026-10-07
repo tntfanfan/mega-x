@@ -1,8 +1,8 @@
 # Research migration implementation decisions
 
 These choices were made while implementing the approved migration. All work is
-local. The migration is on `feat/research-frontend-migration`; main has not been
-merged and no remote push, PR or deployment was performed.
+local. The verified migration was fast-forwarded locally into `main` after the user
+confirmed integration. No remote push, PR or deployment was performed.
 
 ## Rulings and their limits
 
