@@ -1,0 +1,29 @@
+console/src/pages/business/company/DeptsView.tsx
+  s_8e3d594a983dbe::t_78ed58a66636e8 129
+console/src/pages/solo/line/TeamView.tsx
+  s_8e3d594a983dbe::t_977b2e38dedef6 120
+console/src/pages/solo/line/TimelineView.tsx
+  s_8e3d594a983dbe::t_33b0b5890414d0 19-23
+console/tests/outputRefs.test.mjs
+  s_8e3d594a983dbe::t_1bc4298a15dd97 266
+package.json
+  s_8e3d594a983dbe::t_3fe5fd72fc4b7f 33
+pnpm-lock.yaml
+  s_8e3d594a983dbe::t_41c428cf50760a 54-56,65,83,630-632,1405-1407,1872-1875,1893-1904,2916-2917,2981-2989
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "107ebee4e324886464088198e03cc04b8337ece7",
+  "prompts": {},
+  "sessions": {
+    "s_8e3d594a983dbe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1151d-2883-7c21-8d9a-21b3179c5de8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
