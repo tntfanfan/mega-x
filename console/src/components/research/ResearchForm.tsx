@@ -19,11 +19,13 @@ export function ResearchForm({
   companyState,
   language,
   tr,
+  onSubmitted,
 }: {
   research: ResearchState;
   companyState: string;
   language: ResearchLanguage;
   tr: Copy;
+  onSubmitted?: () => void;
 }) {
   const [market, setMarket] = useState<Market>("A"),
     [depth, setDepth] = useState("quick"),
@@ -94,17 +96,18 @@ export function ResearchForm({
       )}
       <form
         className="px-5 pb-5"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
           setError("");
           try {
-            void research.submit({
+            const submitted = await research.submit({
               market: active,
               ticker: normalTicker(ticker, active),
               depth,
               school: null,
               language,
             });
+            if (submitted) onSubmitted?.();
           } catch (e) {
             setError(e instanceof Error ? e.message : String(e));
           }

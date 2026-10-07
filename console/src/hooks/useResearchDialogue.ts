@@ -41,12 +41,12 @@ const remove = (key: string) => {
     sessionStorage.removeItem(key);
   } catch {}
 };
-function initial(company: string) {
+function initial(company: string, kind: Selection["kind"] = "single") {
   return {
     company,
     cid: "",
     persona: "buffett",
-    kind: "single" as Selection["kind"],
+    kind,
     participants: ["buffett", "munger"],
     generation: 0,
     capability: {} as DialogueCapabilities,
@@ -66,8 +66,10 @@ export function useResearchDialogue(
   companyId: string,
   language: ResearchLanguage,
   client: ResearchClient,
+  initialMode: Selection["kind"] = "single",
 ) {
-  const [state, setState] = useState(() => initial(companyId)),
+  const initialKind = useRef(initialMode).current;
+  const [state, setState] = useState(() => initial(companyId, initialKind)),
     ref = useRef(state);
   const languageRef = useRef(language);
   languageRef.current = language;
@@ -216,7 +218,7 @@ export function useResearchDialogue(
     lifetime.current = new AbortController();
     contextReads.current = new AbortController();
     const signal = lifetime.current.signal;
-    ref.current = initial(companyId);
+    ref.current = initial(companyId, initialKind);
     ref.current.message = stored(dialogueDraftKey(ref.current, null));
     setState(ref.current);
     const initialEdits = messageEdits.current;

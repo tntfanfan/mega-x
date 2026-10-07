@@ -164,7 +164,7 @@ export default function App() {
             <Route index element={<DeptsView />} />
             <Route path="depts" element={<Navigate to=".." replace />} />
             <Route path="chat" element={<ChatView />} />
-            <Route path="research" element={<ResearchView />} />
+            <Route path="research/*" element={<ResearchView />} />
             <Route path="tasks" element={<TasksList />} />
             <Route path="tasks/new" element={<TaskNew />} />
             <Route path="tasks/:taskId" element={<TaskDetail />} />

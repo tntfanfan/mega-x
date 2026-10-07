@@ -7,6 +7,8 @@
  *  - 风格用 mega-x 金/暗调色板（不用 animal-island）
  */
 
+import { useTranslation } from "react-i18next";
+import { resolveDeptDisplay } from "../../lib/depts";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import type { DeptCatalogItem, Agent } from "../../lib/api";
 
@@ -29,6 +31,7 @@ const TEAM_ROLE_COLOR: Record<string, string> = {
 
 export function DeptNode({ data, selected }: NodeProps<DeptNodeT>) {
   const { dept, agents, activeTasks, bubble, bubbleActive } = data;
+  const { t } = useTranslation();
 
   return (
     <div
@@ -42,7 +45,7 @@ export function DeptNode({ data, selected }: NodeProps<DeptNodeT>) {
       <div className="flex items-start gap-2 mb-2">
         <span className="text-2xl shrink-0">{dept.emoji}</span>
         <div className="min-w-0 flex-1">
-          <div className="font-display text-sm text-heading truncate">{dept.name}</div>
+          <div className="font-display text-sm text-heading truncate">{resolveDeptDisplay(dept.id, [dept], t).name}</div>
           <div className="text-[9px] text-muted font-mono truncate">{dept.id}</div>
         </div>
         {activeTasks > 0 && (

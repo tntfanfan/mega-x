@@ -85,16 +85,16 @@ export default function DeptsView() {
   }, [selectedDeptId]);
 
   const removeDept = async (d: DeptWithMeta) => {
-    if (!window.confirm(t("business.company.depts.remove-confirm", { name: d.name }))) return;
+    if (!window.confirm(t("business.company.depts.remove-confirm", { name: resolveDeptDisplay(d.id, [d], t).name }))) return;
     setRemoving(d.id);
     try {
       await api.delete(`/v1/companies/${company.id}/depts/${d.id}`);
       setItems((cur) => cur.filter((x) => x.id !== d.id));
       await refreshCompany?.();
       if (selectedDeptId === d.id) setSelectedDeptId(null);
-      toast.success(t("business.company.depts.remove-success", { name: d.name }));
+      toast.success(t("business.company.depts.remove-success", { name: resolveDeptDisplay(d.id, [d], t).name }));
     } catch (e) {
-      toast.error(apiErrorMessage(e, t("business.company.depts.remove-error", { name: d.name })));
+      toast.error(apiErrorMessage(e, t("business.company.depts.remove-error", { name: resolveDeptDisplay(d.id, [d], t).name })));
     } finally {
       setRemoving(null);
     }

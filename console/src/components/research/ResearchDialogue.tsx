@@ -21,11 +21,15 @@ export function ResearchDialogue({
   language,
   tr,
   onPreview,
+  active = true,
+  showModeSwitch = true,
 }: {
   dialogue: ResearchDialogueState;
   language: ResearchLanguage;
   tr: Copy;
   onPreview: (path: string) => void;
+  active?: boolean;
+  showModeSwitch?: boolean;
 }) {
   const [school, setSchool] = useState("all"),
     input = useRef<HTMLTextAreaElement>(null),
@@ -59,12 +63,12 @@ export function ResearchDialogue({
     ),
   });
   useEffect(() => {
-    input.current?.focus({ preventScroll: true });
-  }, [dialogue.cid, dialogue.persona, dialogue.kind]);
+    if (active) input.current?.focus({ preventScroll: true });
+  }, [active, dialogue.cid, dialogue.persona, dialogue.kind]);
   return (
     <Section
       id="dialogue"
-      title={tr("投资人物对话")}
+      title={tr(round ? "投资圆桌" : "人物对话")}
       description={tr("选择一种投资思路，讨论问题或追问研究报告。")}
       action={
         <span className="text-xs text-muted">
@@ -72,7 +76,7 @@ export function ResearchDialogue({
         </span>
       }
     >
-      <div className="flex flex-wrap gap-2 px-5 pt-5">
+      {showModeSwitch && <div className="flex flex-wrap gap-2 px-5 pt-5">
         {[
           ["single", "单人对话"],
           ["roundtable", "投资圆桌"],
@@ -87,7 +91,7 @@ export function ResearchDialogue({
             {tr(label)}
           </button>
         ))}
-      </div>
+      </div>}
       {round && (
         <p className="px-5 pt-3 text-xs text-muted">
           {tr(

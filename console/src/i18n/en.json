@@ -1375,5 +1375,7 @@
   "dept.dept-film.member.editor": "Editor",
   "dept.dept-film.member.researcher": "Researcher",
   "dept.dept-film.member.continuity-supervisor": "Continuity Supervisor",
-  "business.company.tab.research": "Research"
+  "business.company.tab.research": "Research",
+  "dept.dept-investment.name": "Equity research department",
+  "dept.dept-investment.desc": "Stock research, valuation, and risk reports"
 }

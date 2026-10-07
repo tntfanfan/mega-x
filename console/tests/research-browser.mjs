@@ -26,7 +26,7 @@ const companies = ["c-a", "c-b"].map((id, i) => ({
   name: i ? "Second Company" : "Research Company",
   emoji: "",
   state: "running",
-  dept_ids: ["dept-ceo"],
+  dept_ids: ["dept-ceo", "dept-investment"],
   token_usage_30d: 0,
 }));
 const roles = ["buffett", "munger", "graham", "lynch"].map((id, i) => ({
@@ -265,7 +265,114 @@ await context.route("**/v1/**", async (route) => {
     completedWrites.push(body.message);
 });
 try {
-  if (process.env.RESEARCH_TIMEOUT_ONLY === "1") {
+  if (process.env.RESEARCH_RESTORE_ONLY === "1") {
+    await page.goto(`${origin}/console/?lang=en#/business/c/c-a/research/roundtable`);
+    const dialogue = page.locator("#dialogue");
+    await dialogue.getByRole("checkbox").first().waitFor();
+    await dialogue.locator("textarea").fill("Keep this roundtable after reload");
+    await dialogue.getByRole("button", { name: "Send question", exact: true }).click();
+    await dialogue.getByText("Original answer", { exact: false }).first().waitFor();
+    assert.equal(await page.evaluate(() => sessionStorage.getItem("native-dialogue-active:c-a")), "d-test");
+    await page.reload();
+    await page.getByRole("heading", { name: "Investment roundtable", exact: true }).waitFor();
+    await dialogue.getByText("Original answer", { exact: false }).first().waitFor({ timeout: 4000 });
+    assert.equal(await page.evaluate(() => sessionStorage.getItem("native-dialogue-active:c-a")), "d-test");
+    await dialogue.getByText("Keep this roundtable after reload", { exact: true }).waitFor();
+    console.log("Roundtable deep-link reload restores the active conversation and turns: PASS");
+  } else if (process.env.RESEARCH_ENGLISH_ONLY === "1") {
+    await page.goto(`${origin}/console/?lang=en#/business/c/c-a/research`);
+    const menu = page.getByRole("navigation", { name: "Research menu", exact: true });
+    const workspace = page.locator(".research-workspace");
+    for (const name of ["New research", "Research tasks", "Research reports", "Investment schools", "Investor conversations", "Investment roundtable"]) {
+      await menu.getByRole("link", { name, exact: true }).click();
+      const route = name === "Investment roundtable" ? "Investment roundtable" : name === "Investor conversations" ? "Investor conversations" : name === "Investment schools" ? "Schools and people" : name === "New research" ? "New stock research" : name === "Research reports" ? "Research reports" : /Task history/;
+      await workspace.getByRole("heading", { name: route, exact: typeof route === "string" }).waitFor();
+      assert(!/\p{Script=Han}/u.test(await workspace.innerText()), `${name} has untranslated Chinese UI`);
+      for (const select of await workspace.locator("select:visible").all()) {
+        const labels = await select.locator("option").allTextContents();
+        assert(labels.every(label => !/\p{Script=Han}/u.test(label)), `${name} has untranslated dropdown options: ${labels.join(", ")}`);
+      }
+      if (["Investment schools", "Investor conversations", "Investment roundtable"].includes(name)) {
+        const school = workspace.getByRole("combobox").first();
+        assert.equal(await school.locator('option[value="all"]').innerText(), "All schools");
+        const values = await school.locator("option").evaluateAll(options => options.slice(1).map(option => option.value));
+        for (const value of values) {
+          await school.selectOption(value);
+          assert(!/\p{Script=Han}/u.test(await workspace.innerText()), `${name} filtered content has untranslated UI`);
+        }
+        await school.selectOption("all");
+      }
+    }
+    await menu.getByRole("link", { name: "Research tasks", exact: true }).click();
+    for (const [state, label] of [["accepted", "Waiting for generation"], ["partial_failed", "Partially failed"]]) {
+      task.state = state;
+      task.run.state = state;
+      await page.getByRole("button", { name: "Refresh status", exact: true }).click();
+      await workspace.getByText(label, { exact: true }).first().waitFor();
+      assert(!/\p{Script=Han}/u.test(await workspace.innerText()), `State ${state} has mixed-language UI`);
+    }
+    assert.equal(errors.length, 0, errors.join("\n"));
+    console.log("All six English research pages, all school dropdowns/filters and waiting/partial failure statuses: PASS");
+  } else if (process.env.RESEARCH_MENU_ONLY === "1") {
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
+    const menu = page.getByRole("navigation", { name: "投研功能菜单", exact: true });
+    const research = page.locator("#research");
+    await research.locator("input").fill("600519");
+    const artifacts = process.env.RESEARCH_ARTIFACT_DIR || "/private/tmp/mega-x-research-menu-qa";
+    await mkdir(artifacts, { recursive: true });
+    const entries = [
+      ["新建研究", "", "新建股票研究"],
+      ["研究任务", "tasks", "任务记录 · 1"],
+      ["研究报告", "reports", "研究报告"],
+      ["投资流派", "schools", "流派与人物"],
+      ["人物对话", "dialogue", "人物对话"],
+      ["投资圆桌", "roundtable", "投资圆桌"],
+    ];
+    for (const [name, path, heading] of entries) {
+      await menu.getByRole("link", { name, exact: true }).click();
+      await page.getByRole("heading", { name: heading, exact: true }).waitFor();
+      assert.equal(await menu.locator('[aria-current="page"]').innerText(), name);
+      assert(page.url().endsWith(`/research${path ? "/" + path : ""}`));
+      if (path) assert(!(await research.isVisible()), "Form remains visible outside its page");
+      if (path !== "tasks") assert(!(await page.locator("#tasks").isVisible()), "Tasks remain visible outside their page");
+      if (path === "roundtable") assert.equal(await page.locator("#dialogue").getByRole("checkbox").count(), 4);
+      await page.screenshot({ path: `${artifacts}/desktop-${path || "new"}.png`, fullPage: true });
+    }
+    await menu.getByRole("link", { name: "新建研究", exact: true }).click();
+    assert.equal(await research.locator("input").inputValue(), "600519", "Menu navigation discarded stock draft");
+    await research.getByRole("button", { name: "开始研究", exact: true }).click();
+    await page.getByRole("heading", { name: "执行详情", exact: true }).waitFor();
+    assert(page.url().endsWith("/research/tasks"));
+    await page.getByRole("button", { name: "与角色讨论", exact: true }).click();
+    await page.locator("#dialogue").getByText(/固定版本 r-20261003/).waitFor();
+    assert(page.url().endsWith("/research/dialogue"));
+    const question = page.locator("#dialogue textarea");
+    await question.fill("保留我的问题草稿");
+    await menu.getByRole("link", { name: "研究报告", exact: true }).click();
+    await menu.getByRole("link", { name: "人物对话", exact: true }).click();
+    assert.equal(await question.inputValue(), "保留我的问题草稿");
+    await menu.getByRole("link", { name: "投资流派", exact: true }).click();
+    await page.getByRole("button", { name: /巴菲特/ }).click();
+    await page.getByRole("heading", { name: "人物对话", exact: true }).waitFor();
+    assert(page.url().endsWith("/research/dialogue"));
+    await menu.getByRole("link", { name: "投资圆桌", exact: true }).click();
+    await page.reload();
+    await page.getByRole("heading", { name: "投资圆桌", exact: true }).waitFor();
+    assert.equal(await page.locator("#dialogue").getByRole("checkbox").count(), 4);
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const [name, path, heading] of entries) {
+      await menu.getByRole("link", { name, exact: true }).click();
+      await page.getByRole("heading", { name: heading, exact: true }).waitFor();
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${name} mobile overflow`);
+      await page.screenshot({ path: `${artifacts}/mobile-${path || "new"}.png`, fullPage: true });
+    }
+    await page.locator("header select").first().selectOption("en");
+    await page.getByRole("navigation", { name: "Research menu", exact: true }).waitFor();
+    await page.getByRole("heading", { name: "Investment roundtable", exact: true }).waitFor();
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "English menu mobile overflow");
+    assert.equal(errors.length, 0, errors.join("\n"));
+    console.log("Six independent menus, deep links, preserved drafts, submit/discussion transitions and responsive layout: PASS");
+  } else if (process.env.RESEARCH_TIMEOUT_ONLY === "1") {
     await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
     const research = page.locator("#research");
     await research
@@ -300,7 +407,7 @@ try {
       "Actual request deadline preserves the retry identity after uncertain delivery: PASS",
     );
   } else if (process.env.RESEARCH_RACE_ONLY === "1") {
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research/dialogue`);
     const dialogue = page.locator("#dialogue"),
       input = dialogue.locator("textarea");
     await input.fill("Draft typed during bootstrap");
@@ -365,7 +472,7 @@ try {
       .click();
     await oldWrite;
     await page.evaluate(() => {
-      location.hash = "/business/c/c-b/research";
+      location.hash = "/business/c/c-b/research/dialogue";
     });
     await page
       .getByRole("button", { name: "Second Company", exact: true })
@@ -483,9 +590,8 @@ try {
     await dialogue.getByRole("button", { name: /巴菲特/ }).click();
     await dialogue.getByRole("button", { name: /林奇/ }).click();
     assert.equal(await dialogue.locator("textarea").inputValue(), "林奇草稿");
-    await dialogue
-      .getByRole("button", { name: "投资圆桌", exact: true })
-      .click();
+    await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "投资圆桌", exact: true }).click();
+    await dialogue.getByRole("checkbox").first().waitFor();
     assert.equal(await dialogue.getByRole("checkbox").count(), 4);
     await dialogue
       .getByRole("checkbox", { name: "格雷厄姆", exact: true })
@@ -515,7 +621,7 @@ try {
       .innerText();
     await page.locator("header select").first().selectOption("en");
     await page
-      .getByRole("heading", { name: "New stock research", exact: true })
+      .getByRole("heading", { name: "Investment roundtable", exact: true })
       .waitFor();
     assert(
       (
@@ -580,6 +686,7 @@ try {
     await research
       .getByRole("button", { name: "开始研究", exact: true })
       .waitFor();
+    await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "研究任务", exact: true }).click();
     for (const [runState, label, endpoint] of [
       ["failed", "重新研究", "/research/tasks/" + task.id + "/retry"],
       [
@@ -612,6 +719,7 @@ try {
     task.state = "done";
     task.run.state = "done";
     largeOutputs = true;
+    await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "研究报告", exact: true }).click();
     await page.getByRole("button", { name: "刷新状态", exact: true }).click();
     await page
       .getByRole("button", { name: "加载更多成果", exact: true })
@@ -622,12 +730,9 @@ try {
     );
     largeOutputs = false;
     largeHistory = true;
-    await dialogue
-      .getByRole("button", { name: "发送问题", exact: true })
-      .waitFor();
     // Re-enter to fetch the expanded server-side history from offset zero.
     await page.goto(`${origin}/console/?lang=zh#/business/companies`);
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research/dialogue`);
     await dialogue
       .getByRole("button", { name: "加载更多会话", exact: true })
       .click();
@@ -635,6 +740,7 @@ try {
       calls.some((c) => c.path.endsWith("/research/dialogue/conversations")),
     );
     largeHistory = false;
+    await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "新建研究", exact: true }).click();
     departmentStatus = "not_installed";
     await page.getByRole("button", { name: "刷新状态", exact: true }).click();
     await research
@@ -650,6 +756,7 @@ try {
         .getByRole("button", { name: "开始研究", exact: true })
         .isDisabled(),
     );
+    await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "研究任务", exact: true }).click();
     assert(
       await page
         .locator("#tasks")
@@ -657,6 +764,7 @@ try {
         .isVisible(),
       "Missing operation must not hide task history",
     );
+    await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "新建研究", exact: true }).click();
     departmentStatus = "failed";
     await page.getByRole("button", { name: "刷新状态", exact: true }).click();
     await research
@@ -664,12 +772,13 @@ try {
       .waitFor();
     departmentStatus = "ready";
     await page.getByRole("button", { name: "刷新状态", exact: true }).click();
+    await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "研究任务", exact: true }).click();
     delayTask = true;
     await page
       .locator("#tasks")
       .getByRole("button", { name: /AAPL Research/ })
       .click();
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-b/research`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-b/research/tasks`);
     await page
       .locator("#tasks")
       .getByRole("button", { name: /Second Company Task/ })

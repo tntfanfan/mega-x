@@ -68,7 +68,7 @@ export function ResearchOutputs({
   return (
     <Section
       id="deliverables"
-      title={tr("研究成果")}
+      title={tr("研究报告")}
       description={tr(
         "查看当前公司的已归档文件，包含历史版本；可继续加载更早成果。",
       )}

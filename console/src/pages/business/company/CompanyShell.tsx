@@ -98,7 +98,7 @@ export default function CompanyShell() {
       <div className="min-h-[calc(100vh-8rem)] flex flex-col">
         <CompanyHeader company={company} companies={companies} onRefresh={refresh} />
         <div className="company-workspace-body flex flex-1">
-          <CompanySidebar companyId={company.id} />
+          <CompanySidebar companyId={company.id} deptIds={company.dept_ids} />
           <div className="flex-1 min-w-0">
             <Outlet context={{ company, companies, refreshCompany: refresh } satisfies CompanyOutlet} />
           </div>
@@ -183,7 +183,7 @@ function CompanyHeader({
   );
 }
 
-function CompanySidebar({ companyId }: { companyId: string }) {
+function CompanySidebar({ companyId, deptIds }: { companyId: string; deptIds: string[] }) {
   const { t } = useTranslation();
   const tabs: { key: string; to: string; end?: boolean; label: string }[] = [
     { key: "marketplace", to: "marketplace", label: t("business.company.tab.marketplace") },
@@ -200,7 +200,7 @@ function CompanySidebar({ companyId }: { companyId: string }) {
       className="company-workspace-nav w-48 shrink-0 border-e border-border-solid bg-surface/60 py-4"
     >
       <nav aria-label={t("business.company.nav.label")} className="flex flex-col">
-        {tabs.map((tab) => (
+        {tabs.filter((tab) => tab.key !== "research" || deptIds.includes("dept-investment")).map((tab) => (
           <NavLink
             key={tab.key}
             end={tab.end}
@@ -213,6 +213,7 @@ function CompanySidebar({ companyId }: { companyId: string }) {
               }`
             }
           >
+            {tab.key === "research" && <span aria-hidden="true">📈 </span>}
             {tab.label}
           </NavLink>
         ))}

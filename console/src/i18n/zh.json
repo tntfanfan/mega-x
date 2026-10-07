@@ -1375,5 +1375,7 @@
   "dept.dept-film.member.editor": "剪辑师",
   "dept.dept-film.member.researcher": "资料研究",
   "dept.dept-film.member.continuity-supervisor": "场记审核",
-  "business.company.tab.research": "投研"
+  "business.company.tab.research": "投研",
+  "dept.dept-investment.name": "股票投研部",
+  "dept.dept-investment.desc": "个股研究、估值与风险报告"
 }

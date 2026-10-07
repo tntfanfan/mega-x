@@ -46,7 +46,8 @@ export function deptDescKey(deptId: string): string {
 }
 
 function isOfficialDept(deptId: string): boolean {
-  return DEPT_CATALOG.some((d) => d.id === deptId);
+  // The official stock research department is company-only, outside the global catalog.
+  return deptId === "dept-investment" || DEPT_CATALOG.some((d) => d.id === deptId);
 }
 
 export function resolveDeptDisplay(

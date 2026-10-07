@@ -9,6 +9,7 @@ import { CardGridSkeleton } from "../../../components/ui/Skeleton";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { SearchInput } from "../../../components/ui/SearchInput";
 import { Segmented, type SegmentedOption } from "../../../components/ui/Segmented";
+import { loadCompanyMarketplace } from "../../../lib/companyMarketplace";
 import { resolveDeptDisplay, resolveDeptDesc } from "../../../lib/depts";
 
 type Ctx = { company: Company; refreshCompany?: () => Promise<void> };
@@ -34,13 +35,12 @@ export default function CompanyMarketplace() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    api
-      .get<{ items: DeptCatalogItem[] }>("/v1/marketplace")
-      .then((r) => { if (!cancelled) setItems(r.items); })
+    loadCompanyMarketplace(api, company.id)
+      .then((items) => { if (!cancelled) setItems(items); })
       .catch((e) => { if (!cancelled) toast.error(apiErrorMessage(e, t("business.company.marketplace.load-error"))); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [toast, t]);
+  }, [company.id, toast, t]);
 
   const install = async (d: DeptCatalogItem) => {
     setInstalling(d.id);
@@ -48,16 +48,16 @@ export default function CompanyMarketplace() {
       await api.post(`/v1/companies/${company.id}/depts`, { dept_id: d.id });
       setEnabled((cur) => new Set(cur).add(d.id));
       await refreshCompany?.();
-      toast.success(t("business.company.marketplace.install-success", { name: d.name }));
+      toast.success(t("business.company.marketplace.install-success", { name: resolveDeptDisplay(d.id, [d], t).name }));
     } catch (e) {
-      toast.error(apiErrorMessage(e, t("business.company.marketplace.install-error", { name: d.name })));
+      toast.error(apiErrorMessage(e, t("business.company.marketplace.install-error", { name: resolveDeptDisplay(d.id, [d], t).name })));
     } finally {
       setInstalling(null);
     }
   };
 
   const uninstall = async (d: DeptCatalogItem) => {
-    if (!window.confirm(t("business.company.marketplace.uninstall-confirm", { name: d.name }))) return;
+    if (!window.confirm(t("business.company.marketplace.uninstall-confirm", { name: resolveDeptDisplay(d.id, [d], t).name }))) return;
     setInstalling(d.id);
     try {
       await api.delete(`/v1/companies/${company.id}/depts/${d.id}`);
@@ -67,9 +67,9 @@ export default function CompanyMarketplace() {
         return next;
       });
       await refreshCompany?.();
-      toast.success(t("business.company.marketplace.uninstall-success", { name: d.name }));
+      toast.success(t("business.company.marketplace.uninstall-success", { name: resolveDeptDisplay(d.id, [d], t).name }));
     } catch (e) {
-      toast.error(apiErrorMessage(e, t("business.company.marketplace.uninstall-error", { name: d.name })));
+      toast.error(apiErrorMessage(e, t("business.company.marketplace.uninstall-error", { name: resolveDeptDisplay(d.id, [d], t).name })));
     } finally {
       setInstalling(null);
     }

@@ -134,10 +134,12 @@ export function useResearch(
     notice = "操作已提交，状态将在执行服务处理后更新。",
   ) => {
     const token = gate.beginMutation();
-    if (token === null) return;
+    if (token === null) return false;
+    let succeeded = false;
     setState((s) => ({ ...s, busy: true, error: "", notice: "" }));
     try {
       await action();
+      succeeded = true;
       if (gate.current(token)) setState((s) => ({ ...s, notice }));
     } catch (error) {
       if (gate.current(token))
@@ -148,6 +150,7 @@ export function useResearch(
         await refresh();
       }
     }
+    return succeeded && gate.current(token) && !controller.current.signal.aborted;
   };
   return {
     ...state,
