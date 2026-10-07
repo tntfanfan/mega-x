@@ -1,6 +1,6 @@
 # Research Frontend Migration Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans or superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans or superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 将已提交投研工作台的全部浏览器功能迁移到 Mega X 公司控制台，并保持原有接口行为和现有视觉风格。
 
@@ -55,10 +55,10 @@
 
 **Interfaces:** `Market = "A" | "US"`; `ResearchLanguage = "zh" | "en"`; `normalTicker(value: string, market?: Market): string`; `marketCapabilities(caps: ResearchCapabilities, language: ResearchLanguage): Partial<Record<Market, MarketCapability>>`; `stageStates(run: ResearchRun): ("pending" | "current" | "complete")[]`; `requestKey(store: StorageLike, company: string, action: string, body: unknown): string`; `forgetKey(...)`; `citationTarget(conversation: Conversation, sectionId: string): string | null`; `catalogForLanguage(language: ResearchLanguage): CatalogSchool[]`; `researchLanguage(locale: string): ResearchLanguage`; `translate(language, value, ...interpolations): string`.
 
-- [ ] Write failing tests preserving original assertions: `normalTicker("000001") === "000001.SZ"`, `normalTicker("brk.b", "US") === "BRK-B"`, stage failure at sequence 2 remains current, US supports quick only, English requires executor language support, company/market/language keys differ, known bound section yields report path, user interpolation remains unchanged, English hides original CN catalog schools, Arabic maps to English.
-- [ ] Run `node --test console/tests/researchCore.test.mjs console/tests/researchCatalog.test.mjs console/tests/researchCopy.test.mjs`; confirm failure comes from absent migration modules.
-- [ ] Implement the declared modules from source HEAD, using the repository's TypeScript transpilation test pattern. Keep exact directory membership, persona IDs, school descriptions, original literal translations and immutable participant snapshots.
-- [ ] Re-run the same command; all tests pass. Commit only Task 1 files locally.
+- [x] Write failing tests preserving original assertions: `normalTicker("000001") === "000001.SZ"`, `normalTicker("brk.b", "US") === "BRK-B"`, stage failure at sequence 2 remains current, US supports quick only, English requires executor language support, company/market/language keys differ, known bound section yields report path, user interpolation remains unchanged, English hides original CN catalog schools, Arabic maps to English.
+- [x] Run `node --test console/tests/researchCore.test.mjs console/tests/researchCatalog.test.mjs console/tests/researchCopy.test.mjs`; confirm failure comes from absent migration modules.
+- [x] Implement the declared modules from source HEAD, using the repository's TypeScript transpilation test pattern. Keep exact directory membership, persona IDs, school descriptions, original literal translations and immutable participant snapshots.
+- [x] Re-run the same command; all tests pass. Commit only Task 1 files locally.
 
 ## Task 2: API 适配与安全成果链接
 
@@ -66,10 +66,10 @@
 
 **Interfaces:** `createResearchClient(transport: ResearchTransport, apiBase: string, pageOrigin: string): ResearchClient`; transport exposes existing typed `get(path, init?)` and `post(path, body?, init?)`. Client exposes `department(companyId)`, `tasks(companyId)`, `task(companyId, taskId)`, `outputs(companyId, limit, taskId?)`, `operation(operationId)`, `install(companyId)`, `restart(companyId)`, `submit(companyId, request, key)`, `retry(companyId, taskId, key)`, `resume(companyId, taskId, runId)`, `cancel(companyId, taskId, runId)`, `personas(companyId)`, `dialogueCapabilities(companyId)`, `conversations(companyId, limit)`, `conversation(companyId, conversationId)`, `turns(companyId, conversationId)`, `createConversation(companyId, request)`, `sendTurn(companyId, conversationId, request, key)`, `preview(companyId, path)` and `downloadUrl(companyId, path)`.
 
-- [ ] Write failing protocol tests using recording transport: submission/retry/send retain `Idempotency-Key`; report creation includes only `task_id` and `run_id`; encoded IDs cannot alter URL path; unavailable historical operation does not reject research state; relative preview resolves to API host; foreign host, non-HTTP scheme and non-signature path throw; download escapes output path.
-- [ ] Run `node --test console/tests/researchClient.test.mjs`; confirm absent client failure.
-- [ ] Implement endpoints exactly from source app/dialogue modules with a 20-second timeout and existing cookie behavior. Do not retry writes automatically. For historical operation return an explicit unavailable result.
-- [ ] Re-run test; all assertions pass. Commit Task 2 locally.
+- [x] Write failing protocol tests using recording transport: submission/retry/send retain `Idempotency-Key`; report creation includes only `task_id` and `run_id`; encoded IDs cannot alter URL path; unavailable historical operation does not reject research state; relative preview resolves to API host; foreign host, non-HTTP scheme and non-signature path throw; download escapes output path.
+- [x] Run `node --test console/tests/researchClient.test.mjs`; confirm absent client failure.
+- [x] Implement endpoints exactly from source app/dialogue modules with a 20-second timeout and existing cookie behavior. Do not retry writes automatically. For historical operation return an explicit unavailable result.
+- [x] Re-run test; all assertions pass. Commit Task 2 locally.
 
 ## Task 3: 研究、任务与成果页面
 
@@ -77,10 +77,10 @@
 
 **Interfaces:** `useResearch(companyId: string, language: ResearchLanguage, client: ResearchClient)` returns department/tasks/selected task/outputs/operation/error/loading/busy/syncedAt, `refresh`, `selectTask`, `loadMore`, `install`, `restart`, `submit`, `retry`, `resume`, `cancel`. Components take this state and translated copy; `ResearchView` consumes `CompanyOutlet` and current i18next language. A generation token checks company and selected task identity before applying a response.
 
-- [ ] Add failing state tests: old company or task generation is rejected; failure clears its own operation only; identical timed-out submissions reuse the original key; terminal/paused states expose only source-supported actions; cancelled poll does not update state; hidden documents suppress polling.
-- [ ] Run `node --test console/tests/researchState.test.mjs`; expected red assertions for missing state helpers.
-- [ ] Implement company-scoped loading and five-second polling, optional operation lookup, task detail loading, actions, filtering, market/depth constraints, stage rendering, output pagination and safe preview. Extract pure state helpers to `core.ts` as needed so tests exercise decisions used by hooks. Keep input state across polling and language switches.
-- [ ] Run all research pure tests. Browser event coverage for hook cleanup and writes belongs to Task 6. Commit Task 3 locally.
+- [x] Add failing state tests: old company or task generation is rejected; failure clears its own operation only; identical timed-out submissions reuse the original key; terminal/paused states expose only source-supported actions; cancelled poll does not update state; hidden documents suppress polling.
+- [x] Run `node --test console/tests/researchState.test.mjs`; expected red assertions for missing state helpers.
+- [x] Implement company-scoped loading and five-second polling, optional operation lookup, task detail loading, actions, filtering, market/depth constraints, stage rendering, output pagination and safe preview. Extract pure state helpers to `core.ts` as needed so tests exercise decisions used by hooks. Keep input state across polling and language switches.
+- [x] Run all research pure tests. Browser event coverage for hook cleanup and writes belongs to Task 6. Commit Task 3 locally.
 
 ## Task 4: 人物目录、对话和圆桌
 
@@ -88,10 +88,10 @@
 
 **Interfaces:** `useResearchDialogue(companyId: string, language: ResearchLanguage, client: ResearchClient)` returns capability/personas/conversations/conversation/turns/mode/participants/persona/message/busy/error/report and `selectMode`, `selectPersona`, `toggleParticipant`, `openConversation`, `newConversation`, `openReport`, `setMessage`, `send`, `loadMore`. `InvestorCatalog.onSelect(personaId)` selects a new single-person discussion. `ResearchTasks.onDiscuss({task_id, run_id})` creates a new report-bound context. `DialogueTurns` receives a conversation and `onCitation(path)`.
 
-- [ ] Write failing tests for 2–4 participants and source ordering; immutable historical participants; language-aware draft/request keys; same failed message retry; stale company/role/conversation responses; report selection retained when changing roles/mode; safe report identity; known-section citations only; 4000 accepted and 4001 rejected; raw generated text not interpreted as HTML.
-- [ ] Run `node --test console/tests/researchDialogue.test.mjs`; verify missing-module/behavior failures.
-- [ ] Implement the original capabilities/persona/list/detail/turn protocols, draft restoration and active conversation restoration. Poll generating turns every 2 seconds and capabilities every 30 seconds. Cancel timers and pending reads on unmount; generation guards isolate in-flight writes. Preserve completed speeches, truncation, coverage, citation warning and evidence metadata. Disable participant changes for persisted roundtables.
-- [ ] Run research tests; connect catalog and report actions to the dialogue component. Commit Task 4 locally.
+- [x] Write failing tests for 2–4 participants and source ordering; immutable historical participants; language-aware draft/request keys; same failed message retry; stale company/role/conversation responses; report selection retained when changing roles/mode; safe report identity; known-section citations only; 4000 accepted and 4001 rejected; raw generated text not interpreted as HTML.
+- [x] Run `node --test console/tests/researchDialogue.test.mjs`; verify missing-module/behavior failures.
+- [x] Implement the original capabilities/persona/list/detail/turn protocols, draft restoration and active conversation restoration. Poll generating turns every 2 seconds and capabilities every 30 seconds. Cancel timers and pending reads on unmount; generation guards isolate in-flight writes. Preserve completed speeches, truncation, coverage, citation warning and evidence metadata. Disable participant changes for persisted roundtables.
+- [x] Run research tests; connect catalog and report actions to the dialogue component. Commit Task 4 locally.
 
 ## Task 5: 控制台入口与视觉整合
 
@@ -99,10 +99,10 @@
 
 **Interfaces:** New company child route `research`; sidebar translation key `business.company.tab.research`. Research copy follows active i18next language without additional language selector. Existing `/business/companies/new` and CompanySwitcher provide all company creation/switching actions.
 
-- [ ] Write navigation/render checks for company research route, Chinese/English title and labels, English fallback under Arabic, absence of links to backend `/workbench/`, and existing company creation/switch entry availability.
-- [ ] Implement route and navigation, integrate all components and original features, and apply existing color/type/button/spacing tokens. Narrow screens stack panels and allow sidebar navigation without horizontal page overflow. English fallback region uses `lang="en" dir="ltr"` under Arabic shell.
-- [ ] Update README with `pnpm install --frozen-lockfile`, `VITE_API_TARGET=http://127.0.0.1:8002 pnpm dev`, route, API-base behavior and test commands. Avoid modifying production environment credentials/configuration.
-- [ ] Run `pnpm exec tsc --noEmit`, `pnpm build`, `node --test console/tests/*.test.mjs`. Compare failures with baseline, then commit Task 5 locally when new errors are resolved.
+- [x] Write navigation/render checks for company research route, Chinese/English title and labels, English fallback under Arabic, absence of links to backend `/workbench/`, and existing company creation/switch entry availability.
+- [x] Implement route and navigation, integrate all components and original features, and apply existing color/type/button/spacing tokens. Narrow screens stack panels and allow sidebar navigation without horizontal page overflow. English fallback region uses `lang="en" dir="ltr"` under Arabic shell.
+- [x] Update README with `pnpm install --frozen-lockfile`, `VITE_API_TARGET=http://127.0.0.1:8002 pnpm dev`, route, API-base behavior and test commands. Avoid modifying production environment credentials/configuration.
+- [x] Run `pnpm exec tsc --noEmit`, `pnpm build`, `node --test console/tests/*.test.mjs`. Compare failures with baseline, then commit Task 5 locally when new errors are resolved.
 
 ## Task 6: 浏览器回归、来源映射与交付
 
@@ -110,11 +110,11 @@
 
 **Interfaces:** Browser script accepts preview URL and an explicit Playwright runtime path if not installed in this repo. Intercepts `/v1` for all mutation scenarios; real API verification performs only reads. The mapping document connects all 11 source files to destination modules and records baseline SHA and commands/results.
 
-- [ ] Add browser assertions for market/depth restrictions, installation states, submission timeout/key reuse, task controls, bound report discussion, persona switching, roundtable 2–4 selection/order, history pagination, content escaping, signature preview, language switching and preserved input.
-- [ ] Add races/cleanup assertions: delayed old company and conversation responses never overwrite new selection; switching routes stops polls; StrictMode mounts do not send writes; hidden pages suppress polls; mobile widths 390px and desktop widths 1440px do not overflow; keyboard focus reaches actionable controls.
-- [ ] Start local Vite with explicit API target and mock mode disabled. Run browser regression against fixtures, then read-only smoke checks against running API. Save representative desktop/mobile screenshots locally for visual review.
-- [ ] Run production build, typecheck, all Console tests and `git diff --check` after any fixes. Review feature mapping against spec item by item, inspect full local diff, and record actual limitations without claiming unexecuted checks.
-- [ ] Commit verified migration changes locally; report route, source coverage, test results and local commits. Never invoke push, remote PR or deployment commands.
+- [x] Add browser assertions for market/depth restrictions, installation states, submission timeout/key reuse, task controls, bound report discussion, persona switching, roundtable 2–4 selection/order, history pagination, content escaping, signature preview, language switching and preserved input.
+- [x] Add races/cleanup assertions: delayed old company and conversation responses never overwrite new selection; switching routes stops polls; StrictMode mounts do not send writes; hidden pages suppress polls; mobile widths 390px and desktop widths 1440px do not overflow; keyboard focus reaches actionable controls.
+- [x] Start local Vite with explicit API target and mock mode disabled. Run browser regression against fixtures, then read-only smoke checks against running API. Save representative desktop/mobile screenshots locally for visual review.
+- [x] Run production build, typecheck, all Console tests and `git diff --check` after any fixes. Review feature mapping against spec item by item, inspect full local diff, and record actual limitations without claiming unexecuted checks.
+- [x] Commit verified migration changes locally; report route, source coverage, test results and local commits. Never invoke push, remote PR or deployment commands.
 
 ## Plan Self-Review
 
