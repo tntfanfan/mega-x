@@ -1,0 +1,63 @@
+console/src/App.tsx
+  s_a7c6574ace7b96::t_44558918fc9c94 167
+console/src/components/canvas/DeptNode.tsx
+  s_a7c6574ace7b96::t_0f7b861d2f4476 10-11,34,48
+console/src/components/research/ResearchDialogue.tsx
+  s_a7c6574ace7b96::t_a88c32b24b98f6 24-25,31-32,66-67,71,79,94
+console/src/components/research/ResearchForm.tsx
+  s_a7c6574ace7b96::t_c358de5d90a73e 22,28,99,103,110
+console/src/components/research/ResearchNavigation.tsx
+  s_a7c6574ace7b96::t_a5e47940d7e4f6 1-32
+console/src/components/research/ResearchOutputs.tsx
+  s_a7c6574ace7b96::t_d0a2e9aa344e03 71
+console/src/hooks/useResearch.ts
+  s_a7c6574ace7b96::t_31b8b39df028c1 137-138,142,153
+console/src/hooks/useResearchDialogue.ts
+  s_a7c6574ace7b96::t_053a79d7cb5e22 44,49,69,71-72,221
+console/src/i18n/en.json
+  s_a7c6574ace7b96::t_da9a07404aa335 1378-1380
+console/src/i18n/zh.json
+  s_a7c6574ace7b96::t_b9cd6ff764ddd7 1378-1380
+console/src/lib/companyMarketplace.ts
+  s_a7c6574ace7b96::t_44425319fe2523 1-21
+console/src/lib/depts.ts
+  s_a7c6574ace7b96::t_221ecd946587a6 49-50
+console/src/lib/research/english.ts
+  s_a7c6574ace7b96::t_39d32c41240a31 3-18
+console/src/lib/research/navigation.ts
+  s_a7c6574ace7b96::t_c999c8d62157dc 1-12
+console/src/pages/business/company/CompanyShell.tsx
+  s_a7c6574ace7b96::t_2f1300f7105e28 101,186,203,216
+console/src/pages/business/company/DeptsView.tsx
+  s_a7c6574ace7b96::t_c71e7bb8f909a6 88,95,97
+console/src/pages/business/company/Marketplace.tsx
+  s_a7c6574ace7b96::t_0ec10611d9af25 12,38-39,43,51,53,60,70,72
+console/src/pages/business/company/ResearchView.tsx
+  s_a7c6574ace7b96::t_c444a515c7e413 1-3,9,11-12,17-19,24-32,35-59,74-75,77-81,83,85,87,89-105,107-114
+console/tests/companyMarketplace.test.mjs
+  s_a7c6574ace7b96::t_5f1befe97982be 1-30
+console/tests/research-browser.mjs
+  s_a7c6574ace7b96::t_80e3353f9d739e 29,268-375,410,475,593-594,624,689,722,735,743,759,767,775,781
+console/tests/researchCopy.test.mjs
+  s_a7c6574ace7b96::t_d1e1ed3a741278 25-64
+console/tests/researchDepartmentLocale.test.mjs
+  s_a7c6574ace7b96::t_645a65b1685f4b 1-25
+console/tests/researchNavigation.test.mjs
+  s_a7c6574ace7b96::t_85cbcb9632619b 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "38802d66ed9622b7403eba11a5675a2bf7a818d2",
+  "prompts": {},
+  "sessions": {
+    "s_a7c6574ace7b96": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a116b5-c995-7a03-ae98-a1e66c0f16d8",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
