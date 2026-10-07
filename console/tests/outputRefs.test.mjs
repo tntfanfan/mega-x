@@ -79,6 +79,10 @@ test("history keeps same text with different files and merges by stable receipt"
   assert.equal(merged.length, 1);
   assert.equal(merged[0].status, "accepted");
   assert.equal(merged[0].refs[0].path, "chat/a.md");
+  const inflight = history.turnsToMessages([{ role: "user", text: "hi", client_message_id: "m1", status: "submitting" }]);
+  assert.equal(inflight[0].status, "sending");
+  const unknown = history.turnsToMessages([{ role: "user", text: "hi", client_message_id: "m1", status: "delivery_unknown" }]);
+  assert.equal(unknown[0].status, "delivery_unknown");
 });
 
 test("acceptance consumes only the submitted draft versions", () => {
