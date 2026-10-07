@@ -1,27 +1,331 @@
 // Display catalog snapshot from UZI investor_db.py (2026-10-03).
 // CN marks China-market schools, not ethnicity. Chat availability follows the reviewed dialogue profiles.
 export const schools = [
-{"id":"A","region":"global","name":{"zh":"经典价值派","en":"Classical value"},"description":{"zh":"企业质量、内在价值与安全边际","en":"Business quality, intrinsic value, and margin of safety"},"members":[{"id":"buffett","name":{"zh":"巴菲特","en":"Warren Buffett"},"canChat":true},{"id":"graham","name":{"zh":"格雷厄姆","en":"Benjamin Graham"},"canChat":true},{"id":"fisher","name":{"zh":"费雪","en":"Philip Fisher"},"canChat":true},{"id":"munger","name":{"zh":"芒格","en":"Charlie Munger"},"canChat":true},{"id":"templeton","name":{"zh":"邓普顿","en":"John Templeton"},"canChat":true},{"id":"klarman","name":{"zh":"卡拉曼","en":"Seth Klarman"},"canChat":true}]},
-{"id":"B","region":"global","name":{"zh":"成长投资派","en":"Growth investing"},"description":{"zh":"业务成长、创新与估值匹配","en":"Business growth, innovation, and valuation"},"members":[{"id":"lynch","name":{"zh":"彼得·林奇","en":"Peter Lynch"},"canChat":true},{"id":"oneill","name":{"zh":"欧奈尔","en":"William O'Neil"},"canChat":true},{"id":"thiel","name":{"zh":"彼得·蒂尔","en":"Peter Thiel"},"canChat":true},{"id":"wood","name":{"zh":"木头姐","en":"Cathie Wood"},"canChat":true},{"id":"andreessen","name":{"zh":"马克·安德森","en":"Marc Andreessen"},"canChat":false},{"id":"gurley","name":{"zh":"比尔·格利","en":"Bill Gurley"},"canChat":false},{"id":"naval","name":{"zh":"纳瓦尔","en":"Naval Ravikant"},"canChat":false},{"id":"gerstner","name":{"zh":"布拉德·格斯特纳","en":"Brad Gerstner"},"canChat":false},{"id":"chamath","name":{"zh":"查马斯","en":"Chamath Palihapitiya"},"canChat":false}]},
-{"id":"C","region":"global","name":{"zh":"宏观对冲派","en":"Macro and hedge investing"},"description":{"zh":"经济周期、风险与市场预期","en":"Economic cycles, risk, and market expectations"},"members":[{"id":"soros","name":{"zh":"索罗斯","en":"George Soros"},"canChat":true},{"id":"dalio","name":{"zh":"达里奥","en":"Ray Dalio"},"canChat":true},{"id":"marks","name":{"zh":"霍华德·马克斯","en":"Howard Marks"},"canChat":true},{"id":"druck","name":{"zh":"德鲁肯米勒","en":"Stanley Druckenmiller"},"canChat":true},{"id":"robertson","name":{"zh":"罗伯逊","en":"Julian Robertson"},"canChat":true},{"id":"burry","name":{"zh":"迈克尔·伯利","en":"Michael Burry"},"canChat":false},{"id":"chanos","name":{"zh":"吉姆·查诺斯","en":"Jim Chanos"},"canChat":false}]},
-{"id":"D","region":"global","name":{"zh":"技术交易派","en":"Technical trading"},"description":{"zh":"价格趋势、交易纪律与市场结构","en":"Price trends, trading discipline, and market structure"},"members":[{"id":"livermore","name":{"zh":"利弗莫尔","en":"Jesse Livermore"},"canChat":true},{"id":"minervini","name":{"zh":"米内尔维尼","en":"Mark Minervini"},"canChat":true},{"id":"darvas","name":{"zh":"达瓦斯","en":"Nicolas Darvas"},"canChat":true},{"id":"gann","name":{"zh":"江恩","en":"William Gann"},"canChat":true}]},
-{"id":"E","region":"CN","name":{"zh":"中国价投／公募派","en":"Chinese value and fund investing"},"description":{"zh":"中国企业研究与长期价值","en":"Chinese businesses and long-term value"},"members":[{"id":"duan","name":{"zh":"段永平","en":"Duan Yongping"},"canChat":true},{"id":"zhangkun","name":{"zh":"张坤","en":"Zhang Kun"},"canChat":true},{"id":"zhushaoxing","name":{"zh":"朱少醒","en":"Zhu Shaoxing"},"canChat":true},{"id":"xiezhiyu","name":{"zh":"谢治宇","en":"Xie Zhiyu"},"canChat":true},{"id":"fengliu","name":{"zh":"冯柳","en":"Feng Liu"},"canChat":true},{"id":"dengxiaofeng","name":{"zh":"邓晓峰","en":"Deng Xiaofeng"},"canChat":true},{"id":"zhang_lei","name":{"zh":"张磊","en":"Zhang Lei (Hillhouse)"},"canChat":false}]},
-{"id":"F","region":"CN","name":{"zh":"A 股游资派","en":"A-share trading"},"description":{"zh":"题材、资金流与短线交易","en":"Market themes, capital flows, and short-term trading"},"members":[{"id":"zhang_mz","name":{"zh":"章盟主","en":""},"canChat":true},{"id":"sun_ge","name":{"zh":"孙哥","en":""},"canChat":false},{"id":"zhao_lg","name":{"zh":"赵老哥","en":""},"canChat":true},{"id":"fs_wyj","name":{"zh":"佛山无影脚","en":""},"canChat":false},{"id":"yangjia","name":{"zh":"炒股养家","en":""},"canChat":false},{"id":"chen_xq","name":{"zh":"陈小群","en":""},"canChat":false},{"id":"hu_jl","name":{"zh":"呼家楼","en":""},"canChat":false},{"id":"fang_xx","name":{"zh":"方新侠","en":""},"canChat":false},{"id":"zuoshou","name":{"zh":"作手新一","en":""},"canChat":false},{"id":"xiao_ey","name":{"zh":"小鳄鱼","en":""},"canChat":false},{"id":"jiao_yy","name":{"zh":"交易猿","en":""},"canChat":false},{"id":"mao_lb","name":{"zh":"毛老板","en":""},"canChat":false},{"id":"xiao_xian","name":{"zh":"消闲派","en":""},"canChat":false},{"id":"lasa","name":{"zh":"拉萨天团","en":""},"canChat":false},{"id":"chengdu","name":{"zh":"成都帮","en":""},"canChat":false},{"id":"sunan","name":{"zh":"苏南帮","en":""},"canChat":false},{"id":"ningbo_st","name":{"zh":"宁波桑田路","en":""},"canChat":false},{"id":"liuyi_zl","name":{"zh":"六一中路","en":""},"canChat":false},{"id":"liu_sh","name":{"zh":"流沙河","en":""},"canChat":false},{"id":"gu_bl","name":{"zh":"古北路","en":""},"canChat":false},{"id":"bj_cj","name":{"zh":"北京炒家","en":""},"canChat":false},{"id":"wang_zr","name":{"zh":"瑞鹤仙","en":""},"canChat":false},{"id":"xin_dd","name":{"zh":"鑫多多","en":""},"canChat":false},{"id":"ghzw","name":{"zh":"股海贼王","en":""},"canChat":false}]},
-{"id":"G","region":"global","name":{"zh":"量化派","en":"Quantitative investing"},"description":{"zh":"统计规律、系统策略与风险管理","en":"Statistical patterns, systematic strategies, and risk management"},"members":[{"id":"simons","name":{"zh":"西蒙斯","en":"Jim Simons"},"canChat":true},{"id":"thorp","name":{"zh":"索普","en":"Ed Thorp"},"canChat":true},{"id":"shaw","name":{"zh":"大卫·肖","en":"David Shaw"},"canChat":true},{"id":"asness","name":{"zh":"克利夫·阿斯尼斯","en":"Cliff Asness"},"canChat":false}]},
-{"id":"H","region":"global","name":{"zh":"科技领袖派","en":"Technology leaders"},"description":{"zh":"技术趋势、产业生态与商业模式","en":"Technology trends, ecosystems, and business models"},"members":[{"id":"jensen_huang","name":{"zh":"黄仁勋","en":"Jensen Huang"},"canChat":false},{"id":"musk","name":{"zh":"马斯克","en":"Elon Musk"},"canChat":false},{"id":"altman","name":{"zh":"山姆·奥特曼","en":"Sam Altman"},"canChat":false},{"id":"saylor","name":{"zh":"迈克尔·塞勒","en":"Michael Saylor"},"canChat":false}]},
-{"id":"I","region":"global","name":{"zh":"AI 卡位／瓶颈猎手","en":"AI bottleneck investing"},"description":{"zh":"AI 供应链与关键瓶颈","en":"AI supply chains and critical bottlenecks"},"members":[{"id":"serenity","name":{"zh":"Serenity","en":"Serenity (@aleabitoreddit)"},"canChat":true}]},
+  {
+    id: "A",
+    region: "global",
+    name: { zh: "经典价值派", en: "Classical value" },
+    description: {
+      zh: "企业质量、内在价值与安全边际",
+      en: "Business quality, intrinsic value, and margin of safety",
+    },
+    members: [
+      {
+        id: "buffett",
+        name: { zh: "巴菲特", en: "Warren Buffett" },
+        canChat: true,
+      },
+      {
+        id: "graham",
+        name: { zh: "格雷厄姆", en: "Benjamin Graham" },
+        canChat: true,
+      },
+      {
+        id: "fisher",
+        name: { zh: "费雪", en: "Philip Fisher" },
+        canChat: true,
+      },
+      {
+        id: "munger",
+        name: { zh: "芒格", en: "Charlie Munger" },
+        canChat: true,
+      },
+      {
+        id: "templeton",
+        name: { zh: "邓普顿", en: "John Templeton" },
+        canChat: true,
+      },
+      {
+        id: "klarman",
+        name: { zh: "卡拉曼", en: "Seth Klarman" },
+        canChat: true,
+      },
+    ],
+  },
+  {
+    id: "B",
+    region: "global",
+    name: { zh: "成长投资派", en: "Growth investing" },
+    description: {
+      zh: "业务成长、创新与估值匹配",
+      en: "Business growth, innovation, and valuation",
+    },
+    members: [
+      {
+        id: "lynch",
+        name: { zh: "彼得·林奇", en: "Peter Lynch" },
+        canChat: true,
+      },
+      {
+        id: "oneill",
+        name: { zh: "欧奈尔", en: "William O'Neil" },
+        canChat: true,
+      },
+      {
+        id: "thiel",
+        name: { zh: "彼得·蒂尔", en: "Peter Thiel" },
+        canChat: true,
+      },
+      { id: "wood", name: { zh: "木头姐", en: "Cathie Wood" }, canChat: true },
+      {
+        id: "andreessen",
+        name: { zh: "马克·安德森", en: "Marc Andreessen" },
+        canChat: false,
+      },
+      {
+        id: "gurley",
+        name: { zh: "比尔·格利", en: "Bill Gurley" },
+        canChat: false,
+      },
+      {
+        id: "naval",
+        name: { zh: "纳瓦尔", en: "Naval Ravikant" },
+        canChat: false,
+      },
+      {
+        id: "gerstner",
+        name: { zh: "布拉德·格斯特纳", en: "Brad Gerstner" },
+        canChat: false,
+      },
+      {
+        id: "chamath",
+        name: { zh: "查马斯", en: "Chamath Palihapitiya" },
+        canChat: false,
+      },
+    ],
+  },
+  {
+    id: "C",
+    region: "global",
+    name: { zh: "宏观对冲派", en: "Macro and hedge investing" },
+    description: {
+      zh: "经济周期、风险与市场预期",
+      en: "Economic cycles, risk, and market expectations",
+    },
+    members: [
+      {
+        id: "soros",
+        name: { zh: "索罗斯", en: "George Soros" },
+        canChat: true,
+      },
+      { id: "dalio", name: { zh: "达里奥", en: "Ray Dalio" }, canChat: true },
+      {
+        id: "marks",
+        name: { zh: "霍华德·马克斯", en: "Howard Marks" },
+        canChat: true,
+      },
+      {
+        id: "druck",
+        name: { zh: "德鲁肯米勒", en: "Stanley Druckenmiller" },
+        canChat: true,
+      },
+      {
+        id: "robertson",
+        name: { zh: "罗伯逊", en: "Julian Robertson" },
+        canChat: true,
+      },
+      {
+        id: "burry",
+        name: { zh: "迈克尔·伯利", en: "Michael Burry" },
+        canChat: false,
+      },
+      {
+        id: "chanos",
+        name: { zh: "吉姆·查诺斯", en: "Jim Chanos" },
+        canChat: false,
+      },
+    ],
+  },
+  {
+    id: "D",
+    region: "global",
+    name: { zh: "技术交易派", en: "Technical trading" },
+    description: {
+      zh: "价格趋势、交易纪律与市场结构",
+      en: "Price trends, trading discipline, and market structure",
+    },
+    members: [
+      {
+        id: "livermore",
+        name: { zh: "利弗莫尔", en: "Jesse Livermore" },
+        canChat: true,
+      },
+      {
+        id: "minervini",
+        name: { zh: "米内尔维尼", en: "Mark Minervini" },
+        canChat: true,
+      },
+      {
+        id: "darvas",
+        name: { zh: "达瓦斯", en: "Nicolas Darvas" },
+        canChat: true,
+      },
+      { id: "gann", name: { zh: "江恩", en: "William Gann" }, canChat: true },
+    ],
+  },
+  {
+    id: "E",
+    region: "CN",
+    name: { zh: "中国价投／公募派", en: "Chinese value and fund investing" },
+    description: {
+      zh: "中国企业研究与长期价值",
+      en: "Chinese businesses and long-term value",
+    },
+    members: [
+      {
+        id: "duan",
+        name: { zh: "段永平", en: "Duan Yongping" },
+        canChat: true,
+      },
+      { id: "zhangkun", name: { zh: "张坤", en: "Zhang Kun" }, canChat: true },
+      {
+        id: "zhushaoxing",
+        name: { zh: "朱少醒", en: "Zhu Shaoxing" },
+        canChat: true,
+      },
+      {
+        id: "xiezhiyu",
+        name: { zh: "谢治宇", en: "Xie Zhiyu" },
+        canChat: true,
+      },
+      { id: "fengliu", name: { zh: "冯柳", en: "Feng Liu" }, canChat: true },
+      {
+        id: "dengxiaofeng",
+        name: { zh: "邓晓峰", en: "Deng Xiaofeng" },
+        canChat: true,
+      },
+      {
+        id: "zhang_lei",
+        name: { zh: "张磊", en: "Zhang Lei (Hillhouse)" },
+        canChat: false,
+      },
+    ],
+  },
+  {
+    id: "F",
+    region: "CN",
+    name: { zh: "A 股游资派", en: "A-share trading" },
+    description: {
+      zh: "题材、资金流与短线交易",
+      en: "Market themes, capital flows, and short-term trading",
+    },
+    members: [
+      { id: "zhang_mz", name: { zh: "章盟主", en: "" }, canChat: true },
+      { id: "sun_ge", name: { zh: "孙哥", en: "" }, canChat: false },
+      { id: "zhao_lg", name: { zh: "赵老哥", en: "" }, canChat: true },
+      { id: "fs_wyj", name: { zh: "佛山无影脚", en: "" }, canChat: false },
+      { id: "yangjia", name: { zh: "炒股养家", en: "" }, canChat: false },
+      { id: "chen_xq", name: { zh: "陈小群", en: "" }, canChat: false },
+      { id: "hu_jl", name: { zh: "呼家楼", en: "" }, canChat: false },
+      { id: "fang_xx", name: { zh: "方新侠", en: "" }, canChat: false },
+      { id: "zuoshou", name: { zh: "作手新一", en: "" }, canChat: false },
+      { id: "xiao_ey", name: { zh: "小鳄鱼", en: "" }, canChat: false },
+      { id: "jiao_yy", name: { zh: "交易猿", en: "" }, canChat: false },
+      { id: "mao_lb", name: { zh: "毛老板", en: "" }, canChat: false },
+      { id: "xiao_xian", name: { zh: "消闲派", en: "" }, canChat: false },
+      { id: "lasa", name: { zh: "拉萨天团", en: "" }, canChat: false },
+      { id: "chengdu", name: { zh: "成都帮", en: "" }, canChat: false },
+      { id: "sunan", name: { zh: "苏南帮", en: "" }, canChat: false },
+      { id: "ningbo_st", name: { zh: "宁波桑田路", en: "" }, canChat: false },
+      { id: "liuyi_zl", name: { zh: "六一中路", en: "" }, canChat: false },
+      { id: "liu_sh", name: { zh: "流沙河", en: "" }, canChat: false },
+      { id: "gu_bl", name: { zh: "古北路", en: "" }, canChat: false },
+      { id: "bj_cj", name: { zh: "北京炒家", en: "" }, canChat: false },
+      { id: "wang_zr", name: { zh: "瑞鹤仙", en: "" }, canChat: false },
+      { id: "xin_dd", name: { zh: "鑫多多", en: "" }, canChat: false },
+      { id: "ghzw", name: { zh: "股海贼王", en: "" }, canChat: false },
+    ],
+  },
+  {
+    id: "G",
+    region: "global",
+    name: { zh: "量化派", en: "Quantitative investing" },
+    description: {
+      zh: "统计规律、系统策略与风险管理",
+      en: "Statistical patterns, systematic strategies, and risk management",
+    },
+    members: [
+      { id: "simons", name: { zh: "西蒙斯", en: "Jim Simons" }, canChat: true },
+      { id: "thorp", name: { zh: "索普", en: "Ed Thorp" }, canChat: true },
+      { id: "shaw", name: { zh: "大卫·肖", en: "David Shaw" }, canChat: true },
+      {
+        id: "asness",
+        name: { zh: "克利夫·阿斯尼斯", en: "Cliff Asness" },
+        canChat: false,
+      },
+    ],
+  },
+  {
+    id: "H",
+    region: "global",
+    name: { zh: "科技领袖派", en: "Technology leaders" },
+    description: {
+      zh: "技术趋势、产业生态与商业模式",
+      en: "Technology trends, ecosystems, and business models",
+    },
+    members: [
+      {
+        id: "jensen_huang",
+        name: { zh: "黄仁勋", en: "Jensen Huang" },
+        canChat: false,
+      },
+      { id: "musk", name: { zh: "马斯克", en: "Elon Musk" }, canChat: false },
+      {
+        id: "altman",
+        name: { zh: "山姆·奥特曼", en: "Sam Altman" },
+        canChat: false,
+      },
+      {
+        id: "saylor",
+        name: { zh: "迈克尔·塞勒", en: "Michael Saylor" },
+        canChat: false,
+      },
+    ],
+  },
+  {
+    id: "I",
+    region: "global",
+    name: { zh: "AI 卡位／瓶颈猎手", en: "AI bottleneck investing" },
+    description: {
+      zh: "AI 供应链与关键瓶颈",
+      en: "AI supply chains and critical bottlenecks",
+    },
+    members: [
+      {
+        id: "serenity",
+        name: { zh: "Serenity", en: "Serenity (@aleabitoreddit)" },
+        canChat: true,
+      },
+    ],
+  },
 ];
 
-import type { ResearchLanguage, Persona } from './types.ts';
-export function catalogForLanguage(language: ResearchLanguage = 'zh') {
-  return schools.filter(g => language !== 'en' || g.region !== 'CN').map(g => ({
-    id: g.id, name: g.name[language], description: g.description[language],
-    members: g.members.map(p => ({ id: p.id, name: p.name[language], canChat: p.canChat })),
-  }));
+import type { ResearchLanguage, Persona } from "./types.ts";
+export function catalogForLanguage(language: ResearchLanguage = "zh") {
+  return schools
+    .filter((g) => language !== "en" || g.region !== "CN")
+    .map((g) => ({
+      id: g.id,
+      name: g.name[language],
+      description: g.description[language],
+      members: g.members.map((p) => ({
+        id: p.id,
+        name: p.name[language],
+        canChat: p.canChat,
+      })),
+    }));
 }
-export function schoolOf(persona: Pick<Persona, 'id' | 'school_id'>) {
-  return persona.school_id || schools.find(g => g.members.some(p => p.id === persona.id))?.id;
+export function schoolOf(persona: Pick<Persona, "id" | "school_id">) {
+  return (
+    persona.school_id ||
+    schools.find((g) => g.members.some((p) => p.id === persona.id))?.id
+  );
 }
-export function availablePersonas(personas: Persona[], language: ResearchLanguage) {
-  return personas.filter(p => language !== 'en' || !['E', 'F'].includes(schoolOf(p)));
+export function availablePersonas(
+  personas: Persona[],
+  language: ResearchLanguage,
+) {
+  return personas.filter(
+    (p) => language !== "en" || !["E", "F"].includes(schoolOf(p)),
+  );
 }

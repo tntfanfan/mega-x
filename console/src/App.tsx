@@ -84,7 +84,7 @@ function ConsoleShell() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border-solid bg-surface/80 backdrop-blur">
-        <div className="container flex items-center justify-between py-4">
+        <div className="container flex flex-wrap items-center justify-between gap-3 py-4">
           <Link to="/" className="font-display text-xl text-heading flex items-center gap-3">
             <span>Phyntom <span className="text-primary">X8</span></span>
             {isMockMode() && (
@@ -96,10 +96,10 @@ function ConsoleShell() {
               </span>
             )}
           </Link>
-          <div className="flex items-center gap-6">
+          <div className="flex min-w-0 flex-wrap items-center gap-3 sm:gap-6">
             <nav
               aria-label={t("shell.nav.primary")}
-              className="flex gap-6 text-sm text-body"
+              className="flex flex-wrap gap-3 text-sm text-body sm:gap-6"
             >
               <Link to="/business/" className="hover:text-primary">{t("shell.nav.business")}</Link>
               <Link to="/solo/" className="hover:text-primary">{t("shell.nav.solo")}</Link>

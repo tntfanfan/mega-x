@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import type { Company } from "../../lib/api";
+import { companyLabel, researchLanguage } from "../../lib/research/copy";
 
 interface Props {
   current: Company | null;
@@ -33,7 +34,8 @@ export function CompanySwitcher({
   emptyKey = "shell.switcher.empty",
   countSuffixKey = "business.overview.company.depts-suffix",
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const language = researchLanguage(i18n.language);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +64,7 @@ export function CompanySwitcher({
         className="flex items-center gap-1.5 font-display text-lg text-heading hover:text-primary transition-colors min-w-0"
       >
         <span className="truncate max-w-[24ch]">
-          {current ? current.name : t(labelKey)}
+          {current ? companyLabel(current.name, language) : t(labelKey)}
         </span>
         <svg
           width="10"
@@ -98,7 +100,7 @@ export function CompanySwitcher({
                     }`}
                   >
                     <span className="text-base shrink-0">{c.emoji}</span>
-                    <span className="truncate flex-1">{c.name}</span>
+                    <span className="truncate flex-1">{companyLabel(c.name, language)}</span>
                     <span className="text-[10px] text-muted shrink-0">
                       {c.dept_ids.length}
                       {t(countSuffixKey)}

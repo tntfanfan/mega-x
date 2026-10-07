@@ -147,7 +147,7 @@ function CompanyHeader({
 
   return (
     <header className="border-b border-border-solid bg-surface px-6 py-4">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/business/overview"
