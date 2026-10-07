@@ -16,6 +16,11 @@ type Ctx = { line: Company };
 
 const TYPE_LABEL: Record<ActivityEvent["type"], { emoji: string; tone: string }> = {
   task_received: { emoji: "📥", tone: "text-spark-blue" },
+  task_planning: { emoji: "📋", tone: "text-spark-blue" },
+  task_started: { emoji: "▶️", tone: "text-spark-blue" },
+  task_failed: { emoji: "⚠️", tone: "text-fusion" },
+  task_blocked: { emoji: "⏸️", tone: "text-spark-flare" },
+  task_resumed: { emoji: "▶️", tone: "text-spark-mint" },
   handoff:       { emoji: "↪️", tone: "text-spark-flare" },
   review_gate:   { emoji: "🔍", tone: "text-spark-flare" },
   task_done:     { emoji: "✅", tone: "text-spark-mint" },

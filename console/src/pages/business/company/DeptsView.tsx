@@ -126,7 +126,7 @@ export default function DeptsView() {
           <p className="text-xs text-muted">{t("business.company.depts.subtitle", { count: items.length })}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Segmented options={viewOptions} value={viewMode} onChange={setViewMode} />
+          <Segmented<ViewMode> options={viewOptions} value={viewMode} onChange={setViewMode} />
           <Link
             to={`/business/c/${company.id}/marketplace`}
             className="rounded-md bg-primary text-bg px-4 py-1.5 text-sm font-medium hover:bg-accent"

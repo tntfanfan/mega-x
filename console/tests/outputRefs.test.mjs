@@ -263,7 +263,7 @@ test("session queries reach both same-origin and configured WebSocket API routes
   const source = readFileSync(new URL("../src/lib/tryChatWs.ts", import.meta.url), "utf8")
     .replaceAll("import.meta.env.VITE_API_BASE", JSON.stringify("https://api.example.test"));
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  const context = vm.createContext({ exports: {}, require: path => lib(path.replace("./", "")), URL, WebSocket: Socket });
+  const context = vm.createContext({ exports: {}, require: path => lib(path.replace("./", "")), URL, WebSocket: Socket, setTimeout: () => 1, clearTimeout: () => {} });
   vm.runInContext(js, context);
   const remote = new context.exports.TryChatWs(path, {});
   remote.connect();
