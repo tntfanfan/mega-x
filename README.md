@@ -180,3 +180,42 @@ Vite — no webpack.
 ## License
 
 © 2026 Mega X Holding Ltd. All rights reserved.
+
+### Company research workspace
+
+The committed Native research workbench now lives in the Console at
+`/console/#/business/c/<company-id>/research`. Select **Research / 投研** in a
+company's sidebar. Use the existing company switcher and create-company flow.
+The page includes A-share/US research, execution history, report preview and
+download, the complete investor catalog, profile conversations and roundtables.
+It follows the Console's language selector (Chinese/English; English fallback
+inside the research region when Arabic is selected).
+
+```bash
+pnpm install --frozen-lockfile
+VITE_USE_MOCK=false VITE_API_TARGET=http://127.0.0.1:8002 pnpm dev
+```
+
+`VITE_API_TARGET` controls the development reverse proxy. `VITE_API_BASE` controls
+the browser API origin in split-host deployments; previews and downloads use that
+origin. Production remains the existing Vite build and existing backend `/v1`
+interfaces. The new page does not request backend `/workbench/` assets.
+
+Research pure-module tests require Node 24+ (native TypeScript support); the
+production bundle retains the existing Node 18.18+ build floor:
+
+```bash
+node --test console/tests/research*.test.mjs
+pnpm exec tsc --noEmit
+pnpm build
+```
+
+Browser regression intercepts every `/v1` request, including all writes. Provide
+an installed Playwright runtime (absolute path to its `index.mjs`) or install
+Playwright in your local test environment, then run against a running dev server:
+
+```bash
+RESEARCH_PREVIEW_URL=http://127.0.0.1:5174 PLAYWRIGHT_MODULE=/absolute/path/to/playwright-core/index.mjs node console/tests/research-browser.mjs
+```
+
+No deployment or remote Git push is part of this migration.

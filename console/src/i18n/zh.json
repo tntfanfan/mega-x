@@ -1374,5 +1374,6 @@
   "dept.dept-film.member.sound-designer": "声音设计",
   "dept.dept-film.member.editor": "剪辑师",
   "dept.dept-film.member.researcher": "资料研究",
-  "dept.dept-film.member.continuity-supervisor": "场记审核"
+  "dept.dept-film.member.continuity-supervisor": "场记审核",
+  "business.company.tab.research": "投研"
 }

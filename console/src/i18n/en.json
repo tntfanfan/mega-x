@@ -1374,5 +1374,6 @@
   "dept.dept-film.member.sound-designer": "Sound Designer",
   "dept.dept-film.member.editor": "Editor",
   "dept.dept-film.member.researcher": "Researcher",
-  "dept.dept-film.member.continuity-supervisor": "Continuity Supervisor"
+  "dept.dept-film.member.continuity-supervisor": "Continuity Supervisor",
+  "business.company.tab.research": "Research"
 }

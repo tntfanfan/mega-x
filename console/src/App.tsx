@@ -23,6 +23,7 @@ import TaskNew from "./pages/business/company/TaskNew";
 import ChatView from "./pages/business/company/ChatView";
 import CompanyMarketplace from "./pages/business/company/Marketplace";
 import Settings from "./pages/business/company/Settings";
+import ResearchView from "./pages/business/company/ResearchView";
 
 // Solo (超级个体 — 完全独立 IA：产线 + 团队 + 杠杆)
 import SoloLanding from "./pages/solo/Landing";
@@ -163,6 +164,7 @@ export default function App() {
             <Route index element={<DeptsView />} />
             <Route path="depts" element={<Navigate to=".." replace />} />
             <Route path="chat" element={<ChatView />} />
+            <Route path="research" element={<ResearchView />} />
             <Route path="tasks" element={<TasksList />} />
             <Route path="tasks/new" element={<TaskNew />} />
             <Route path="tasks/:taskId" element={<TaskDetail />} />

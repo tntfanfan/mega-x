@@ -395,3 +395,21 @@
     background-clip: unset;
   }
 }
+
+/* Company research inherits the console palette and typography. */
+.research-workspace { min-width: 0; }
+.research-workspace input, .research-workspace textarea { caret-color: theme("colors.primary.DEFAULT"); }
+.research-workspace ::selection { background: theme("colors.primary.muted"); color: theme("colors.heading"); }
+.research-workspace small { font-size: 0.75rem; line-height: 1.5; }
+.research-workspace .research-role-list { max-height: 22rem; overflow-y: auto; scrollbar-gutter: stable; }
+.research-workspace .research-dialogue-messages { max-height: 36rem; overflow-y: auto; overflow-wrap: anywhere; }
+.research-workspace .research-task-list { max-height: 34rem; overflow-y: auto; }
+.research-workspace :is(.research-role-list, .research-dialogue-messages, .research-task-list) { scrollbar-width: thin; scrollbar-color: theme("colors.border-solid") theme("colors.surface"); }
+.research-workspace :is(.research-role-list, .research-dialogue-messages, .research-task-list)::-webkit-scrollbar { width: 6px; }
+.research-workspace :is(.research-role-list, .research-dialogue-messages, .research-task-list)::-webkit-scrollbar-thumb { background: theme("colors.border-solid"); border-radius: 6px; }
+@media (max-width: 767px) {
+  .company-workspace-body { flex-direction: column; }
+  .company-workspace-nav { width: 100%; border-inline-end: 0; border-bottom: 1px solid theme("colors.border-solid"); padding: 0.5rem; }
+  .company-workspace-nav nav { flex-direction: row; flex-wrap: wrap; }
+  .company-workspace-nav nav a { padding: 0.5rem 0.75rem; }
+}

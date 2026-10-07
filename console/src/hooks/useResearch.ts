@@ -3,7 +3,7 @@ import { apiErrorMessage } from '../lib/api';
 import { createRequestGate, forgetKey, requestKey, shouldPoll } from '../lib/research/core';
 import type { ResearchClient } from '../lib/research/client';
 import type { Department, Operation, ResearchTask, ResearchFile, ResearchRequest, ResearchLanguage } from '../lib/research/types';
-const initial = () => ({department:null as Department|null,tasks:[] as ResearchTask[],outputs:[] as ResearchFile[],operation:null as Operation|null,detail:null as ResearchTask|null,detailFiles:[] as ResearchFile[],selected:'',loading:true,busy:false,error:'',notice:'',syncedAt:'',limit:200});
+const initial = () => ({department:null as Department|null,tasks:[] as ResearchTask[],outputs:[] as ResearchFile[],operation:null as Operation|null,detail:null as ResearchTask|null,detailFiles:[] as ResearchFile[],selected:'',loading:true,busy:false,error:'',syncError:'',notice:'',syncedAt:'',limit:200});
 export function useResearch(companyId: string, language: ResearchLanguage, client: ResearchClient) {
   const [state,setState]=useState(initial);
   const stateRef=useRef(state);stateRef.current=state;
@@ -26,9 +26,9 @@ export function useResearch(companyId: string, language: ResearchLanguage, clien
       const rows=(tasks.items||[]).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
       const tid=selection.current;
       if(tid&&!rows.some(t=>t.id===tid)){selection.current='';setState(s=>({...s,selected:'',detail:null,detailFiles:[]}));}
-      setState(s=>({...s,department,tasks:rows,outputs:files.items||[],operation,loading:false,syncedAt:new Date().toISOString(),error:''}));
+      setState(s=>({...s,department,tasks:rows,outputs:files.items||[],operation,loading:false,syncedAt:new Date().toISOString(),syncError:''}));
       if(selection.current)await readDetail(selection.current);
-    } catch(error) {if(current(token,signal))setState(s=>({...s,error:apiErrorMessage(error),loading:false}));}
+    } catch(error) {if(current(token,signal))setState(s=>({...s,syncError:apiErrorMessage(error),loading:false}));}
     finally {if(inFlight.current===token)inFlight.current=null;}
   },[companyId,client,gate,readDetail]);
   useEffect(()=>{
@@ -52,9 +52,9 @@ export function useResearch(companyId: string, language: ResearchLanguage, clien
     install:()=>mutate(async()=>{await client.install(companyId);},'安装请求已提交，请等待安装状态更新。'),
     restart:()=>mutate(async()=>{await client.restart(companyId);},'已请求重新启动公司。'),
     submit:(request:ResearchRequest)=>mutate(async()=>{
-      const body={...request,language};const key=requestKey(sessionStorage,companyId,'submit',body);
+      const token=gate.capture(),body={...request,language};const key=requestKey(sessionStorage,companyId,'submit',body);
       const result=await client.submit(companyId,body,key);forgetKey(sessionStorage,companyId,'submit',body);
-      if(!controller.current.signal.aborted){selection.current=result.task_id;setState(s=>({...s,selected:result.task_id}));}
+      if(gate.current(token)&&!controller.current.signal.aborted){selection.current=result.task_id;setState(s=>({...s,selected:result.task_id}));}
     },'研究已提交，可以在执行详情中查看进度。'),
     retry:()=>mutate(async()=>{const tid=selection.current,body={task_id:tid},key=requestKey(sessionStorage,companyId,'retry',body);await client.retry(companyId,tid,key);forgetKey(sessionStorage,companyId,'retry',body);}),
     resume:()=>mutate(async()=>{await client.resume(companyId,selection.current,stateRef.current.detail.run.id);}),
