@@ -98,7 +98,7 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
       },
       onDelivery: info => {
         if (disposed) return;
-        const status = info.status === "submitting" ? "delivery_unknown" : info.status;
+        const status = info.status === "submitting" ? "sending" : info.status;
         setMessages(rows => rows.map(m => m.clientMessageId === info.clientMessageId ? { ...m, status, ...(status === "accepted" ? { refs: info.refs } : {}) } : m));
         if (status === "failed") setBusy(false);
       },

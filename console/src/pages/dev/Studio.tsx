@@ -437,7 +437,7 @@ export default function DevStudio() {
         setTryMessages(current => current.map(message => message.status === "sending" ? { ...message, status: "delivery_unknown" } : message));
       },
       onDelivery: (info) => {
-        const status = info.status === "submitting" ? "delivery_unknown" : info.status;
+        const status = info.status === "submitting" ? "sending" : info.status;
         if (status === "failed") {
           setTryBusy(false);
           setTryToolStatus(null);

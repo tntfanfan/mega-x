@@ -73,7 +73,7 @@ export function turnsToMessages(turns: TryHistoryTurn[]): ChatMsg[] {
       label: t.label,
       source: t.source,
       clientMessageId: t.client_message_id,
-      status: t.status === "submitting" ? "delivery_unknown" :
+      status: t.status === "submitting" ? "sending" :
         ["accepted", "failed", "delivery_unknown"].includes(t.status) ? t.status as ChatMsg["status"] : undefined,
     }));
 }
