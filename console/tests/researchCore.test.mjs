@@ -24,6 +24,7 @@ test('company execution diagnostics are used only for execution readiness failur
   assert.equal(researchExecutionReason({reason: 'disabled'}, 'engine_missing'), 'disabled');
   assert.equal(researchExecutionReason({reason: 'ready'}, 'engine_missing'), 'ready');
   assert.equal(researchExecutionReason({reason: 'execution_not_ready'}), 'execution_not_ready');
+  assert.equal(researchExecutionReason({reason: 'execution_not_ready'}, 'ready'), 'execution_not_ready');
 });
 test("codes retain zeros, infer exchanges, normalize US class aliases and reject unknown codes", () => {
   for (const [a, b] of [

@@ -155,7 +155,9 @@ export const stateLabels = {
   partial_failed: "部分失败",
 };
 export function researchExecutionReason(cap: { reason?: string }, executionReason?: string) {
-  return cap.reason === "execution_not_ready" ? executionReason || cap.reason : cap.reason || "execution_not_ready";
+  return cap.reason === "execution_not_ready"
+    ? executionReason && executionReason !== "ready" ? executionReason : cap.reason
+    : cap.reason || "execution_not_ready";
 }
 export const reasons = {
   engine_missing: "公司实例尚未包含投研引擎，请更新公司运行镜像后重试。",
