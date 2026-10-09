@@ -1,0 +1,27 @@
+console/src/lib/research/types.ts
+  s_2309e885438939::t_67eed809732b86 14
+console/src/lib/research/core.ts
+  s_2309e885438939::t_67eed809732b86 157-159,161-167,173
+console/src/components/research/ResearchForm.tsx
+  s_2309e885438939::t_67eed809732b86 6,53
+console/src/lib/research/english.ts
+  s_2309e885438939::t_3ef608ed3f227e 3-10
+console/tests/researchCore.test.mjs
+  s_2309e885438939::t_5b900864b0e857 12,22-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "66a1af324e78abbcf8a722ea41af43f9bc99a262",
+  "prompts": {},
+  "sessions": {
+    "s_2309e885438939": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12074-1305-7411-88ad-4cac060a7da9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
