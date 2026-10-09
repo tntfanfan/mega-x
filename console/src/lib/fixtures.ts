@@ -73,7 +73,7 @@ export const COMPANIES: Company[] = [
     template_slug: "mcn-content-machine",
     state: "paused",
     gateway_port: 18790,
-    dept_ids: ["dept-pub", "dept-ad", "dept-organic", "dept-drama", "dept-cinematic"],
+    dept_ids: ["dept-pub", "dept-ad", "dept-organic", "dept-series", "dept-cinematic"],
     token_usage_30d: 12_400,
     active_tasks: 0,
     created_at: "2026-04-01T10:30:00Z",
@@ -110,7 +110,7 @@ export const COMPANIES: Company[] = [
     template_slug: "short-video",
     state: "running",
     gateway_port: 18793,
-    dept_ids: ["dept-drama", "dept-cinematic", "dept-pub", "dept-ad"],
+    dept_ids: ["dept-series", "dept-cinematic", "dept-pub", "dept-ad"],
     token_usage_30d: 58_100,
     active_tasks: 2,
     created_at: "2026-03-20T19:00:00Z",
@@ -223,7 +223,7 @@ export const COMPANY_TEMPLATES: CompanyTemplate[] = [
     desc_key: "business.companies.new.tpl.mcn-content-machine.desc",
     dept_ids: [
       "dept-ceo", "dept-hr", "dept-pub", "dept-growth",
-      "dept-ad", "dept-organic", "dept-drama", "dept-cinematic",
+      "dept-ad", "dept-organic", "dept-series", "dept-cinematic",
     ],
   },
   {
@@ -280,7 +280,7 @@ export const LINE_TEMPLATES: LineTemplate[] = [
     slug: "short-video", emoji: "🎬", scope: "industry",
     name_key: "solo.line-tpl.short-video.name",
     desc_key: "solo.line-tpl.short-video.desc",
-    dept_ids: ["dept-drama", "dept-cinematic", "dept-pub", "dept-ad"],
+    dept_ids: ["dept-series", "dept-cinematic", "dept-pub", "dept-ad"],
     monthly_output_estimate: 12, hours_saved_estimate: 64,
   },
   {
@@ -336,7 +336,7 @@ export const GROUP_LABELS: Record<string, Record<string, GroupLabel>> = {
     "dept-cpo":      { emoji: "🎯", label_key: "solo.group.editor.label",   lead_title_key: "solo.group.editor.lead",   helper_title_key: "solo.group.editor.helper",   reviewer_title_key: "solo.group.editor.reviewer",   ops_title_key: "solo.group.editor.ops" },
   },
   "short-video": {
-    "dept-drama":     { emoji: "📝", label_key: "solo.group.script.label",   lead_title_key: "solo.group.script.lead",   helper_title_key: "solo.group.script.helper",   reviewer_title_key: "solo.group.script.reviewer",   ops_title_key: "solo.group.script.ops" },
+    "dept-series":    { emoji: "📝", label_key: "solo.group.script.label",   lead_title_key: "solo.group.script.lead",   helper_title_key: "solo.group.script.helper",   reviewer_title_key: "solo.group.script.reviewer",   ops_title_key: "solo.group.script.ops" },
     "dept-cinematic": { emoji: "🎬", label_key: "solo.group.video.label",    lead_title_key: "solo.group.video.lead",    helper_title_key: "solo.group.video.helper",    reviewer_title_key: "solo.group.video.reviewer",    ops_title_key: "solo.group.video.ops" },
     "dept-pub":       { emoji: "📢", label_key: "solo.group.distribution.label", lead_title_key: "solo.group.distribution.lead", helper_title_key: "solo.group.distribution.helper", reviewer_title_key: "solo.group.distribution.reviewer", ops_title_key: "solo.group.distribution.ops" },
     "dept-ad":        { emoji: "💰", label_key: "solo.group.ads.label",      lead_title_key: "solo.group.ads.lead",      helper_title_key: "solo.group.ads.helper",      reviewer_title_key: "solo.group.ads.reviewer",      ops_title_key: "solo.group.ads.ops" },
@@ -459,8 +459,6 @@ export const DEPT_CATALOG: DeptCatalogItem[] = [
   { id: "dept-ad",         name: "广告部",            emoji: "💰", short_desc: "买量 + 计费 + 投放",        source_type: "builtin", price_monthly: 0, role_count: 9,  tier_breakdown: { HIGH: 2, MEDIUM: 6, LOW: 1 }, category: "marketing" },
   { id: "dept-organic",    name: "社媒部",         emoji: "🌱", short_desc: "X/Reddit/小红书养号",      source_type: "builtin", price_monthly: 0, role_count: 6,  tier_breakdown: { HIGH: 2, MEDIUM: 4, LOW: 0 }, category: "marketing" },
   // ── 自家垂直业务（仅行业模板） ──
-  { id: "dept-drama",      name: "短剧部",           emoji: "🎭", short_desc: "脚本 + 分镜 + 字幕",        source_type: "builtin", price_monthly: 0, role_count: 9,  tier_breakdown: { HIGH: 2, MEDIUM: 6, LOW: 1 }, category: "creative" },
-  { id: "dept-film",       name: "短片工作室",       emoji: "🎞️", short_desc: "故事 + 视觉资产 + 精品成片", source_type: "builtin", price_monthly: 0, role_count: 9, tier_breakdown: { HIGH: 3, MEDIUM: 5, LOW: 1 }, category: "creative" },
   { id: "dept-series",     name: "网剧部",           emoji: "📺", short_desc: "分集故事 + 锁资产 + 成片", source_type: "builtin", price_monthly: 0, role_count: 8, tier_breakdown: { HIGH: 4, MEDIUM: 4, LOW: 0 }, category: "creative" },
   { id: "dept-cinematic",  name: "动画部",            emoji: "🎬", short_desc: "开场 CG / 剧情动画",       source_type: "builtin", price_monthly: 0, role_count: 10, tier_breakdown: { HIGH: 2, MEDIUM: 7, LOW: 1 }, category: "creative" },
   { id: "dept-game",       name: "游戏部",         emoji: "🎮", short_desc: "玩法 + 关卡 + 平衡",        source_type: "builtin", price_monthly: 0, role_count: 8,  tier_breakdown: { HIGH: 2, MEDIUM: 5, LOW: 1 }, category: "creative" },
