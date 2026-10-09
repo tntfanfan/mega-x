@@ -3,6 +3,7 @@ import {
   marketCapabilities,
   normalTicker,
   reasons,
+  researchExecutionReason,
 } from "../../lib/research/core";
 import type { Market, ResearchLanguage } from "../../lib/research/types";
 import type { ResearchState } from "../../hooks/useResearch";
@@ -49,7 +50,7 @@ export function ResearchForm({
       ? "正在安装投研部。容器重建期间请稍候，页面会自动更新。"
       : status === "failed"
         ? "投研部安装或注册校验失败。可以重新安装；若再次失败，请检查运行日志。"
-        : reasons[cap.reason] || `暂不可执行：${cap.reason || "状态未知"}`;
+        : reasons[researchExecutionReason(cap, research.department?.execution_reason)] || `暂不可执行：${cap.reason || "状态未知"}`;
   return (
     <Section
       id="research"

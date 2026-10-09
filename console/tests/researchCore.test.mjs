@@ -9,6 +9,7 @@ import {
   citationTarget,
   canSend,
   acceptsContext,
+  researchExecutionReason,
 } from "../src/lib/research/core.ts";
 const memory = () => {
   const m = new Map();
@@ -18,6 +19,12 @@ const memory = () => {
     removeItem: (k) => m.delete(k),
   };
 };
+test('company execution diagnostics are used only for execution readiness failures', () => {
+  assert.equal(researchExecutionReason({reason: 'execution_not_ready'}, 'engine_missing'), 'engine_missing');
+  assert.equal(researchExecutionReason({reason: 'disabled'}, 'engine_missing'), 'disabled');
+  assert.equal(researchExecutionReason({reason: 'ready'}, 'engine_missing'), 'ready');
+  assert.equal(researchExecutionReason({reason: 'execution_not_ready'}), 'execution_not_ready');
+});
 test("codes retain zeros, infer exchanges, normalize US class aliases and reject unknown codes", () => {
   for (const [a, b] of [
     ["600519", "600519.SH"],

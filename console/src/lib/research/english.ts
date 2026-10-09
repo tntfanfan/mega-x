@@ -1,5 +1,13 @@
 // UI copy only. Stored messages, report text, names and titles are never translated.
 export const english = {
+  "公司实例尚未包含投研引擎，请更新公司运行镜像后重试。": "This company instance does not include the research engine. Update its runtime image and retry.",
+  "公司投研引擎校验失败，请检查运行镜像版本。": "The company research engine failed validation. Check the runtime image version.",
+  "公司投研引擎依赖不完整，请更新公司运行镜像。": "The research engine dependencies are incomplete. Update the company runtime image.",
+  "投研 Agent 尚未完成注册，请重新安装投研部。": "The research agent is not registered. Reinstall the research department.",
+  "公司任务服务暂时无法连接，请刷新状态或重启公司实例。": "The company task runtime is temporarily unreachable. Refresh its status or restart the instance.",
+  "公司任务服务版本不兼容，请更新公司实例。": "The company task runtime is incompatible. Update the instance.",
+  "公司实例正在重启，请稍候。": "The company instance is restarting. Please wait.",
+  "公司投研执行器尚未就绪，请检查公司实例状态。": "The company research executor is not ready. Check the instance status.",
   全部流派: "All schools",
   等待生成: "Waiting for generation",
   部分失败: "Partially failed",

@@ -154,13 +154,23 @@ export const stateLabels = {
   accepted: "等待生成",
   partial_failed: "部分失败",
 };
+export function researchExecutionReason(cap: { reason?: string }, executionReason?: string) {
+  return cap.reason === "execution_not_ready" ? executionReason || cap.reason : cap.reason || "execution_not_ready";
+}
 export const reasons = {
+  engine_missing: "公司实例尚未包含投研引擎，请更新公司运行镜像后重试。",
+  engine_invalid: "公司投研引擎校验失败，请检查运行镜像版本。",
+  dependency_missing: "公司投研引擎依赖不完整，请更新公司运行镜像。",
+  agent_not_registered: "投研 Agent 尚未完成注册，请重新安装投研部。",
+  runtime_unreachable: "公司任务服务暂时无法连接，请刷新状态或重启公司实例。",
+  runtime_invalid_response: "公司任务服务版本不兼容，请更新公司实例。",
+  runtime_stopping: "公司实例正在重启，请稍候。",
   language_not_supported: "当前执行服务不支持此语言，请更新执行服务后重试。",
   disabled: "投研功能尚未开启，请先完成本地运行配置。",
   not_enabled_for_company: "此公司尚未加入投研开放范围。",
   not_installed: "安装股票投研部后，可以在这里提交研究。",
   execution_not_ready:
-    "投研执行服务尚未就绪。请完成镜像构建及独立执行服务配置。",
+    "公司投研执行器尚未就绪，请检查公司实例状态。",
   ready: "部门和执行服务已就绪，可以开始研究。",
 };
 export const researchErrors = {
