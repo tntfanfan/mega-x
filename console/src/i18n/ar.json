@@ -1189,6 +1189,8 @@
   "business.company.depts.members.hide": "إخفاء الأعضاء",
   "dept.dept-film.name": "استوديو الأفلام القصيرة",
   "dept.dept-film.desc": "القصة والأصول البصرية والأفلام المكتملة",
+  "dept.dept-series.name": "قسم المسلسلات",
+  "dept.dept-series.desc": "قصة الحلقات والأصول المقفلة والمونتاج",
   "film.project": "اختيار المشروع",
   "film.new": "مشروع جديد",
   "film.views": "طرق عرض المشروع",
@@ -1268,5 +1270,13 @@
   "dept.dept-film.member.editor": "المونتير",
   "dept.dept-film.member.researcher": "الباحث",
   "dept.dept-film.member.continuity-supervisor": "مشرف الاستمرارية",
+  "dept.dept-series.member.orchestrator": "منسق المسلسل",
+  "dept.dept-series.member.producer": "المنتج",
+  "dept.dept-series.member.novelist": "الروائي",
+  "dept.dept-series.member.screenwriter": "كاتب السيناريو",
+  "dept.dept-series.member.asset-extractor": "مستخرج الأصول",
+  "dept.dept-series.member.storyboard-artist": "فنان اللوحة القصصية",
+  "dept.dept-series.member.video-director": "مخرج الفيديو",
+  "dept.dept-series.member.editor": "المونتير",
   "business.company.tab.research": "Research"
 }
