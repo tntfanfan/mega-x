@@ -1,0 +1,21 @@
+console/tests/researchCore.test.mjs
+  s_2309e885438939::t_2103216fe60f73 27
+console/src/lib/research/core.ts
+  s_2309e885438939::t_016e39067d1174 158-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "400fc090ef1d1c398a9254fcbd744e7da335312c",
+  "prompts": {},
+  "sessions": {
+    "s_2309e885438939": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12074-1305-7411-88ad-4cac060a7da9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
