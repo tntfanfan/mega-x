@@ -4,6 +4,7 @@ import {
   createRequestGate,
   forgetKey,
   requestKey,
+  researchErrors,
   shouldPoll,
 } from "../lib/research/core";
 import type { ResearchClient } from "../lib/research/client";
@@ -142,8 +143,14 @@ export function useResearch(
       succeeded = true;
       if (gate.current(token)) setState((s) => ({ ...s, notice }));
     } catch (error) {
-      if (gate.current(token))
-        setState((s) => ({ ...s, error: apiErrorMessage(error) }));
+      if (gate.current(token)) {
+        const message = apiErrorMessage(error);
+        setState((s) => ({
+          ...s,
+          error:
+            researchErrors[message as keyof typeof researchErrors] || message,
+        }));
+      }
     } finally {
       if (gate.endMutation(token)) {
         setState((s) => ({ ...s, busy: false }));

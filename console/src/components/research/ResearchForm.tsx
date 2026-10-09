@@ -173,7 +173,10 @@ export function ResearchForm({
                   <option
                     key={d}
                     value={d}
-                    disabled={!cap.supported_depths?.includes(d)}
+                    disabled={
+                      !!cap.supported_depths?.length &&
+                      !cap.supported_depths.includes(d)
+                    }
                   >
                     {tr(d === "quick" ? "快速了解" : "标准研究")}
                   </option>
@@ -186,7 +189,6 @@ export function ResearchForm({
           <button
             type="submit"
             className={`${primaryClass} self-start lg:mt-7`}
-            disabled={!cap.can_submit}
           >
             {tr("开始研究")}
           </button>
