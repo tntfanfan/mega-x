@@ -176,6 +176,7 @@ export const reasons = {
   ready: "部门和执行服务已就绪，可以开始研究。",
 };
 export const researchErrors = {
+  us_not_enabled_for_company: "此公司尚未开放美股研究，请先启用美股配置。",
   run_timeout:
     "本次研究执行超时，未能完成报告。请检查数据源连接后重试。（run_timeout）",
   unsupported_security:
@@ -189,6 +190,14 @@ export const researchErrors = {
   market_currency_mismatch: "数据源的市场或币种不一致，已停止研究。",
   research_execution_failed: "研究执行失败，请检查执行服务日志后重试。",
 };
+
+export function researchRunError(run: { error?: unknown; runtime_events?: { state?: string; error_code?: string | null }[] }) {
+  if (run.error === "research_execution_failed") {
+    const failed = run.runtime_events?.filter(event => event.state === "failed").at(-1);
+    if (failed?.error_code && failed.error_code in researchErrors) return failed.error_code;
+  }
+  return run.error;
+}
 
 export function runActions(task: ResearchTask) {
   if (task.executor !== "research") return [];

@@ -10,6 +10,7 @@ import {
   canSend,
   acceptsContext,
   researchExecutionReason,
+  researchRunError,
 } from "../src/lib/research/core.ts";
 const memory = () => {
   const m = new Map();
@@ -19,6 +20,12 @@ const memory = () => {
     removeItem: (k) => m.delete(k),
   };
 };
+test('historical generic failures recover known stage errors without overriding specific failures', () => {
+  const runtime_events = [{state:'failed',error_code:'unsupported_security'}];
+  assert.equal(researchRunError({error:'research_execution_failed',runtime_events}), 'unsupported_security');
+  assert.equal(researchRunError({error:'provider_timeout',runtime_events}), 'provider_timeout');
+  assert.equal(researchRunError({error:'research_execution_failed',runtime_events:[{state:'failed',error_code:'unknown_error'}]}), 'research_execution_failed');
+});
 test('company execution diagnostics are used only for execution readiness failures', () => {
   assert.equal(researchExecutionReason({reason: 'execution_not_ready'}, 'engine_missing'), 'engine_missing');
   assert.equal(researchExecutionReason({reason: 'disabled'}, 'engine_missing'), 'disabled');

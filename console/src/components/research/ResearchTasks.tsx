@@ -7,6 +7,7 @@ import {
   stageStates,
   taskMarket,
   researchErrors,
+  researchRunError,
 } from "../../lib/research/core";
 import { dateLabel } from "../../lib/research/copy";
 import { OutputRows } from "./ResearchOutputs";
@@ -46,12 +47,13 @@ export function ResearchTasks({
     state = run.state || task?.state,
     actions = task ? runActions(task) : [],
     stages = stageStates(run);
+  const errorCode = researchRunError(run);
   const error =
-    run.error == null
+    errorCode == null
       ? ""
-      : typeof run.error === "string"
-        ? researchErrors[run.error] || run.error
-        : JSON.stringify(run.error);
+      : typeof errorCode === "string"
+        ? researchErrors[errorCode] || errorCode
+        : JSON.stringify(errorCode);
   return (
     <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(260px,0.85fr)_minmax(0,1.15fr)]">
       <Section

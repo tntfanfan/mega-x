@@ -32,6 +32,7 @@ export type ResearchRun = {
   ended_at?: string;
   error?: unknown;
   result?: { quality?: string; gaps?: string[] };
+  runtime_events?: { state?: string; error_code?: string | null }[];
 };
 export type ResearchTask = {
   id: string;

@@ -42,6 +42,8 @@ export const english = {
     "The current executor does not support this language. Update the executor and retry.",
   固定版本: "Fixed version",
   方法版本: "Method version",
+  "美股研究暂未开放": "US stock research is not available yet",
+  "此公司尚未开放美股研究，请先启用美股配置。": "US stock research is not enabled for this company. Enable the US market configuration first.",
   "A 股支持快速与标准研究；美股开放后支持快速研究":
     "Quick and standard research for China A-shares; quick research for US stocks when enabled",
   "NYSE / Nasdaq 美国普通股票，美元计价":
