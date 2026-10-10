@@ -764,6 +764,10 @@ try {
         .getByRole("button", { name: "开始研究", exact: true })
         .isDisabled(),
     );
+    const ticker = research.locator("input");
+    assert.equal(await ticker.isDisabled(), false, "Ticker stays editable when a run cannot start");
+    await ticker.fill("600519");
+    assert.equal(await ticker.inputValue(), "600519");
     await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "研究任务", exact: true }).click();
     await page.locator("#tasks").getByRole("button", { name: /AAPL Research/ }).waitFor();
     assert(

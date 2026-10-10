@@ -144,13 +144,7 @@ export function ResearchForm({
           </select>
         </label>
         <fieldset
-          disabled={
-            research.busy ||
-            research.loading ||
-            !!research.syncError ||
-            status !== "ready" ||
-            !cap.can_submit
-          }
+          disabled={research.busy || research.loading || !!research.syncError}
           className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
         >
           <label className="text-sm text-body">
@@ -206,6 +200,7 @@ export function ResearchForm({
           <button
             type="submit"
             className={`${primaryClass} self-start lg:mt-7`}
+            disabled={status !== "ready" || !cap.can_submit}
           >
             {tr("开始研究")}
           </button>
