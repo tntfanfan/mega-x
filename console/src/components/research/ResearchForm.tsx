@@ -3,6 +3,7 @@ import {
   marketCapabilities,
   normalTicker,
   reasons,
+  researchExecutionReason,
 } from "../../lib/research/core";
 import type { Market, ResearchLanguage } from "../../lib/research/types";
 import type { ResearchState } from "../../hooks/useResearch";
@@ -27,12 +28,20 @@ export function ResearchForm({
   tr: Copy;
   onSubmitted?: () => void;
 }) {
-  const [market, setMarket] = useState<Market>("A"),
+  const [market, setMarket] = useState<Market>("US"),
     [depth, setDepth] = useState("quick"),
     [ticker, setTicker] = useState(""),
     [error, setError] = useState("");
-  const caps = marketCapabilities(research.department?.capabilities, language),
-    active = market in caps ? market : "A",
+  const available = marketCapabilities(research.department?.capabilities, language),
+    caps = {
+      ...available,
+      US: available.US || {
+        can_submit: false,
+        supported_depths: [],
+        reason: research.department?.capabilities?.markets?.US?.reason || "execution_not_ready",
+      },
+    },
+    active = market in caps ? market : "US",
     cap = caps[active] || {},
     us = active === "US";
   useEffect(() => {
@@ -49,7 +58,9 @@ export function ResearchForm({
       ? "正在安装投研部。容器重建期间请稍候，页面会自动更新。"
       : status === "failed"
         ? "投研部安装或注册校验失败。可以重新安装；若再次失败，请检查运行日志。"
-        : reasons[cap.reason] || `暂不可执行：${cap.reason || "状态未知"}`;
+        : us && cap.reason === "disabled"
+          ? "美股研究暂未开放"
+          : reasons[researchExecutionReason(cap, research.department?.execution_reason)] || `暂不可执行：${cap.reason || "状态未知"}`;
   return (
     <Section
       id="research"

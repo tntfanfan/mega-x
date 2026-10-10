@@ -317,6 +317,8 @@ try {
     await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
     const menu = page.getByRole("navigation", { name: "投研功能菜单", exact: true });
     const research = page.locator("#research");
+    assert.equal(await research.getByRole("combobox").first().inputValue(), "US");
+    await research.getByRole("combobox").first().selectOption("A");
     await research.locator("input").fill("600519");
     const artifacts = process.env.RESEARCH_ARTIFACT_DIR || "/private/tmp/mega-x-research-menu-qa";
     await mkdir(artifacts, { recursive: true });
@@ -381,6 +383,7 @@ try {
     await page
       .getByRole("heading", { name: "新建股票研究", exact: true })
       .waitFor();
+    await research.getByRole("combobox").first().selectOption("A");
     await research.locator("input").fill("600519");
     await page.evaluate(() => {
       const timeout = AbortSignal.timeout.bind(AbortSignal);
@@ -516,7 +519,7 @@ try {
     const research = page.locator("#research"),
       dialogue = page.locator("#dialogue");
     await research.locator("input").waitFor();
-    await research.getByRole("combobox").first().selectOption("US");
+    assert.equal(await research.getByRole("combobox").first().inputValue(), "US", "New research should default to US stocks");
     assert.equal(
       await research.getByRole("combobox").nth(1).locator("option").count(),
       1,

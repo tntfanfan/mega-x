@@ -8,6 +8,7 @@ import { ResearchDialogue } from "../../../components/research/ResearchDialogue"
 import type { CompanyOutlet } from "./CompanyShell";
 import { api, type Company } from "../../../lib/api";
 import { createResearchClient } from "../../../lib/research/client";
+import { researchErrors } from "../../../lib/research/core";
 import { createCopy, researchLanguage, dateLabel } from "../../../lib/research/copy";
 import { researchPages, researchPageFromPath, type ResearchPage } from "../../../lib/research/navigation";
 import { useResearch } from "../../../hooks/useResearch";
@@ -84,7 +85,7 @@ function ResearchWorkspace({ company }: { company: Company }) {
       </header>
       <ResearchNavigation {...{ basePath, tr }} active={page} dialogueBusy={dialogue.busy} dialogueKind={dialogue.kind} />
       {(error || research.notice) && (
-        <p role={error ? "alert" : "status"} className={`text-sm ${error ? "text-fusion" : "text-spark-mint"}`}>{tr(error || research.notice)}</p>
+        <p role={error ? "alert" : "status"} className={`text-sm ${error ? "text-fusion" : "text-spark-mint"}`}>{tr(researchErrors[error] || error || research.notice)}</p>
       )}
       <ResearchPanel active={page === "new"}>
         <ResearchForm {...{ research, language, tr }} companyState={company.state} onSubmitted={() => openPage("tasks")} />
