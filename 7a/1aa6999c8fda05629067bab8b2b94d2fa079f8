@@ -1,0 +1,33 @@
+console/src/components/research/ResearchTasks.tsx
+  s_2309e885438939::t_7f76205fdde098 10,50,52,54-56
+console/tests/researchCore.test.mjs
+  s_2309e885438939::t_7f76205fdde098 13,23-28
+console/src/lib/research/english.ts
+  s_2309e885438939::t_e7d6e66183733c 45
+  s_2309e885438939::t_7b802a9a72ffa1 46
+console/src/components/research/ResearchForm.tsx
+  s_2309e885438939::t_e7d6e66183733c 31,35-44,61-63
+console/tests/research-browser.mjs
+  s_2309e885438939::t_b49b524dc06ef9 320-321,386,522
+console/src/lib/research/types.ts
+  s_2309e885438939::t_7f76205fdde098 35
+console/src/lib/research/core.ts
+  s_2309e885438939::t_7f76205fdde098 179,194-200
+  s_2309e885438939::t_f6860fae63ad5c 201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "7a1aa6999c8fda05629067bab8b2b94d2fa079f8",
+  "prompts": {},
+  "sessions": {
+    "s_2309e885438939": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a12074-1305-7411-88ad-4cac060a7da9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
