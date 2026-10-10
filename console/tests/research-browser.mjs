@@ -5,7 +5,12 @@ const modulePath = process.env.PLAYWRIGHT_MODULE;
 const { chromium } = await import(
   modulePath ? pathToFileURL(modulePath).href : "playwright"
 );
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({
+  headless: true,
+  ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+    ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+    : {}),
+});
 const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
   }),
@@ -727,7 +732,7 @@ try {
     await page
       .getByRole("button", { name: "加载更多成果", exact: true })
       .click();
-    await page.getByText("report-200.html", { exact: true }).first().waitFor();
+    await page.locator("#deliverables").getByText("report-200.html", { exact: true }).waitFor();
     assert(
       calls.some((c) => c.path.endsWith("/outputs/list") && c.method === "GET"),
     );
@@ -760,6 +765,7 @@ try {
         .isDisabled(),
     );
     await page.getByRole("navigation", { name: "投研功能菜单", exact: true }).getByRole("link", { name: "研究任务", exact: true }).click();
+    await page.locator("#tasks").getByRole("button", { name: /AAPL Research/ }).waitFor();
     assert(
       await page
         .locator("#tasks")

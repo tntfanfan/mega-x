@@ -144,7 +144,13 @@ export function ResearchForm({
           </select>
         </label>
         <fieldset
-          disabled={research.busy || research.loading || !!research.syncError}
+          disabled={
+            research.busy ||
+            research.loading ||
+            !!research.syncError ||
+            status !== "ready" ||
+            !cap.can_submit
+          }
           className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
         >
           <label className="text-sm text-body">
