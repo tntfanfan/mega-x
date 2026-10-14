@@ -264,7 +264,7 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
                 f"Start it:\n"
                 f"  - vite (console):   pnpm --filter @megax/console dev   (from frontend/mega-x/)\n"
                 f"                       or: cd frontend/mega-x/apps/console && pnpm dev\n"
-                f"  - FastAPI backend:  python -m platform.ai_native.main\n"
+                f"  - FastAPI backend:  python -m platform.api_gateway.main\n"
             )
             self.log_error(hint.replace("\n", " | "))
             body_bytes = hint.encode("utf-8", "replace")
