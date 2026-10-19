@@ -2,8 +2,8 @@
  * 网剧部门应用：对话 │ 产出物工作区（按环节分栏）。
  *
  * 对话是唯一的入口：想做什么都跟主创说；右边按环节（设定 / 剧本 / 资产 / 分镜 / 视频 / 成片 / 审查）
- * 摆着每样产出物和它的各个版本，用户在这里看、改文字、对比、选哪一版生效，
- * 任何一样都能拖回对话里接着问。
+ * 摆着每样产出物和它的各个版本，用户在这里看、改文字、对比、选哪一版定稿（最终使用），
+ * 任何一样都能拖回对话里接着问。右边也能切到「文件」，看项目目录在磁盘上的原样。
  *
  * 后端是租户里的 `platform/apps/series/`（HTTP / WS 都在 appBase 下）。聊天协议、
  * 断线重连、历史都是网剧自己的；产出物照旧写在 board/dept-series/series/，产出物
@@ -18,18 +18,20 @@ import type { DeptAppProps } from "../registry";
 import { apiErrorMessage } from "../../lib/api";
 import { resolveDeptDisplay } from "../../lib/depts";
 import { logicalOf, seriesApi, type ChatRef, type ProjectStatus, type ProjectSummary, type Session } from "./api";
+import { projectPath } from "./files";
 import type { Frame } from "./socket";
 import { useSeriesChat } from "./useChat";
-import { STAGES, refLabel, stageItems, stageOf, timeLabel, type StageId } from "./stages";
+import { itemRef, refLabel, stageOf, timeLabel, type StageId, type TabId } from "./stages";
 import { ChatPane, REF_LIMIT, type Draft } from "./components/ChatPane";
 import { JobsBar } from "./components/JobsBar";
 import { SessionPicker } from "./components/SessionPicker";
 import { Popover } from "./components/bits";
-import { Workspace } from "./components/Workspace";
+import { Workspace, type SeriesView } from "./components/Workspace";
 
 // Not "session": the shell's default chat (TenantChatProvider) reads ?session= on mount.
 const SESSION_PARAM = "app_session";
 const LAYOUT_KEY = "series.layout";
+const VIEW_KEY = "series.view";
 const CHAT_MIN = 340;
 const WORK_MIN = 420;
 
@@ -46,6 +48,10 @@ function readLayout(): Layout {
 
 function saveLayout(layout: Layout) {
   try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch { /* private mode */ }
+}
+
+function readView(): SeriesView {
+  try { return localStorage.getItem(VIEW_KEY) === "files" ? "files" : "structured"; } catch { return "structured"; }
 }
 
 function useWide(): boolean {
@@ -70,7 +76,7 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [projectId, setProjectId] = useState("");
   const [status, setStatus] = useState<ProjectStatus | null>(null);
-  const [stage, setStage] = useState<StageId>("setting");
+  const [stage, setStage] = useState<TabId>("overview");
   const [picked, setPicked] = useState<Partial<Record<StageId, string>>>({});
   const [focusRef, setFocusRef] = useState<string | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -81,10 +87,12 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   const [fresh, setFresh] = useState<{ ref: string; label: string } | null>(null);
   const [layout, setLayout] = useState<Layout>(readLayout);
   const [sheet, setSheet] = useState(false);
+  const [view, setViewState] = useState<SeriesView>(readView);
+  const [filePath, setFilePath] = useState("");
   const wide = useWide();
   const dirty = useRef(false);
   const body = useRef<HTMLDivElement>(null);
-  const selected = picked[stage] || "";
+  const selected = stage === "overview" ? "" : picked[stage] || "";
 
   const setDraft = useCallback((update: (d: Draft) => Draft) => setDraftState(update), []);
   const onDirty = useCallback((d: boolean) => { dirty.current = d; }, []);
@@ -126,17 +134,16 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   }, [api, sid]);
 
   useEffect(() => {
-    setPicked({}); setFocusRef(undefined); setPublishedRef(""); setFresh(null);
+    setPicked({}); setFocusRef(undefined); setPublishedRef(""); setFresh(null); setFilePath("");
     void loadStatus(projectId);
   }, [projectId, loadStatus]);
 
-  // A project just opened: start on the first stage that has something.
+  // A project just opened: start on its overview.
   const landed = useRef("");
   useEffect(() => {
     if (!status || landed.current === status.project_id) return;
     landed.current = status.project_id;
-    const first = STAGES.find(s => stageItems(status, s.id).length);
-    if (first) setStage(first.id);
+    setStage("overview");
   }, [status]);
 
   // Artifacts change underneath (the agent, another tab, a job finishing): SSE from the app.
@@ -166,7 +173,8 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
     const item = status.items.find(i => i.latest === publishedRef || i.canonical === publishedRef);
     if (!item) return;
     setPublishedRef("");
-    const idle = !selected || selected === item.logical;
+    // Reading the overview is not idle: offer the link instead of pulling the page away.
+    const idle = view === "structured" && stage !== "overview" && (!selected || selected === item.logical);
     if (idle && !dirty.current) show(item.logical, item.kind, publishedRef);
     else setFresh({ ref: publishedRef, label: refLabel(status, publishedRef) });
   }, [publishedRef, status]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -220,21 +228,45 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   }, [chat, wide]);
 
   const selectInStage = (logical: string) => {
-    if (logical === selected || !leaveEdit()) return;
+    if (stage === "overview" || logical === selected || !leaveEdit()) return;
     setPicked(p => ({ ...p, [stage]: logical }));
     setFocusRef(undefined);
   };
-  const changeStage = (s: StageId) => {
+  const changeStage = (s: TabId) => {
     if (s === stage || !leaveEdit()) return;
     setStage(s);
     setFocusRef(undefined);
   };
-  const openRef = (ref: string) => {
+  const setView = (next: SeriesView) => {
+    setViewState(next);
+    try { localStorage.setItem(VIEW_KEY, next); } catch { /* private mode */ }
+  };
+  // Switching to files shows the file of the item that is open in the structured view.
+  const changeView = (next: SeriesView) => {
+    if (next === view || (view === "structured" && !leaveEdit())) return;
+    const item = next === "files" && selected && status ? status.items.find(i => i.logical === selected) : undefined;
+    if (item && status) {
+      const ref = focusRef && logicalOf(focusRef) === item.logical ? focusRef : itemRef(item);
+      const path = projectPath(ref, status.project_id);
+      // The file you left is that very version (its md, or one of its images): come back to it.
+      if (!filePath.startsWith(path.replace(/\.md$/, "."))) setFilePath(path);
+    }
+    setView(next);
+  };
+  /** A ref from the chat or a toast: the item in the structured view, or the file in the files view (where plain files live too). */
+  const openRef = (ref: string, target: SeriesView = view) => {
     const logical = logicalOf(ref);
     const item = status?.items.find(i => i.logical === logical || i.latest === ref || i.canonical === ref);
-    if (!item) { setError(`「${refLabel(status, ref)}」不在当前项目里`); return; }
-    if (item.logical !== selected && !leaveEdit()) return;
-    show(item.logical, item.kind, /@v\d+$/.test(ref) ? ref : undefined);
+    if (target === "files" || !item) {
+      if (!status) { setError(`「${refLabel(status, ref)}」不在当前项目里`); return; }
+      if (view === "structured" && !leaveEdit()) return;
+      setFilePath(projectPath(ref, status.project_id));
+      setView("files");
+    } else {
+      if ((item.logical !== selected || view !== "structured") && !leaveEdit()) return;
+      show(item.logical, item.kind, /@v\d+$/.test(ref) ? ref : undefined);
+      setView("structured");
+    }
     setFresh(null);
     if (wide && !layout.workspace) toggleWorkspace(true);
     if (!wide) setSheet(true);
@@ -297,7 +329,11 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
 
   const project = projects.find(p => p.project_id === projectId);
   const workspace = (
-    <Workspace api={api} status={status} stage={stage} onStage={changeStage} selected={selected} focusRef={focusRef}
+    <Workspace api={api} status={status} view={view} onView={changeView} filePath={filePath} onFilePath={setFilePath}
+      onStructured={ref => openRef(ref, "structured")}
+      stage={stage} onStage={changeStage} selected={selected} focusRef={focusRef}
+      onShow={item => { if (leaveEdit()) { show(item.logical, item.kind); setView("structured"); } }}
+      onOpenFile={path => { if (!leaveEdit()) return; setFilePath(path); setView("files"); }}
       onSelect={selectInStage} refreshKey={refreshKey} busy={chat.busy} connected={connected}
       onSend={send} onRef={addRef} onQuote={quote} onOpen={openRef} onSuggest={suggest}
       onChanged={() => { void loadStatus(projectId); setRefreshKey(k => k + 1); }} onDirty={onDirty} />

@@ -6,6 +6,8 @@
 import { logicalOf, versionOf, type ProjectStatus, type StatusItem } from "./api";
 
 export type StageId = "setting" | "story" | "assets" | "boards" | "clips" | "cut" | "review";
+/** 工作区顶上的页签：总览 + 各环节。 */
+export type TabId = "overview" | StageId;
 export type Stage = { id: StageId; label: string; kinds: string[]; empty: string; suggest: string };
 
 export const STAGES: Stage[] = [
@@ -50,7 +52,7 @@ export function shortLabel(item: StatusItem): string {
 
 export type ItemState = "canonical" | "stale" | "draft" | "deprecated";
 
-/** 一项产出物整体的状态：有生效版就是生效；生效版的上游变了（它变成过期）就是过期。 */
+/** 一项产出物整体的状态：有定稿版就是定稿；定稿版的上游变了（它变成过期）就是过期。 */
 export function itemState(item: StatusItem): ItemState {
   if (item.canonical) return "canonical";
   if (item.stale.length) return "stale";
@@ -58,12 +60,12 @@ export function itemState(item: StatusItem): ItemState {
   return "draft";
 }
 
-/** 生效的不是最新一版：有新稿等你看。 */
+/** 定稿的不是最新一版：有新稿等你看。 */
 export function hasNewer(item: StatusItem): boolean {
   return Boolean(item.canonical && item.latest !== item.canonical && item.latest_status !== "deprecated");
 }
 
-/** 这一项「在用」的那一版：生效版，没有就是过期的旧生效版，再没有就是最新稿。 */
+/** 这一项「在用」的那一版：定稿版，没有就是过期的旧定稿版，再没有就是最新稿。 */
 export function itemRef(item: StatusItem): string {
   return item.canonical || item.stale[item.stale.length - 1] || item.latest;
 }

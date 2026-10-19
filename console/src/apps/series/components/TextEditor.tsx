@@ -5,7 +5,7 @@ import { shortVersion } from "../stages";
 
 /**
  * 在页面上直接改一版文字。保存 = 存成一个新的草稿版本（原版本不动），
- * 依赖、媒体、范围都沿用原版本；「保存并设为生效」顺手把新版本设为生效。
+ * 依赖、媒体、范围都沿用原版本；「保存并设为定稿」顺手把新版本设为定稿。
  */
 export function TextEditor({ version, saving, error, onCancel, onSave, onDirty }: {
   version: Version;
@@ -75,8 +75,8 @@ export function TextEditor({ version, saving, error, onCancel, onSave, onDirty }
           {saving && <LoaderCircle size={12} aria-hidden className="animate-spin" />}保存为新版本 <kbd className="ms-1 text-primary/60">⌘S</kbd>
         </button>
         <button type="button" onClick={() => save(true)} disabled={saving || !dirty || !body.trim()}
-          title="存成新版本并设为生效（⌘/Ctrl+Enter）"
-          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-bg hover:bg-accent disabled:opacity-40">保存并设为生效</button>
+          title="存成新版本并设为定稿（⌘/Ctrl+Enter）"
+          className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-bg hover:bg-accent disabled:opacity-40">保存并设为定稿</button>
       </div>
     </div>
   );

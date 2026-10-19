@@ -110,6 +110,24 @@ export type ActionResult =
   | { ok: true; ref: string; status: Status; unchanged?: boolean; impacts?: Impacts; marked?: number }
   | { ok: false; needs_confirm: true; ref: string; action: Action; status: Status; impacts: Impacts };
 
+/** The version a file on disk belongs to: its text, one of its media, or its copy in the object store. */
+export type FileOwner = { ref: string; logical: string; kind: string; status: Status; role: "text" | "media" | "object" };
+export type FileEntry = { path: string; dir?: boolean; size?: number; mtime?: string; owner?: FileOwner };
+/** The project directory as it is on disk. `root` is the collection-relative path of the project. */
+export type FileTree = { project_id: string; root: string; entries: FileEntry[]; files: number; bytes: number; truncated: boolean };
+export type FileContent = {
+  path: string;
+  size: number;
+  mtime: string;
+  mime: string;
+  /** `media?path=…`: the raw bytes */
+  url: string;
+  text: string | null;
+  truncated?: boolean;
+  binary?: boolean;
+  owner?: FileOwner;
+};
+
 export type EditResult = { ok: true; ref: string; unchanged?: boolean; from?: string; warnings?: string[] };
 
 export class ActionRefused extends Error {
@@ -150,6 +168,8 @@ export function seriesApi(appBase: string) {
     /** The user's text as a new draft version of `ref` (same scope, dependencies and media). */
     edit: (pid: string, body: { ref: string; body: string; fields?: string }) =>
       refusable(api.post<EditResult>(`${appBase}/projects/${q(pid)}/edits`, body)),
+    files: (pid: string) => api.get<FileTree>(`${appBase}/projects/${q(pid)}/files`),
+    file: (pid: string, path: string) => api.get<FileContent>(`${appBase}/projects/${q(pid)}/file?path=${q(path)}`),
     /** `media?path=…` from the app → a URL the browser can load (cookie rides along, same origin). */
     mediaSrc: (url: string) => /^https?:\/\//i.test(url) ? url : `${API_BASE}${appBase}/${url.replace(/^\//, "")}`,
     eventsUrl: (pid: string) => `${API_BASE}${appBase}/projects/${q(pid)}/events`,
@@ -158,8 +178,8 @@ export function seriesApi(appBase: string) {
 
 export type SeriesApi = ReturnType<typeof seriesApi>;
 
-/** 页面上「定稿」叫「生效」：下游统一引用的那一版。 */
-export const STATUS_LABEL: Record<string, string> = { canonical: "生效", stale: "过期", deprecated: "弃用", draft: "草稿" };
+/** 「定稿」= 最终使用的那一版：下游统一以它为准。 */
+export const STATUS_LABEL: Record<string, string> = { canonical: "定稿", stale: "过期", deprecated: "弃用", draft: "草稿" };
 
 /** `path/to/file.md@v002` → `v002` */
 export function versionOf(ref: string): string {

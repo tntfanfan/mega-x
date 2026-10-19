@@ -1,15 +1,17 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Ban, Check, ChevronDown, ChevronRight, GitCompare, Images, LoaderCircle, MessageSquarePlus, Pencil, Quote, Undo2, X } from "lucide-react";
-import { Markdown } from "../../../components/ui/Markdown";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Ban, Check, GitCompare, Images, LoaderCircle, MessageSquarePlus, Pencil, Quote, Undo2, X } from "lucide-react";
 import { apiErrorMessage } from "../../../lib/api";
 import {
   ActionRefused, STATUS_LABEL, isImage,
   type Action, type ArtifactDetail, type ChatRef, type Impacts, type ProjectStatus, type SeriesApi, type Version,
 } from "../api";
 import { lineDiff, foldDiff } from "../diff";
+import { splitFrontmatter } from "../notes";
 import { dragRef, mediaPath } from "../drag";
 import { authorLabel, refLabel, shortVersion, timeLabel } from "../stages";
 import { KindIcon, StatusDot, StatusPill, isTyping, toneOf } from "./bits";
+import { FieldsCard, MdBody } from "./Doc";
+import { NO_FINAL } from "./FinalPicker";
 import { MediaGrid } from "./MediaGrid";
 import { TextEditor } from "./TextEditor";
 
@@ -18,7 +20,7 @@ type Refused = { action: Action; ref: string; message: string; problems: string[
 type Notice = { text: string; error?: boolean; actions?: { label: string; run: () => void; primary?: boolean }[] };
 type Mode = "read" | "edit" | "diff";
 
-const ACTION_TEXT: Record<Action, string> = { canonical: "设为生效", uncanonical: "取消生效", deprecate: "弃用" };
+const ACTION_TEXT: Record<Action, string> = { canonical: "设为定稿", uncanonical: "取消定稿", deprecate: "弃用" };
 
 /** 正文前的 YAML 头（kind / version / status…）是给系统看的，阅读器里不显示。 */
 function stripFrontmatter(text: string): string {
@@ -30,10 +32,8 @@ function bodyOf(v: Version): string {
   return v.body ?? (v.text ? stripFrontmatter(v.text) : "");
 }
 
-/** Re-rendering the Markdown remounts its DOM and drops the reader's text selection, so only redo it when the text changes. */
-const ArticleBody = memo(function ArticleBody({ text }: { text: string }) {
-  return <Markdown text={text} variant="article" />;
-});
+/** Re-rendering the Markdown remounts its DOM and drops the reader's text selection, so only redo it when the text changes (MdBody is memoised). */
+const ArticleBody = MdBody;
 
 /** `revision_of` is a version path (no `@vN`). */
 function sameVersion(ref: string, pathOrRef: string): boolean {
@@ -41,7 +41,7 @@ function sameVersion(ref: string, pathOrRef: string): boolean {
 }
 
 /**
- * 一项产出物：版本条（旧 → 新，←/→ 切换）、生效 / 弃用、编辑文字、和改自的版本对比、
+ * 一项产出物：版本条（旧 → 新，←/→ 切换）、定稿 / 弃用、编辑文字、和改自的版本对比、
  * 读正文（选中一段可以「引用这段」）、看图选图；依赖 / 下游可以点过去。
  */
 export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, status, busy, connected, onSend, onRef, onQuote, onOpen, onChanged, onDirty }: {
@@ -70,7 +70,6 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [refused, setRefused] = useState<Refused | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [showFields, setShowFields] = useState(false);
   const [quote, setQuote] = useState<{ x: number; y: number; text: string } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const reader = useRef<HTMLDivElement>(null);
@@ -93,6 +92,8 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
   const current: Version | undefined = versions.find(v => v.ref === picked)
     || [...versions].reverse().find(v => v.status !== "deprecated") || versions[versions.length - 1];
   const live = versions.find(v => v.status === "canonical");
+  // References and reviews are never final (series_mcp.kinds.NO_CANONICAL).
+  const noFinal = NO_FINAL.has(status?.items.find(i => i.logical === logical)?.kind || "");
   const newest = versions[versions.length - 1];
   const label = detail?.label || "";
 
@@ -125,6 +126,8 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
   const chatRef = (v: Version): ChatRef => ({ ref: v.ref, label: `${label} ${shortVersion(v.ref)}`, project_id: projectId });
   const images = current.media.filter(isImage);
   const body = bodyOf(current);
+  // The whole frontmatter when the text is here (the system's part folds away), else just the author's fields.
+  const yaml = (current.text ? splitFrontmatter(current.text)[0] : "") || current.fields || "";
   const baseVersion = versions.find(v => v.ref === base)
     || (current.revision_of ? versions.find(v => sameVersion(v.ref, current.revision_of!)) : undefined)
     || versions[versions.findIndex(v => v.ref === current.ref) - 1];
@@ -142,7 +145,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
       const marked = result.ok ? result.marked || 0 : 0;
       setNotice({
         text: result.ok && result.unchanged ? `${shortVersion(target)} 已经是${STATUS_LABEL[result.status] || result.status}`
-          : action === "canonical" ? `${shortVersion(target)} 已生效，下游会以它为准${marked ? `；${marked} 项下游标成了过期` : ""}`
+          : action === "canonical" ? `${shortVersion(target)} 已定稿，下游会以它为准${marked ? `；${marked} 项下游标成了过期` : ""}`
           : `已${ACTION_TEXT[action]} ${shortVersion(target)}${marked ? `，${marked} 项下游标成了过期` : ""}`,
         actions: marked && connected ? [{ label: "让主创更新下游", run: () => onSend(`${label} 换成了 ${shortVersion(target)}，把过期的下游更新一下。`, [{ ...chatRef(current), ref: target }]) }] : undefined,
       });
@@ -169,7 +172,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
       setNotice({
         text: `已存为 ${v}（草稿）${warnings}`,
         actions: [
-          ...(thenCanonical ? [] : [{ label: "设为生效", primary: true, run: () => void run("canonical", result.ref) }]),
+          ...(thenCanonical ? [] : [{ label: "设为定稿", primary: true, run: () => void run("canonical", result.ref) }]),
           ...(connected ? [{ label: "让主创看看", run: () => onSend(`我改了${label}，存成了 ${v}。看看还有哪里要顺着调整。`, [{ ref: result.ref, label: `${label} ${v}`, project_id: projectId }]) }] : []),
         ],
       });
@@ -225,7 +228,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
                   : `border-border-solid text-body hover:border-primary/60 ${t === "deprecated" ? "opacity-50" : ""}`}`}>
                 <StatusDot tone={t} />
                 <span className={t === "deprecated" ? "line-through" : ""}>{shortVersion(v.ref)}</span>
-                {t === "canonical" && <span className="text-[10px] text-spark-mint">生效</span>}
+                {t === "canonical" && <span className="text-[10px] text-spark-mint">定稿</span>}
                 {v.created_by === "user" && <span className="text-[10px] text-spark-blue" title="你改的">你</span>}
               </button>
             );
@@ -239,7 +242,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
           {current.created_at && <span>· {timeLabel(current.created_at)}</span>}
           {revisionOf && <span>· 改自 <button type="button" onClick={() => pick(revisionOf.ref)} className="text-body hover:text-primary hover:underline">{shortVersion(revisionOf.ref)}</button></span>}
           {live && live.ref !== current.ref && (
-            <span>· 生效的是 <button type="button" onClick={() => pick(live.ref)} className="text-spark-mint hover:underline">{shortVersion(live.ref)}</button></span>
+            <span>· 定稿的是 <button type="button" onClick={() => pick(live.ref)} className="text-spark-mint hover:underline">{shortVersion(live.ref)}</button></span>
           )}
           {newest && newest.ref !== current.ref && newest.status !== "deprecated" && newest !== live && (
             <span>· 最新 <button type="button" onClick={() => pick(newest.ref)} className="text-spark-blue hover:underline">{shortVersion(newest.ref)}</button></span>
@@ -248,17 +251,17 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
 
         {mode !== "edit" && (
           <div className="flex flex-wrap items-center gap-2">
-            {current.status === "canonical" ? (
+            {noFinal ? null : current.status === "canonical" ? (
               <>
-                <span className="inline-flex items-center gap-1 rounded-md bg-spark-mint/10 px-2.5 py-1 text-xs text-spark-mint"><Check size={13} aria-hidden />正在生效</span>
+                <span className="inline-flex items-center gap-1 rounded-md bg-spark-mint/10 px-2.5 py-1 text-xs text-spark-mint"><Check size={13} aria-hidden />当前定稿</span>
                 <button type="button" disabled={working} onClick={() => run("uncanonical", current.ref)} title="退回草稿；下游不再以它为准"
-                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-heading disabled:opacity-40"><Undo2 size={12} aria-hidden />取消生效</button>
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-surface-2 hover:text-heading disabled:opacity-40"><Undo2 size={12} aria-hidden />取消定稿</button>
               </>
             ) : (
               <button type="button" disabled={working || current.status === "deprecated"} onClick={() => run("canonical", current.ref)}
-                title={live ? `用 ${shortVersion(current.ref)} 替换现在生效的 ${shortVersion(live.ref)}` : "下游会以这一版为准"}
+                title={live ? `改为最终使用 ${shortVersion(current.ref)}（替换现在定稿的 ${shortVersion(live.ref)}），下游都以它为准` : "设为最终使用的版本，下游都以它为准"}
                 className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-xs font-medium text-bg transition-colors hover:bg-accent disabled:opacity-40">
-                <Check size={13} aria-hidden />设为生效
+                <Check size={13} aria-hidden />设为定稿
               </button>
             )}
             {current.editable && (
@@ -322,9 +325,9 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
             <div className="mt-2 flex flex-wrap gap-2">
               {refused.action === "canonical" && (
                 <button type="button" disabled={working} onClick={() => run("canonical", refused.ref, false, true)}
-                  className="rounded-md border border-border-solid px-3 py-1 text-body hover:border-primary">依赖还是草稿，也照样生效</button>
+                  className="rounded-md border border-border-solid px-3 py-1 text-body hover:border-primary">依赖还是草稿，也照样定稿</button>
               )}
-              <button type="button" disabled={busy || !connected} onClick={() => { onSend(`${label} ${shortVersion(refused.ref)} 还不能生效：${refused.problems.join("；") || refused.message}。帮我补上。`, [chatRef(current)]); setRefused(null); }}
+              <button type="button" disabled={busy || !connected} onClick={() => { onSend(`${label} ${shortVersion(refused.ref)} 还不能定稿：${refused.problems.join("；") || refused.message}。帮我补上。`, [chatRef(current)]); setRefused(null); }}
                 className="rounded-md border border-border-solid px-3 py-1 text-body hover:border-primary disabled:opacity-40">让主创补上</button>
               <button type="button" onClick={() => setRefused(null)} className="ms-auto text-muted hover:text-heading">关闭</button>
             </div>
@@ -342,6 +345,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
           <DiffView versions={versions} current={current} base={baseVersion} onBase={setBase} />
         ) : (
           <>
+            {yaml && <FieldsCard yaml={yaml} status={status} onOpen={onOpen} className="mx-auto mb-4 max-w-3xl" />}
             <MediaGrid media={current.media} src={api.mediaSrc} large
               refOf={(item, i) => ({ ref: mediaPath(item.url), label: `${label} ${shortVersion(current.ref)} 第 ${i + 1} 张`, project_id: projectId })}
               onPick={images.length > 1 && connected && !busy ? (_item, index) => onSend(`${label} ${shortVersion(current.ref)} 选第 ${index + 1} 张。`, [chatRef(current)]) : undefined} />
@@ -352,15 +356,6 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
             )}
             {current.text && !current.editable && (
               <p className="mx-auto mt-4 max-w-3xl text-[11px] text-dim">这一版太长，页面上不能直接改；在对话里告诉主创要改哪里。</p>
-            )}
-            {current.fields && (
-              <div className="mx-auto mt-4 max-w-3xl rounded-lg border border-border-solid bg-surface/50">
-                <button type="button" onClick={() => setShowFields(s => !s)} aria-expanded={showFields}
-                  className="flex w-full items-center gap-1 px-3 py-1.5 text-left text-xs text-muted hover:text-heading">
-                  {showFields ? <ChevronDown size={13} aria-hidden /> : <ChevronRight size={13} aria-hidden />}字段
-                </button>
-                {showFields && <pre className="overflow-x-auto border-t border-border-solid px-3 py-2 font-mono text-xs leading-5 text-body">{current.fields}</pre>}
-              </div>
             )}
             {!body && !current.media.length && <p className="text-sm text-muted">这一版没有可显示的内容。</p>}
             <Relations version={current} status={status} onOpen={onOpen} />
@@ -390,7 +385,7 @@ function DiffView({ versions, current, base, onBase }: { versions: Version[]; cu
         <label htmlFor="series-diff-base">对比</label>
         <select id="series-diff-base" value={base.ref} onChange={e => onBase(e.target.value)}
           className="rounded-md border border-border-solid bg-surface px-1.5 py-0.5 text-xs text-heading">
-          {others.map(v => <option key={v.ref} value={v.ref}>{shortVersion(v.ref)}{v.status === "canonical" ? "（生效）" : ""}</option>)}
+          {others.map(v => <option key={v.ref} value={v.ref}>{shortVersion(v.ref)}{v.status === "canonical" ? "（定稿）" : ""}</option>)}
         </select>
         <span>→ {shortVersion(current.ref)}</span>
         {lines && <span className="ms-auto tabular-nums"><span className="text-spark-mint">+{added}</span> <span className="text-fusion">−{removed}</span> 行</span>}

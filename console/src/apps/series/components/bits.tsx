@@ -8,7 +8,7 @@ import {
 export type Tone = "canonical" | "draft" | "stale" | "deprecated" | "newer";
 
 const PILL: Record<Tone, { text: string; cls: string; dot: string }> = {
-  canonical: { text: "生效", cls: "border-spark-mint/40 bg-spark-mint/10 text-spark-mint", dot: "bg-spark-mint" },
+  canonical: { text: "定稿", cls: "border-spark-mint/40 bg-spark-mint/10 text-spark-mint", dot: "bg-spark-mint" },
   draft: { text: "草稿", cls: "border-border-solid bg-surface-2 text-muted", dot: "bg-muted" },
   stale: { text: "过期", cls: "border-spark-flare/40 bg-spark-flare/10 text-spark-flare", dot: "bg-spark-flare" },
   deprecated: { text: "弃用", cls: "border-border-solid bg-transparent text-dim line-through", dot: "bg-dim" },
