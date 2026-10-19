@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../../components/ui/Toast";
 import { useResearchDialogue } from "../../../hooks/useResearchDialogue";
 import { InvestorCatalog } from "../../../components/research/InvestorCatalog";
 import { ResearchDialogue } from "../../../components/research/ResearchDialogue";
-import type { CompanyOutlet } from "./CompanyShell";
 import { api, type Company } from "../../../lib/api";
 import { createResearchClient } from "../../../lib/research/client";
 import { researchErrors } from "../../../lib/research/core";
@@ -18,19 +17,14 @@ import { ResearchOutputs } from "../../../components/research/ResearchOutputs";
 import { ResearchNavigation } from "../../../components/research/ResearchNavigation";
 import { Badge, buttonClass } from "../../../components/research/shared";
 
-export default function ResearchView() {
-  const { company } = useOutletContext<CompanyOutlet>();
-  const { "*": path } = useParams();
-  const basePath = `/business/c/${company.id}/research`;
-  return <ResearchWorkspace key={company.id} company={company} page={researchPageFromPath(path)}
-    hrefFor={page => `${basePath}${pagePath(page) ? `/${pagePath(page)}` : ""}`} />;
-}
-
 function pagePath(page: ResearchPage) {
   return researchPages.find(item => item.id === page)!.path;
 }
 
-/** 「聊天」页选中股票投研部时，用 `?page=` 记住当前功能页，切回别的部门时自然清掉。 */
+/**
+ * 股票投研部的工作台，只在「聊天」页选中它时出现（没有单独的投研页）。
+ * 用 `?page=` 记住当前功能页，切回别的部门时自然清掉。
+ */
 export function ResearchChatPanel({ company, page }: { company: Company; page?: string | null }) {
   const href = (next: ResearchPage) => {
     const params = new URLSearchParams({ dept: "dept-investment" });

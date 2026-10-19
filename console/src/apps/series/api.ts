@@ -74,6 +74,9 @@ export type StatusItem = {
   canonical: string | null;
   stale: string[];
   group: string;
+  /** `media?path=…` of the shown version's first image (canonical, else latest) */
+  thumb?: string | null;
+  media_kind?: "image" | "video" | null;
 };
 export type Job = { job_id: string; kind: string; target_ref?: string | null; state: string; at?: string };
 export type ProjectStatus = {
@@ -94,6 +97,10 @@ export type Version = {
   text?: string | null;
   media: MediaItem[];
   downstream: string[];
+  /** A text version the page can edit: `body` without frontmatter, `fields` = the author's frontmatter lines. */
+  editable?: boolean;
+  body?: string;
+  fields?: string;
 };
 export type ArtifactDetail = { project_id: string; logical: string; label: string; versions: Version[] };
 
@@ -103,11 +110,26 @@ export type ActionResult =
   | { ok: true; ref: string; status: Status; unchanged?: boolean; impacts?: Impacts; marked?: number }
   | { ok: false; needs_confirm: true; ref: string; action: Action; status: Status; impacts: Impacts };
 
+export type EditResult = { ok: true; ref: string; unchanged?: boolean; from?: string; warnings?: string[] };
+
 export class ActionRefused extends Error {
   problems: string[];
   constructor(message: string, problems: string[]) {
     super(message);
     this.problems = problems;
+  }
+}
+
+/** A 409 / 400 with `{detail, problems}` from the app → ActionRefused. */
+async function refusable<T>(call: Promise<T>): Promise<T> {
+  try {
+    return await call;
+  } catch (e) {
+    if (e instanceof ApiError && e.body && typeof e.body === "object") {
+      const b = e.body as { detail?: unknown; problems?: unknown };
+      if (typeof b.detail === "string") throw new ActionRefused(b.detail, Array.isArray(b.problems) ? b.problems.map(String) : []);
+    }
+    throw e;
   }
 }
 
@@ -123,17 +145,11 @@ export function seriesApi(appBase: string) {
     status: (pid: string) => api.get<ProjectStatus>(`${appBase}/projects/${q(pid)}/status`),
     artifact: (pid: string, logical: string) =>
       api.get<ArtifactDetail>(`${appBase}/projects/${q(pid)}/artifacts?logical=${q(logical)}`),
-    action: async (pid: string, body: { action: Action; ref: string; confirm?: boolean; allow_draft?: boolean }) => {
-      try {
-        return await api.post<ActionResult>(`${appBase}/projects/${q(pid)}/actions`, body);
-      } catch (e) {
-        if (e instanceof ApiError && e.body && typeof e.body === "object") {
-          const b = e.body as { detail?: unknown; problems?: unknown };
-          if (typeof b.detail === "string") throw new ActionRefused(b.detail, Array.isArray(b.problems) ? b.problems.map(String) : []);
-        }
-        throw e;
-      }
-    },
+    action: (pid: string, body: { action: Action; ref: string; confirm?: boolean; allow_draft?: boolean }) =>
+      refusable(api.post<ActionResult>(`${appBase}/projects/${q(pid)}/actions`, body)),
+    /** The user's text as a new draft version of `ref` (same scope, dependencies and media). */
+    edit: (pid: string, body: { ref: string; body: string; fields?: string }) =>
+      refusable(api.post<EditResult>(`${appBase}/projects/${q(pid)}/edits`, body)),
     /** `media?path=…` from the app → a URL the browser can load (cookie rides along, same origin). */
     mediaSrc: (url: string) => /^https?:\/\//i.test(url) ? url : `${API_BASE}${appBase}/${url.replace(/^\//, "")}`,
     eventsUrl: (pid: string) => `${API_BASE}${appBase}/projects/${q(pid)}/events`,
@@ -142,13 +158,18 @@ export function seriesApi(appBase: string) {
 
 export type SeriesApi = ReturnType<typeof seriesApi>;
 
-export const STATUS_MARK: Record<string, string> = { canonical: "✔", stale: "⚠", deprecated: "✕", draft: "" };
-export const STATUS_LABEL: Record<string, string> = { canonical: "定稿", stale: "过期", deprecated: "弃用", draft: "草稿" };
+/** 页面上「定稿」叫「生效」：下游统一引用的那一版。 */
+export const STATUS_LABEL: Record<string, string> = { canonical: "生效", stale: "过期", deprecated: "弃用", draft: "草稿" };
 
 /** `path/to/file.md@v002` → `v002` */
 export function versionOf(ref: string): string {
   const at = ref.lastIndexOf("@");
   return at >= 0 ? ref.slice(at + 1) : ref;
+}
+
+/** `story/ep-001/script-ep-001.v002.md@v2` → `story/ep-001/script-ep-001` (the logical artifact). */
+export function logicalOf(ref: string): string {
+  return ref.replace(/@v\d+$/, "").replace(/\.v\d{3,}\.[a-z0-9]+$/i, "");
 }
 
 export function isVideo(item: MediaItem): boolean {

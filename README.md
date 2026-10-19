@@ -183,10 +183,11 @@ Vite — no webpack.
 
 ### Company research workspace
 
-The committed Native research workbench now lives in the Console at
-`/console/#/business/c/<company-id>/research`. Select **Research / 投研** in a
-company's sidebar. Use the existing company switcher and create-company flow.
-The page includes A-share/US research, execution history, report preview and
+The research workbench lives in the company **Chat / 聊天** tab: pick the
+stock research department (`dept-investment`) in the department bar, i.e.
+`/console/#/business/c/<company-id>/chat?dept=dept-investment[&page=tasks|reports|schools|dialogue|roundtable]`.
+There is no separate research tab; the old `/research` route redirects there.
+The workbench includes A-share/US research, execution history, report preview and
 download, the complete investor catalog, profile conversations and roundtables.
 It follows the Console's language selector (Chinese/English; English fallback
 inside the research region when Arabic is selected).

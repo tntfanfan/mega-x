@@ -9,14 +9,14 @@ export function JobsBar({ jobs }: { jobs: Job[] }) {
   const byKind: Record<string, Job[]> = {};
   for (const job of jobs) (byKind[job.kind] ||= []).push(job);
   return (
-    <div className="flex flex-wrap items-center gap-3 text-xs text-muted" role="status" aria-label="作业进度">
+    <div className="flex min-w-0 items-center gap-3 overflow-hidden whitespace-nowrap text-xs text-muted" role="status" aria-label="作业进度">
       {Object.entries(byKind).map(([kind, list]) => {
         const running = list.filter(j => j.state === "running").length;
         return (
           <span key={kind} title={list.map(j => `${j.job_id} ${STATE[j.state] || j.state}${j.target_ref ? ` → ${j.target_ref}` : ""}`).join("\n")}
-            className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-spark-blue" aria-hidden />
-            作业：{KIND[kind] || kind} {list.length} 个{running ? `（${running} 个进行中）` : ""}
+            className="inline-flex min-w-0 items-center gap-1.5">
+            <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-spark-blue" aria-hidden />
+            <span className="truncate">作业：{KIND[kind] || kind} {list.length} 个{running ? <span className="hidden sm:inline">（{running} 个进行中）</span> : null}</span>
           </span>
         );
       })}

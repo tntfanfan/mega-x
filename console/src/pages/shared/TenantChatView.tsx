@@ -18,7 +18,7 @@ import type { Company, DeptCatalogItem } from "../../lib/api";
 import { hasNativeView, hasOwnView, isAppDept, useInstalledDepts } from "../../lib/deptApps";
 import { resolveDeptDisplay } from "../../lib/depts";
 import { companyScope, lineScope, type WorkspaceScope } from "../../lib/workspaceScope";
-import { ResearchChatPanel } from "../business/company/ResearchView";
+import { ResearchChatPanel } from "../business/company/ResearchChatPanel";
 import DeptAppView from "./DeptAppView";
 
 export default function TenantChatView() {

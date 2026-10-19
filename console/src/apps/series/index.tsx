@@ -1,28 +1,65 @@
 /**
- * 网剧部门应用：项目结构 │ 聊天 │ 当前产出物。
+ * 网剧部门应用：对话 │ 产出物工作区（按环节分栏）。
+ *
+ * 对话是唯一的入口：想做什么都跟主创说；右边按环节（设定 / 剧本 / 资产 / 分镜 / 视频 / 成片 / 审查）
+ * 摆着每样产出物和它的各个版本，用户在这里看、改文字、对比、选哪一版生效，
+ * 任何一样都能拖回对话里接着问。
  *
  * 后端是租户里的 `platform/apps/series/`（HTTP / WS 都在 appBase 下）。聊天协议、
  * 断线重连、历史都是网剧自己的；产出物照旧写在 board/dept-series/series/，产出物
  * 中心也能看到。
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { LoaderCircle, Plus, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, FolderOpen, LayoutGrid, LoaderCircle, PanelRightClose, PanelRightOpen, Plus, X } from "lucide-react";
 
 import type { DeptAppProps } from "../registry";
 import { apiErrorMessage } from "../../lib/api";
 import { resolveDeptDisplay } from "../../lib/depts";
-import { seriesApi, type ChatRef, type ProjectStatus, type ProjectSummary, type Session } from "./api";
+import { logicalOf, seriesApi, type ChatRef, type ProjectStatus, type ProjectSummary, type Session } from "./api";
 import type { Frame } from "./socket";
 import { useSeriesChat } from "./useChat";
-import { ArtifactPanel } from "./components/ArtifactPanel";
-import { ChatPane } from "./components/ChatPane";
+import { STAGES, refLabel, stageItems, stageOf, timeLabel, type StageId } from "./stages";
+import { ChatPane, REF_LIMIT, type Draft } from "./components/ChatPane";
 import { JobsBar } from "./components/JobsBar";
-import { ProjectTree } from "./components/ProjectTree";
+import { SessionPicker } from "./components/SessionPicker";
+import { Popover } from "./components/bits";
+import { Workspace } from "./components/Workspace";
 
 // Not "session": the shell's default chat (TenantChatProvider) reads ?session= on mount.
 const SESSION_PARAM = "app_session";
+const LAYOUT_KEY = "series.layout";
+const CHAT_MIN = 340;
+const WORK_MIN = 420;
+
+type Layout = { chat: number; workspace: boolean };
+
+function readLayout(): Layout {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "{}");
+    return { chat: Number(raw.chat) || 460, workspace: raw.workspace !== false };
+  } catch {
+    return { chat: 460, workspace: true };
+  }
+}
+
+function saveLayout(layout: Layout) {
+  try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch { /* private mode */ }
+}
+
+function useWide(): boolean {
+  const query = "(min-width: 1024px)";
+  const [wide, setWide] = useState(() => typeof window !== "undefined" && window.matchMedia?.(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const on = () => setWide(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return wide;
+}
 
 export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   const api = useMemo(() => seriesApi(appBase), [appBase]);
@@ -33,12 +70,25 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [projectId, setProjectId] = useState("");
   const [status, setStatus] = useState<ProjectStatus | null>(null);
-  const [selected, setSelected] = useState("");
+  const [stage, setStage] = useState<StageId>("setting");
+  const [picked, setPicked] = useState<Partial<Record<StageId, string>>>({});
+  const [focusRef, setFocusRef] = useState<string | undefined>();
   const [refreshKey, setRefreshKey] = useState(0);
-  const [refs, setRefs] = useState<ChatRef[]>([]);
+  const [draft, setDraftState] = useState<Draft>({ text: "", refs: [] });
+  const [focusTick, setFocusTick] = useState(0);
   const [error, setError] = useState("");
-  const [panelOpen, setPanelOpen] = useState(false);
   const [publishedRef, setPublishedRef] = useState("");
+  const [fresh, setFresh] = useState<{ ref: string; label: string } | null>(null);
+  const [layout, setLayout] = useState<Layout>(readLayout);
+  const [sheet, setSheet] = useState(false);
+  const wide = useWide();
+  const dirty = useRef(false);
+  const body = useRef<HTMLDivElement>(null);
+  const selected = picked[stage] || "";
+
+  const setDraft = useCallback((update: (d: Draft) => Draft) => setDraftState(update), []);
+  const onDirty = useCallback((d: boolean) => { dirty.current = d; }, []);
+  const leaveEdit = () => !dirty.current || window.confirm("有没保存的修改，放弃吗？");
 
   const openSession = useCallback((id: string) => {
     setParams(p => { const next = new URLSearchParams(p); next.set(SESSION_PARAM, id); return next; }, { replace: true });
@@ -75,7 +125,19 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
     return () => { alive = false; };
   }, [api, sid]);
 
-  useEffect(() => { setSelected(""); setPublishedRef(""); void loadStatus(projectId); }, [projectId, loadStatus]);
+  useEffect(() => {
+    setPicked({}); setFocusRef(undefined); setPublishedRef(""); setFresh(null);
+    void loadStatus(projectId);
+  }, [projectId, loadStatus]);
+
+  // A project just opened: start on the first stage that has something.
+  const landed = useRef("");
+  useEffect(() => {
+    if (!status || landed.current === status.project_id) return;
+    landed.current = status.project_id;
+    const first = STAGES.find(s => stageItems(status, s.id).length);
+    if (first) setStage(first.id);
+  }, [status]);
 
   // Artifacts change underneath (the agent, another tab, a job finishing): SSE from the app.
   useEffect(() => {
@@ -91,12 +153,23 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
     return () => source.close();
   }, [api, projectId]);
 
-  // After a publish, select what was just made (once the status shows it).
+  const show = useCallback((logical: string, kind: string, ref?: string) => {
+    const s = stageOf(kind);
+    setStage(s);
+    setPicked(p => ({ ...p, [s]: logical }));
+    setFocusRef(ref);
+  }, []);
+
+  // After a publish: jump there if the user isn't in the middle of something else, else offer a link.
   useEffect(() => {
     if (!publishedRef || !status) return;
     const item = status.items.find(i => i.latest === publishedRef || i.canonical === publishedRef);
-    if (item) { setSelected(item.logical); setPublishedRef(""); }
-  }, [publishedRef, status]);
+    if (!item) return;
+    setPublishedRef("");
+    const idle = !selected || selected === item.logical;
+    if (idle && !dirty.current) show(item.logical, item.kind, publishedRef);
+    else setFresh({ ref: publishedRef, label: refLabel(status, publishedRef) });
+  }, [publishedRef, status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPageFrame = useCallback((frame: Frame) => {
     const pid = String(frame.project_id || "");
@@ -113,20 +186,66 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   }, [projectId, loadProjects, loadSessions, loadStatus]);
 
   const chat = useSeriesChat(api, `${appBase}/chat`, sid, onPageFrame);
+  const connected = chat.conn.kind === "open";
 
   // Session list titles / busy flags follow the chat.
   useEffect(() => { if (sid) void loadSessions().catch(() => undefined); }, [sid, chat.busy, loadSessions]);
 
   const addRef = useCallback((ref: ChatRef) => {
-    setRefs(list => list.some(r => r.ref === ref.ref) || list.length >= 8 ? list : [...list, ref]);
-  }, []);
+    setDraftState(d => (d.refs.some(r => r.ref === ref.ref) || d.refs.length >= REF_LIMIT ? d : { ...d, refs: [...d.refs, ref] }));
+    setFocusTick(t => t + 1);
+    if (!wide) setSheet(false);
+  }, [wide]);
+
+  const quote = useCallback((ref: ChatRef, text: string) => {
+    const block = text.split("\n").map(l => `> ${l}`).join("\n");
+    setDraftState(d => ({
+      text: `${d.text.trim() ? `${d.text.trimEnd()}\n\n` : ""}${block}\n\n`,
+      refs: d.refs.some(r => r.ref === ref.ref) || d.refs.length >= REF_LIMIT ? d.refs : [...d.refs, ref],
+    }));
+    setFocusTick(t => t + 1);
+    if (!wide) setSheet(false);
+  }, [wide]);
+
+  const suggest = useCallback((text: string) => {
+    setDraftState(d => ({ ...d, text }));
+    setFocusTick(t => t + 1);
+    if (!wide) setSheet(false);
+  }, [wide]);
+
+  const send = useCallback((text: string, refs: ChatRef[]) => {
+    const ok = chat.send(text, refs);
+    if (ok && !wide) setSheet(false);
+    return ok;
+  }, [chat, wide]);
+
+  const selectInStage = (logical: string) => {
+    if (logical === selected || !leaveEdit()) return;
+    setPicked(p => ({ ...p, [stage]: logical }));
+    setFocusRef(undefined);
+  };
+  const changeStage = (s: StageId) => {
+    if (s === stage || !leaveEdit()) return;
+    setStage(s);
+    setFocusRef(undefined);
+  };
+  const openRef = (ref: string) => {
+    const logical = logicalOf(ref);
+    const item = status?.items.find(i => i.logical === logical || i.latest === ref || i.canonical === ref);
+    if (!item) { setError(`「${refLabel(status, ref)}」不在当前项目里`); return; }
+    if (item.logical !== selected && !leaveEdit()) return;
+    show(item.logical, item.kind, /@v\d+$/.test(ref) ? ref : undefined);
+    setFresh(null);
+    if (wide && !layout.workspace) toggleWorkspace(true);
+    if (!wide) setSheet(true);
+  };
 
   const switchProject = async (pid: string) => {
-    if (!sid || pid === projectId) return;
+    if (!sid || pid === projectId || !leaveEdit()) return;
     try {
       await api.setProject(sid, pid);
       setProjectId(pid);
-      setRefs([]);
+      setDraftState(d => ({ ...d, refs: [] }));
       void loadSessions();
     } catch (e) {
       setError(apiErrorMessage(e, "切换项目失败"));
@@ -143,7 +262,32 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
     }
   };
 
-  const select = (logical: string) => { setSelected(logical); setPanelOpen(true); };
+  const toggleWorkspace = (on = !layout.workspace) => {
+    const next = { ...layout, workspace: on };
+    setLayout(next);
+    saveLayout(next);
+  };
+
+  // Drag the divider to give chat or the workspace more room; double-click resets.
+  const resize = (e: React.PointerEvent) => {
+    const box = body.current?.getBoundingClientRect();
+    if (!box) return;
+    e.preventDefault();
+    const handle = e.currentTarget as HTMLElement;
+    handle.setPointerCapture(e.pointerId);
+    let width = layout.chat;
+    const move = (ev: PointerEvent) => {
+      width = Math.round(Math.min(Math.max(ev.clientX - box.left, CHAT_MIN), box.width - WORK_MIN));
+      setLayout(l => ({ ...l, chat: width }));
+    };
+    const up = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", up);
+      setLayout(l => { saveLayout(l); return l; });
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  };
 
   if (!sid) {
     return <div className="flex flex-1 items-center justify-center text-sm text-muted">
@@ -151,34 +295,61 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
     </div>;
   }
 
-  const panel = (
-    <ArtifactPanel api={api} projectId={projectId} logical={selected} refreshKey={refreshKey} busy={chat.busy}
-      onSend={(text, r) => chat.send(text, r)} onRef={addRef} onChanged={() => { void loadStatus(projectId); setRefreshKey(k => k + 1); }} />
+  const project = projects.find(p => p.project_id === projectId);
+  const workspace = (
+    <Workspace api={api} status={status} stage={stage} onStage={changeStage} selected={selected} focusRef={focusRef}
+      onSelect={selectInStage} refreshKey={refreshKey} busy={chat.busy} connected={connected}
+      onSend={send} onRef={addRef} onQuote={quote} onOpen={openRef} onSuggest={suggest}
+      onChanged={() => { void loadStatus(projectId); setRefreshKey(k => k + 1); }} onDirty={onDirty} />
   );
+  const showSide = wide && layout.workspace;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="flex flex-wrap items-center gap-2 border-b border-border-solid bg-surface/60 px-3 py-2 text-sm">
-        <label className="sr-only" htmlFor="series-project">项目</label>
-        <select id="series-project" value={projectId} disabled={chat.busy} onChange={e => void switchProject(e.target.value)}
-          title={chat.busy ? "正在回复，等这一轮结束再切换项目" : "切换项目"}
-          className="max-w-[12rem] rounded-md border border-border-solid bg-surface px-2 py-1 text-sm text-heading disabled:opacity-60">
-          {!projectId && <option value="">（还没选项目）</option>}
-          {projects.map(p => <option key={p.project_id} value={p.project_id}>{p.title}</option>)}
-          {projectId && !projects.some(p => p.project_id === projectId) && <option value={projectId}>{projectId}</option>}
-        </select>
-        <span className="text-muted">│</span>
-        <label className="sr-only" htmlFor="series-session">会话</label>
-        <select id="series-session" value={sid} onChange={e => openSession(e.target.value)}
-          className="max-w-[14rem] rounded-md border border-border-solid bg-surface px-2 py-1 text-sm text-body">
-          {sessions.map(s => <option key={s.id} value={s.id}>{s.busy ? "● " : ""}{s.title}</option>)}
-          {!sessions.some(s => s.id === sid) && <option value={sid}>新对话</option>}
-        </select>
-        <button type="button" onClick={() => void newSession()} title="新对话"
-          className="inline-flex items-center gap-1 rounded-md border border-border-solid px-2 py-1 text-xs text-body hover:border-primary hover:text-primary">
-          <Plus size={12} aria-hidden />新对话
-        </button>
-        <div className="ms-auto"><JobsBar jobs={status?.jobs || []} /></div>
+      <header className="relative z-30 flex shrink-0 items-center gap-2 border-b border-border-solid bg-surface/60 px-2 py-1.5 text-sm">
+        <Popover label="切换项目" disabled={chat.busy} title={chat.busy ? "正在回复，等这一轮结束再切换项目" : "切换项目"} className="max-w-[8.5rem] sm:max-w-[16rem]"
+          trigger={<>
+            <FolderOpen size={15} aria-hidden className="shrink-0 text-primary" />
+            <span className="truncate font-medium text-heading">{status?.title || project?.title || (projectId || "还没选项目")}</span>
+            <ChevronDown size={13} aria-hidden className="shrink-0 text-muted" />
+          </>}>
+          {close => (
+            <div className="flex max-h-[60vh] flex-col">
+              <div className="min-h-0 flex-1 overflow-y-auto py-1">
+                {!projects.length && <p className="px-3 py-3 text-xs text-muted">还没有项目。</p>}
+                {projects.map(p => (
+                  <button key={p.project_id} type="button" role="menuitem" onClick={() => { close(); void switchProject(p.project_id); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface-3">
+                    <span className="min-w-0 flex-1">
+                      <span className={`block truncate text-sm ${p.project_id === projectId ? "text-primary" : "text-heading"}`}>{p.title}</span>
+                      {p.updated_at && <span className="block text-[11px] text-dim">{timeLabel(p.updated_at)}</span>}
+                    </span>
+                    {p.project_id === projectId && <Check size={13} aria-hidden className="text-primary" />}
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={() => { close(); suggest("我想新开一部剧："); }}
+                className="flex items-center gap-2 border-t border-border-solid px-3 py-2 text-sm text-primary hover:bg-surface-3">
+                <Plus size={14} aria-hidden />新开一部剧…
+              </button>
+            </div>
+          )}
+        </Popover>
+        <ChevronRight size={13} aria-hidden className="-mx-1 shrink-0 text-dim" />
+        <SessionPicker sessions={sessions} sid={sid} projects={projects} busy={chat.busy} conn={chat.conn}
+          onOpenSession={openSession} onNewSession={() => void newSession()} />
+        <div className="ms-1 min-w-0 flex-1 overflow-hidden"><JobsBar jobs={status?.jobs || []} /></div>
+        {wide ? (
+          <button type="button" onClick={() => toggleWorkspace()} aria-pressed={layout.workspace} title={layout.workspace ? "收起产出物，专心对话" : "展开产出物"}
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-2 hover:text-heading">
+            {layout.workspace ? <PanelRightClose size={15} aria-hidden /> : <PanelRightOpen size={15} aria-hidden />}产出物
+          </button>
+        ) : (
+          <button type="button" onClick={() => setSheet(true)}
+            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-border-solid px-2 py-1 text-xs text-body hover:border-primary hover:text-primary">
+            <LayoutGrid size={13} aria-hidden />产出物{status?.items.length ? ` ${status.items.length}` : ""}
+          </button>
+        )}
       </header>
       {error && (
         <div role="alert" className="flex items-center gap-2 border-b border-border-solid px-3 py-1.5 text-xs text-fusion">
@@ -186,26 +357,40 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
           <button type="button" onClick={() => setError("")} aria-label="关闭"><X size={13} aria-hidden /></button>
         </div>
       )}
-      <div className="relative flex min-h-0 flex-1">
-        <aside aria-label="项目结构" className="hidden w-60 shrink-0 overflow-y-auto border-e border-border-solid bg-surface/40 md:block">
-          <div className="border-b border-border-solid px-3 py-2 text-xs text-muted">项目结构{status ? ` · ${status.title}` : ""}</div>
-          <ProjectTree status={status} selected={selected} onSelect={select} onRef={addRef} />
-        </aside>
-        <ChatPane title={title} messages={chat.messages} live={chat.live} pending={chat.pending} conn={chat.conn}
-          error={chat.error} busy={chat.busy} refs={refs} setRefs={setRefs} mediaSrc={api.mediaSrc}
-          onSend={chat.send} onAnswer={chat.answer} onCancel={chat.cancel} onRetry={chat.retry} onClearError={chat.clearError} />
-        <aside aria-label="当前产出物" className="hidden w-[26rem] shrink-0 overflow-y-auto border-s border-border-solid bg-surface/40 xl:block">
-          <div className="border-b border-border-solid px-3 py-2 text-xs text-muted">当前产出物</div>
-          {panel}
-        </aside>
-        {panelOpen && selected && (
-          <aside aria-label="当前产出物" className="absolute inset-y-0 end-0 z-20 w-full max-w-md overflow-y-auto border-s border-border-solid bg-bg shadow-xl xl:hidden">
-            <div className="flex items-center border-b border-border-solid px-3 py-2 text-xs text-muted">
-              <span className="flex-1">当前产出物</span>
-              <button type="button" onClick={() => setPanelOpen(false)} aria-label="关闭"><X size={14} aria-hidden /></button>
+      <div ref={body} className="relative flex min-h-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-col" style={showSide ? { width: layout.chat, flexShrink: 0 } : { flex: 1 }}>
+          <ChatPane title={title} messages={chat.messages} live={chat.live} pending={chat.pending} conn={chat.conn}
+            error={chat.error} busy={chat.busy} draft={draft} setDraft={setDraft} focusTick={focusTick}
+            status={status} sid={sid} mediaSrc={api.mediaSrc} onOpenRef={openRef}
+            onSend={chat.send} onAnswer={chat.answer} onCancel={chat.cancel} onRetry={chat.retry} onClearError={chat.clearError} />
+        </div>
+        {showSide && (
+          <>
+            <div role="separator" aria-orientation="vertical" aria-label="拖动调整宽度" title="拖动调整宽度，双击还原"
+              onPointerDown={resize} onDoubleClick={() => { const next = { ...layout, chat: 460 }; setLayout(next); saveLayout(next); }}
+              className="group relative w-px shrink-0 cursor-col-resize bg-border-solid">
+              <span className="absolute inset-y-0 -start-1.5 -end-1.5 z-10" />
+              <span className="absolute inset-y-0 start-0 w-px bg-primary/0 transition-colors group-hover:bg-primary/60" />
             </div>
-            {panel}
-          </aside>
+            {workspace}
+          </>
+        )}
+        {!wide && sheet && (
+          <div role="dialog" aria-label="产出物" className="absolute inset-0 z-40 flex flex-col bg-bg animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex shrink-0 items-center border-b border-border-solid px-3 py-1.5 text-xs text-muted">
+              <span className="flex-1">产出物 · 拖进对话或点「引用到对话」接着问</span>
+              <button type="button" onClick={() => { if (leaveEdit()) setSheet(false); }} aria-label="回到对话" className="rounded p-1 hover:text-heading"><X size={16} aria-hidden /></button>
+            </div>
+            {workspace}
+          </div>
+        )}
+        {fresh && (showSide || sheet) && (
+          <div role="status" className="absolute bottom-4 end-4 z-30 flex items-center gap-2 rounded-lg border border-spark-blue/40 bg-surface-2 px-3 py-2 text-xs text-body shadow-xl animate-in fade-in slide-in-from-bottom-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-spark-blue" aria-hidden />
+            主创刚出了「{fresh.label}」
+            <button type="button" onClick={() => openRef(fresh.ref)} className="font-medium text-primary hover:underline">去看看</button>
+            <button type="button" onClick={() => setFresh(null)} aria-label="关闭" className="text-muted hover:text-heading"><X size={12} aria-hidden /></button>
+          </div>
         )}
       </div>
     </div>
