@@ -3,8 +3,8 @@ import { FlaskConical, ListChecks, Files, Library, MessageSquare, Users } from "
 import { researchPages, type ResearchPage } from "../../lib/research/navigation";
 import type { Copy } from "./shared";
 const icons = { new: FlaskConical, tasks: ListChecks, reports: Files, schools: Library, dialogue: MessageSquare, roundtable: Users };
-export function ResearchNavigation({ basePath, active, tr, dialogueBusy, dialogueKind }: {
-  basePath: string;
+export function ResearchNavigation({ hrefFor, active, tr, dialogueBusy, dialogueKind }: {
+  hrefFor: (page: ResearchPage) => string;
   active: ResearchPage;
   tr: Copy;
   dialogueBusy: boolean;
@@ -17,7 +17,7 @@ export function ResearchNavigation({ basePath, active, tr, dialogueBusy, dialogu
         const selected = active === page.id;
         const blocked = dialogueBusy && ((page.id === "roundtable" && dialogueKind !== "roundtable") || (page.id === "dialogue" && dialogueKind !== "single"));
         return (
-          <Link key={page.id} to={`${basePath}${page.path ? `/${page.path}` : ""}`}
+          <Link key={page.id} to={hrefFor(page.id)}
             aria-current={selected ? "page" : undefined}
             aria-disabled={blocked || undefined}
             onClick={event => { if (blocked) event.preventDefault(); }}

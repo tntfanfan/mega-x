@@ -8,6 +8,23 @@ export function isAppDept(dept: Pick<DeptCatalogItem, "profile">): boolean {
   return Boolean(dept.profile?.app?.id);
 }
 
+/**
+ * 平台 API 本来就带专属界面的部门（不经部门应用转发）：「聊天」页选中它时，同样换掉
+ * 默认聊天。股票投研部走 `/v1/companies/{id}/research/*`，只有公司有。
+ */
+const NATIVE_VIEW_DEPTS: Partial<Record<WorkspaceScope["kind"], string[]>> = {
+  company: ["dept-investment"],
+};
+
+export function hasNativeView(scope: WorkspaceScope, deptId: string): boolean {
+  return Boolean(NATIVE_VIEW_DEPTS[scope.kind]?.includes(deptId));
+}
+
+/** 选中后不用默认聊天：部门应用，或平台自带专属界面的部门。 */
+export function hasOwnView(scope: WorkspaceScope, dept: DeptCatalogItem): boolean {
+  return isAppDept(dept) || hasNativeView(scope, dept.id);
+}
+
 export function deptAppBase(scope: WorkspaceScope, deptId: string): string {
   return `${scope.base}/apps/${encodeURIComponent(deptId)}`;
 }
