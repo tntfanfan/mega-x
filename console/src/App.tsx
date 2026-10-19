@@ -50,6 +50,9 @@ import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
 import AdminTemplateStudio from "./pages/admin/TemplateStudio";
 
+// 部门应用（档案里声明了 app 的部门）在「聊天」页里选；apps/:deptId 是旧链接
+import { DeptAppRedirect } from "./pages/shared/DeptAppView";
+
 function UserMenu() {
   const { t } = useTranslation();
   const { me, status, logout } = useAuth();
@@ -172,6 +175,7 @@ export default function App() {
             <Route path="conversations" element={<Navigate to="../chat" replace />} />
             <Route path="marketplace" element={<CompanyMarketplace />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="apps/:deptId/*" element={<DeptAppRedirect />} />
           </Route>
         </Route>
 
@@ -194,6 +198,7 @@ export default function App() {
             <Route path="timeline" element={<TimelineView />} />
             <Route path="billing" element={<BillingView />} />
             <Route path="settings" element={<SettingsView />} />
+            <Route path="apps/:deptId/*" element={<DeptAppRedirect />} />
           </Route>
         </Route>
 

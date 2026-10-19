@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, apiErrorMessage, type Company, type DeptCatalogItem } from "../../lib/api";
 import type { BuilderDraft, ChatMsg } from "../../lib/builderFixtures";
+import { isAppDept } from "../../lib/deptApps";
 import { resolveDeptDisplay } from "../../lib/depts";
 import { outputWorkspaceKey } from "../../lib/outputRefs";
 import { loadTryChat, saveTryChat, mergeTryHistory, turnsToMessages, type TryChatSession, type TryHistoryTurn } from "../../lib/tryChatReply";
@@ -50,7 +51,8 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
   useEffect(() => {
     let alive = true;
     setDeptsLoaded(false);
-    api.get<{ items: DeptCatalogItem[] }>(`${scope.base}/depts`).then(r => { if (alive) setDepts(r.items || []); }).catch(e => { if (alive) setConnectError(apiErrorMessage(e, "加载部门失败")); })
+    // 部门应用有自己的页面（侧栏页签），不在默认聊天里出现
+    api.get<{ items: DeptCatalogItem[] }>(`${scope.base}/depts`).then(r => { if (alive) setDepts((r.items || []).filter(d => !isAppDept(d))); }).catch(e => { if (alive) setConnectError(apiErrorMessage(e, "加载部门失败")); })
       .finally(() => { if (alive) setDeptsLoaded(true); });
     return () => { alive = false; };
   }, [scope.base, tenant.dept_ids.join(","), retryAttempt]);
@@ -167,11 +169,17 @@ function useTenantChat(scope: WorkspaceScope, tenant: Company) {
     retry: () => { setConnectedIdentity(""); setConnectError(null); setRetryAttempt(value => value + 1); },
     creatingSession: creatingSession || busy, onSessionChange: (id: string) => change(deptId, id), onSessionCreate,
     onChatFocus: () => { const next = new URLSearchParams(params); next.set("dept", deptId); if (sessionId) next.set("session", sessionId); next.set("focus", "main"); navigate(`${scope.routeBase}/chat?${next}`); },
-    depts, deptId, change, loaded: loaded === identity };
+    depts, deptId, change, loaded: loaded === identity, lastDept: selection.dept };
 }
 
 export function useTenantWorkspaceReady() {
   return useContext(Context)?.ready ?? false;
+}
+
+/** For the chat page's department bar: the dept last opened in this shell (any dept, app ones included) and whether the default chat is mid-turn. */
+export function useTenantChatSelection() {
+  const chat = useContext(Context);
+  return { lastDept: chat?.lastDept || "", busy: chat?.busy ?? false };
 }
 
 export function TenantChatProvider({ scope, tenant, children }: { scope: WorkspaceScope; tenant: Company; children: ReactNode }) {
@@ -179,7 +187,8 @@ export function TenantChatProvider({ scope, tenant, children }: { scope: Workspa
   return <Context.Provider value={chat}>{children}</Context.Provider>;
 }
 
-export function TenantWorkspace({ panel }: { panel: "chat" | "tasks" }) {
+/** `embedded`: inside the chat page, which owns the height and the department bar. */
+export function TenantWorkspace({ panel, embedded = false }: { panel: "chat" | "tasks"; embedded?: boolean }) {
   const chat = useContext(Context);
   if (!chat) throw new Error("TenantWorkspace requires TenantChatProvider");
   const noDepts = chat.deptsLoaded && !chat.depts.length && !chat.connectError;
@@ -196,10 +205,10 @@ export function TenantWorkspace({ panel }: { panel: "chat" | "tasks" }) {
     : reason.detail;
   const availability = { title, detail, waiting, attempt: chat.tenantState === "running" ? chat.progress?.attempt : undefined,
     onRetry: !noDepts && !paused ? chat.retry : undefined };
-  return <div className="flex h-[calc(100dvh-8rem-72px)] min-h-0 min-w-0 flex-col">
+  return <div className={`flex ${embedded ? "flex-1" : "h-[calc(100dvh-8rem-72px)]"} min-h-0 min-w-0 flex-col`}>
     {chat.workspaceKey && chat.loaded ? <TestWorkspace key={chat.workspaceKey} {...chat} panel={panel}
       availability={availability}
-      chatActions={<select aria-label="部门" value={chat.deptId} disabled={chat.busy} onChange={e => chat.change(e.target.value)} className="h-7 min-w-0 max-w-40 rounded border border-border-solid bg-surface px-2 text-xs text-body">
+      chatActions={embedded ? undefined : <select aria-label="部门" value={chat.deptId} disabled={chat.busy} onChange={e => chat.change(e.target.value)} className="h-7 min-w-0 max-w-40 rounded border border-border-solid bg-surface px-2 text-xs text-body">
         {chat.depts.map(dept => <option key={dept.id} value={dept.id}>{resolveDeptDisplay(dept.id, chat.depts).label}</option>)}
       </select>} /> : <WorkspaceAvailabilityGate ready={false} {...availability}>
       <div className="grid min-h-0 flex-1 grid-cols-1 divide-x divide-border-solid bg-bg lg:grid-cols-2">

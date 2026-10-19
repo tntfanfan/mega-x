@@ -194,6 +194,7 @@ export type {
   Company,
   CompanyState,
   DeptCatalogItem,
+  DeptPublicProfile,
   Agent,
   AgentTeamRole,
   AgentTier,
