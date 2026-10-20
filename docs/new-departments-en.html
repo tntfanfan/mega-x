@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mega-X New Departments</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Share+Tech+Mono&display=swap">
+<style>
+  /* Layout: one reading column; each department opens with a spec strip; comparison tables carry the brief.
+     Palette and faces follow the Mega-X console tokens (tailwind.config.ts / styles/variables.css). */
+  :root {
+    --bg: #07090F;
+    --surface: #0D1119;
+    --surface-2: #151B28;
+    --rule: rgba(212, 170, 76, 0.16);
+    --rule-solid: #2A2438;
+    --heading: #E8DCC8;
+    --body: #B8AFA0;
+    --muted: #8A95A8;
+    --gold: #D4A84E;
+    --gold-2: #F5DFA0;
+    --gold-wash: rgba(212, 168, 78, 0.10);
+    --mint: #50E8C0;
+    --blue: #70A0FF;
+    --flare: #F0B050;
+    --f-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+    --f-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+    --f-mono: "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--body);
+    font: 400 16px/1.6 var(--f-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 48px 72px;
+  }
+
+  .wrap { max-width: 52rem; margin: 0 auto; display: grid; gap: 64px; }
+  section { display: grid; gap: 20px; min-width: 0; }
+  p, li { max-width: 68ch; }
+  p { margin: 0; }
+  ul, ol { margin: 0; padding-left: 1.25rem; display: grid; gap: 8px; }
+  strong { color: var(--heading); font-weight: 600; }
+  a { color: var(--gold); text-underline-offset: 3px; }
+  a:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 2px; }
+
+  code {
+    font-family: var(--f-mono);
+    font-size: 0.88em;
+    color: var(--gold-2);
+    background: var(--gold-wash);
+    padding: 1px 5px;
+    border-radius: 2px;
+    overflow-wrap: anywhere;
+  }
+
+  .eyebrow {
+    font: 400 12px/1.4 var(--f-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin: 0;
+  }
+
+  h1, h2 {
+    font-family: var(--f-display);
+    font-weight: 400;
+    color: var(--heading);
+    margin: 0;
+    text-wrap: balance;
+  }
+  h1 { font-size: clamp(2.3rem, 6vw, 3.6rem); line-height: 1.04; letter-spacing: -0.01em; }
+  h1 em, h2 em { font-style: italic; color: var(--gold); }
+  h2 { font-size: clamp(1.9rem, 4.4vw, 2.6rem); line-height: 1.1; }
+  h3 {
+    font: 600 1.05rem/1.3 var(--f-body);
+    color: var(--heading);
+    margin: 12px 0 0;
+    text-wrap: balance;
+  }
+
+  /* Header */
+  header { display: grid; gap: 18px; padding-bottom: 28px; border-bottom: 1px solid var(--rule); }
+  .lead { font-size: 1.15rem; line-height: 1.55; color: var(--heading); opacity: 0.92; }
+  .meta { font: 400 13px/1.5 var(--f-mono); color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  nav ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  nav a {
+    display: inline-block;
+    font: 500 14px/1 var(--f-body);
+    color: var(--body);
+    text-decoration: none;
+    padding: 8px 12px;
+    border: 1px solid var(--rule-solid);
+    border-radius: 2px;
+  }
+  nav a:hover { color: var(--heading); border-color: var(--gold); }
+
+  /* Department heading block */
+  .dept-head { display: grid; gap: 14px; }
+  .id-chip {
+    justify-self: start;
+    font: 400 13px/1 var(--f-mono);
+    color: var(--gold-2);
+    background: var(--gold-wash);
+    border: 1px solid var(--rule);
+    padding: 6px 10px;
+    border-radius: 2px;
+  }
+  .spec {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 0;
+    margin: 4px 0 0;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .spec div { padding: 12px 16px 12px 0; min-width: 0; }
+  .spec dt { font: 400 11px/1.3 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .spec dd { margin: 4px 0 0; color: var(--heading); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule-solid); border-radius: 6px; background: var(--surface); min-width: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.5; }
+  table.wide { min-width: 640px; }
+  th, td { padding: 11px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+  thead th {
+    font: 400 11.5px/1.3 var(--f-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+    white-space: nowrap;
+  }
+  tbody th { color: var(--heading); font-weight: 600; }
+  tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+  td.tier { font: 400 13px/1.5 var(--f-mono); color: var(--gold-2); white-space: nowrap; }
+  .sub { display: block; font: 400 12.5px/1.4 var(--f-mono); color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .note { font-size: 14.5px; color: var(--muted); }
+
+  /* Term list */
+  .terms { display: grid; gap: 0; margin: 0; border-left: 2px solid var(--gold); }
+  .terms div { padding: 8px 0 8px 16px; }
+  .terms dt { color: var(--heading); font-weight: 600; }
+  .terms dd { margin: 2px 0 0; max-width: 64ch; }
+
+  /* Workflow figure */
+  figure { margin: 0; display: grid; gap: 12px; min-width: 0; }
+  .fig-title { font: 600 1rem/1.35 var(--f-body); color: var(--heading); margin: 0; }
+  .fig-sub { font-size: 14px; color: var(--muted); margin: 0; }
+  .diagram { overflow-x: auto; border: 1px solid var(--rule-solid); border-radius: 6px; background: var(--surface); padding: 16px 12px 8px; }
+  .diagram svg { display: block; width: 100%; min-width: 640px; height: auto; }
+  .dg text { font-family: var(--f-body); }
+  .dg .box { fill: none; stroke: var(--muted); stroke-width: 1.25; }
+  .dg .box-key { fill: var(--gold-wash); stroke: var(--gold); stroke-width: 2; }
+  .dg .name { fill: var(--heading); font-size: 13.5px; font-weight: 600; }
+  .dg .role { fill: var(--muted); font-size: 12px; }
+  .dg .key-text { fill: var(--heading); }
+  .dg .wire { fill: none; stroke: var(--muted); stroke-width: 1.25; }
+  .dg .loop { fill: none; stroke: var(--flare); stroke-width: 1.25; stroke-dasharray: 4 3; }
+  .dg .head { fill: var(--muted); }
+  .dg .head-loop { fill: var(--flare); }
+  .dg .label { fill: var(--muted); font-size: 12px; }
+  .dg .label-loop { fill: var(--flare); font-size: 12px; }
+  figure ul { font-size: 14.5px; color: var(--muted); }
+
+  /* Readiness chain */
+  .states { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .states li {
+    display: grid;
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid var(--rule-solid);
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--heading);
+    font-size: 14px;
+    font-weight: 500;
+    position: relative;
+  }
+  .states li code { background: none; padding: 0; color: var(--muted); font-size: 12px; }
+  .states li.ok { border-color: var(--mint); }
+  .states li.ok code { color: var(--mint); }
+  .states li + li::before {
+    content: "\2192";
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  /* Department chips in the status table */
+  .chip {
+    display: inline-block;
+    font: 400 12px/1.4 var(--f-mono);
+    padding: 2px 8px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .chip-series { color: var(--gold); }
+  .chip-research { color: var(--blue); }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 20px; font-size: 14px; color: var(--muted); display: grid; gap: 8px; }
+
+  @media (max-width: 520px) {
+    body { padding-block: 32px 56px; }
+    .wrap { gap: 52px; }
+    th, td { padding: 10px 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Mega-X Console &middot; Department brief</p>
+    <h1>Two new departments: <em>Series Studio</em> and <em>Equity Research</em></h1>
+    <p class="lead">Between October 7 and 10, 2026, the Mega-X console gained two departments. Series Studio turns a one-line brief into an episodic web series, from story to finished cut. Equity Research produces single-stock research, valuation, and risk reports.</p>
+    <p class="meta"><span>As of 2026-10-17</span><span>English edition of the Chinese brief</span></p>
+    <nav aria-label="On this page">
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#series">Series Studio</a></li>
+        <li><a href="#research">Equity Research</a></li>
+        <li><a href="#console">Using them in the console</a></li>
+        <li><a href="#limits">Status and limits</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Overview -->
+  <section id="overview" aria-labelledby="overview-h">
+    <h2 id="overview-h">Overview</h2>
+    <p>The two departments reach the catalog in different ways. Series Studio is a built-in department written into the static catalog. Equity Research appears in the department marketplace only when the company's research runtime reports it as discoverable.</p>
+    <div class="table-wrap">
+      <table class="wide">
+        <thead>
+          <tr><th scope="col"></th><th scope="col">Series Studio</th><th scope="col">Equity Research</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">ID</th><td><code>dept-series</code></td><td><code>dept-investment</code></td></tr>
+          <tr><th scope="row">Joined the console</th><td>2026-10-09 (<code>58bac80</code>)</td><td>Migrated from 2026-10-07; readiness states completed 2026-10-10</td></tr>
+          <tr><th scope="row">Catalog category</th><td>creative (in-house vertical)</td><td>Not in the static catalog</td></tr>
+          <tr><th scope="row">In one line</th><td>Episode story, locked assets, and a finished cut</td><td>Stock research, valuation, and risk reports</td></tr>
+          <tr><th scope="row">How it is listed</th><td>Static catalog <code>DEPT_CATALOG</code>; built-in, free, 8 roles (HIGH 4 / MEDIUM 4)</td><td>Added to the marketplace only when <code>/v1/companies/{id}/research/department</code> returns <code>discoverable</code>; the Research tab appears only for companies that include it</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="note">
+      <li>On the day Series Studio was listed (<code>ed0bebe</code>), Short Drama (<code>dept-drama</code>) and Short Film Studio (<code>dept-film</code>) were removed from the catalog. Every company and line template that referenced them now points to Series Studio.</li>
+      <li>Equity Research's frontend was migrated into the console from the existing stock-research frontend, mainly by duzhihao. The readiness and form-locking fixes were made by zhangzhu.</li>
+    </ul>
+  </section>
+
+  <!-- Series Studio -->
+  <section id="series" aria-labelledby="series-h">
+    <div class="dept-head">
+      <span class="id-chip">dept-series</span>
+      <h2 id="series-h">Series Studio</h2>
+      <dl class="spec">
+        <div><dt>Joined</dt><dd>2026-10-09</dd></div>
+        <div><dt>Category</dt><dd>creative</dd></div>
+        <div><dt>Roles</dt><dd>8 &middot; HIGH 4 / MEDIUM 4</dd></div>
+        <div><dt>Price</dt><dd>Built-in, free</dd></div>
+      </dl>
+    </div>
+
+    <p>Series Studio turns a one-line brief into an episodic web series. The coordinator only dispatches work. Seven roles hand over files in a fixed order: lock the assets, then storyboard, then video. Each step waits for the user's confirmation before the next one starts. The README's sample brief is “8 episodes, 90 seconds each, vertical 9:16 urban mystery series.”</p>
+
+    <p>What the catalog tagline means:</p>
+    <dl class="terms">
+      <div><dt>Episode story</dt><dd>A full-series outline, the novel text for each episode, and a script for each episode.</dd></div>
+      <div><dt>Locked assets</dt><dd>Each character, location, and prop gets a written spec plus a text-free PNG concept image. Storyboards and video may only reference these; they never describe a new look.</dd></div>
+      <div><dt>Finished cut</dt><dd>One mp4 per episode with burned-in subtitles. The first version ships without a cover.</dd></div>
+    </dl>
+
+    <h3>Team</h3>
+    <p>The coordinator is always on; the other seven roles are spawned as needed. The department has no reviewer or ops role.</p>
+    <div class="table-wrap">
+      <table class="wide">
+        <thead>
+          <tr><th scope="col">Role</th><th scope="col">Tier</th><th scope="col">Reads</th><th scope="col">Delivers</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Series Coordinator<span class="sub">series-lead</span></th><td class="tier">HIGH</td><td>The user's brief; every role's handoff</td><td>Dispatch and format checks; keeps the project, dispatch, and index files</td></tr>
+          <tr><th scope="row">Producer<span class="sub">producer</span></th><td class="tier">HIGH</td><td>The user's own words</td><td>Series bible (13 fields + 5 sections); picks the art style and genre</td></tr>
+          <tr><th scope="row">Novelist<span class="sub">novelist</span></th><td class="tier">HIGH</td><td>Bible</td><td>Full-series outline (sets the character slugs); after confirmation, the novel text for each episode</td></tr>
+          <tr><th scope="row">Screenwriter<span class="sub">screenwriter</span></th><td class="tier">HIGH</td><td>Bible, outline, that episode's text</td><td>Episode script (sets the location and prop slugs)</td></tr>
+          <tr><th scope="row">Asset Extractor<span class="sub">asset-extractor</span></th><td class="tier">MEDIUM</td><td>Bible, script</td><td>Character, location, and prop specs (md) with concept images (png)</td></tr>
+          <tr><th scope="row">Storyboard Artist<span class="sub">storyboard-artist</span></th><td class="tier">MEDIUM</td><td>Bible, script, concept images</td><td>Per shot: md + a 2×2 four-panel png; then the shot list</td></tr>
+          <tr><th scope="row">Video Director<span class="sub">video-director</span></th><td class="tier">MEDIUM</td><td>Script, storyboard, concept images</td><td>Per shot: a clip (md + mp4, dialogue included); checks continuity line by line</td></tr>
+          <tr><th scope="row">Editor<span class="sub">editor</span></th><td class="tier">MEDIUM</td><td>The confirmed shot list and all clips</td><td>Episode cut (md + mp4)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Workflow</h3>
+    <figure>
+      <p class="fig-title">Assets are locked before storyboarding, and every step waits for the user.</p>
+      <p class="fig-sub">Each arrow means the user confirmed this version and the coordinator dispatched the next step. One step at a time.</p>
+      <div class="diagram">
+        <svg class="dg" viewBox="0 0 800 272" role="img" aria-label="Series Studio workflow: series bible, series outline, episode text, episode script, lock assets, storyboard, shot videos, episode cut. Shots outside 4 to 30 seconds go back to storyboard.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="head" d="M0 0L10 5L0 10z"/></marker>
+            <marker id="arrow-loop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="head-loop" d="M0 0L10 5L0 10z"/></marker>
+          </defs>
+
+          <!-- connectors -->
+          <path class="wire" d="M188 52H220" marker-end="url(#arrow)"/>
+          <path class="wire" d="M384 52H416" marker-end="url(#arrow)"/>
+          <path class="wire" d="M580 52H612" marker-end="url(#arrow)"/>
+          <path class="wire" d="M694 88V112H106V144" marker-end="url(#arrow)"/>
+          <path class="wire" d="M188 180H220" marker-end="url(#arrow)"/>
+          <path class="wire" d="M384 180H416" marker-end="url(#arrow)"/>
+          <path class="wire" d="M580 180H612" marker-end="url(#arrow)"/>
+          <path class="loop" d="M474 216V240H326V216" marker-end="url(#arrow-loop)"/>
+
+          <!-- row 1 -->
+          <rect class="box" x="24" y="16" width="164" height="72" rx="6"/>
+          <text class="name" x="38" y="40">① Series bible</text>
+          <text class="role" x="38" y="60">Producer</text>
+          <text class="role" x="38" y="76">series-bible</text>
+
+          <rect class="box" x="220" y="16" width="164" height="72" rx="6"/>
+          <text class="name" x="234" y="40">② Series outline</text>
+          <text class="role" x="234" y="60">Novelist</text>
+          <text class="role" x="234" y="76">sets character slugs</text>
+
+          <rect class="box" x="416" y="16" width="164" height="72" rx="6"/>
+          <text class="name" x="430" y="40">③ Episode text</text>
+          <text class="role" x="430" y="60">Novelist</text>
+          <text class="role" x="430" y="76">novel, per episode</text>
+
+          <rect class="box" x="612" y="16" width="164" height="72" rx="6"/>
+          <text class="name" x="626" y="40">④ Episode script</text>
+          <text class="role" x="626" y="60">Screenwriter</text>
+          <text class="role" x="626" y="76">location/prop slugs</text>
+
+          <!-- row 2 -->
+          <rect class="box-key" x="24" y="144" width="164" height="72" rx="6"/>
+          <text class="name" x="38" y="168">⑤ Lock assets</text>
+          <text class="role key-text" x="38" y="188">Asset Extractor</text>
+          <text class="role key-text" x="38" y="204">concept md + png</text>
+
+          <rect class="box" x="220" y="144" width="164" height="72" rx="6"/>
+          <text class="name" x="234" y="168">⑥ Storyboard</text>
+          <text class="role" x="234" y="188">Storyboard Artist</text>
+          <text class="role" x="234" y="204">4-panel + shot list</text>
+
+          <rect class="box" x="416" y="144" width="164" height="72" rx="6"/>
+          <text class="name" x="430" y="168">⑦ Shot videos</text>
+          <text class="role" x="430" y="188">Video Director</text>
+          <text class="role" x="430" y="204">clips + continuity</text>
+
+          <rect class="box" x="612" y="144" width="164" height="72" rx="6"/>
+          <text class="name" x="626" y="168">⑧ Episode cut</text>
+          <text class="role" x="626" y="188">Editor</text>
+          <text class="role" x="626" y="204">mp4, burned-in subs</text>
+
+          <!-- labels -->
+          <text class="label" x="596" y="136" text-anchor="middle">continuity: all match</text>
+          <text class="label-loop" x="400" y="260" text-anchor="middle">shot outside 4–30 s: back to storyboard</text>
+        </svg>
+      </div>
+      <ul>
+        <li>Steps ③–⑧ repeat for each episode. Step ⑤ locks every recurring asset before episode 1 is storyboarded; later episodes add only new ones.</li>
+        <li>A continuity mismatch goes back to the Video Director. Any revision ships as a new version, and everything downstream is marked stale and redone.</li>
+      </ul>
+    </figure>
+
+    <ul>
+      <li>The coordinator dispatches one step at a time, and roles cannot dispatch other roles. Passing the format check (<code>format_ok</code>) is not the same as user confirmation.</li>
+      <li><strong>Asset locking:</strong> before episode 1 is storyboarded, every recurring character, location, and prop must have a concept image. Slugs cannot be renamed or invented; differences such as costume or day and night are separate variants.</li>
+      <li>Revisions always ship as a new version. Items downstream along the dependency chain are marked stale, then redone and reconfirmed one by one.</li>
+    </ul>
+
+    <h3>Outputs</h3>
+    <p>Everything lands in <code>board/dept-series/series/&lt;project_id&gt;/</code>, split into five folders (<code>00-management</code> through <code>04-delivery</code>: management, series, assets, episodes, delivery), with 17 deliverable types in total. Each item is versioned from <code>.v001</code> upward and never overwritten. An item is in one of five states: draft, confirmed, rejected, superseded, or stale.</p>
+
+    <h3>Dependencies</h3>
+    <ul>
+      <li><strong>Generation services:</strong> video on seedance-2.5 (4–30 s per clip, with audio), with minimax-hailuo-h3 as the fallback. Images come from gpt-image-2, gemini-3.1-flash-image, nano-banana-pro, and other channels. ffmpeg assembles the cut.</li>
+      <li><strong>Toonflow reference snapshot:</strong> 223 technique documents and prompts taken from the open-source Toonflow-app (commit <code>32ac57d</code>, Apache-2.0). The bible maps onto 13 art-style folders and 14 genre folders. It is reference material only; nothing at runtime depends on Toonflow code or services.</li>
+      <li><strong>Department toolkit</strong> <code>dept-series.tools</code>: <code>series_store.py</code> manages the versioned project folder and <code>series_cut.py</code> does the editing. The department registers no MCP server of its own.</li>
+    </ul>
+
+    <h3>Relation to Short Drama and Short Film Studio</h3>
+    <p>Series Studio was registered on 2026-10-09 at 18:07 alongside Short Film Studio. An hour later (ai_native <code>e1fb44a</code>), both older departments were deleted and marked “department retired” in the roster, and every content template was pointed at Series Studio. The repo has no record of files migrated from the old departments. Series Studio's method comes from the Toonflow port, not from its predecessors.</p>
+  </section>
+
+  <!-- Equity Research -->
+  <section id="research" aria-labelledby="research-h">
+    <div class="dept-head">
+      <span class="id-chip">dept-investment</span>
+      <h2 id="research-h">Equity Research</h2>
+      <dl class="spec">
+        <div><dt>Joined</dt><dd>2026-10-07 to 10-10</dd></div>
+        <div><dt>Listing</dt><dd>Per company, optional</dd></div>
+        <div><dt>Roles</dt><dd>1 &middot; research lead</dd></div>
+        <div><dt>Engine</dt><dd>UZI-Skill 3.9.4</dd></div>
+      </dl>
+    </div>
+
+    <p>Equity Research produces an HTML research report from a stock code. The platform collects data, computes, and writes the report by fixed rules. The department lead, <code>investment-lead</code>, explains the report's inputs, version, valuation assumptions, and risks, and never runs research itself. The engine is a pinned build of the open-source UZI-Skill (MIT license, version 3.9.4). The platform calls it through a bridge and does not modify its source.</p>
+
+    <h3>Coverage</h3>
+    <div class="table-wrap">
+      <table class="wide">
+        <thead>
+          <tr><th scope="col">Market</th><th scope="col">Codes</th><th scope="col">Depths</th><th scope="col">Measured time</th><th scope="col">Report contents</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">China A-shares</th><td>6-digit code; .SH / .SZ / .BJ detected automatically</td><td>Quick overview, Standard research</td><td>Quick: about 1.5–4 min</td><td>Scores on 23 dimensions, rule-based commentary from 9 investment schools, scenario estimates</td></tr>
+          <tr><th scope="row">US stocks</th><td>NYSE / Nasdaq common stocks, priced in USD</td><td>Quick overview only</td><td>About 30 s</td><td>Price, financials, valuation, risk, sources and gaps; no overall score or buy/sell advice</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <ul class="note">
+      <li>The third depth, Deep research, is not available. It needs real model analysis and review before it can be called complete.</li>
+      <li>Time limits per run: 600 s for quick, 1200 s for standard. Hong Kong stocks, ETFs, ADRs, and OTC securities are not supported. Reports come in Chinese and English.</li>
+    </ul>
+
+    <h3>Research flow</h3>
+    <ol>
+      <li>In <strong>New research</strong>, the user picks a market, enters a code, chooses a depth, and submits. The API returns a task ID immediately.</li>
+      <li>The task runs asynchronously on the company's own Task Runtime in three stages: collect, compute, and write the report. It can be paused, resumed, or cancelled between stages. Each company can queue at most 5 tasks.</li>
+      <li>A failed or interrupted task can be retried. A retry creates a new run and never overwrites the earlier report.</li>
+      <li>Delivery is three files: <code>report.html</code> for online preview, <code>standalone.html</code> for offline download, and <code>result.json</code> for structured results. Each file's size and SHA-256 are verified, with 50 MB total at most. Before opening a preview, the frontend checks that the link is on the same origin as the API.</li>
+    </ol>
+
+    <h3>Investor conversations and the investment roundtable</h3>
+    <ul>
+      <li><strong>Investor conversations:</strong> pick one investor and ask freely, or attach a finished report and keep asking. 31 investors can hold a conversation, including Buffett, Munger, Soros, Duan Yongping, and Zhang Kun. The Investment schools catalog lists 9 schools and 66 people; the rest are marked as research review only. The English UI hides two Chinese schools.</li>
+      <li><strong>Investment roundtable:</strong> pick 2–4 investors, who each speak once in a fixed order. Later speakers respond only to earlier turns that succeeded. There is no moderator summary.</li>
+      <li><strong>Boundaries:</strong> the UI labels this “Simulated investment approaches, not the individuals' views.” Investors have no tools and no live quotes, and may cite only report sections. Limits: 2 concurrent rounds per company, 1 per conversation, 120 s per call.</li>
+    </ul>
+
+    <h3>Readiness and common errors</h3>
+    <p>Department status is checked in this order, and the first state that applies is the one shown. A-shares and US stocks are checked separately.</p>
+    <ol class="states" aria-label="Readiness states, checked in order">
+      <li>Master switch off<code>disabled</code></li>
+      <li>Not enabled for this company<code>not_enabled_for_company</code></li>
+      <li>Not installed<code>not_installed</code></li>
+      <li>Environment not ready<code>execution_not_ready</code></li>
+      <li class="ok">Ready<code>ready</code></li>
+    </ol>
+    <p>The environment is ready when the department is installed, <code>investment-lead</code> is registered, and the engine and its dependencies pass validation.</p>
+    <ul>
+      <li><strong>Form behavior:</strong> while loading, after a read failure, or while busy, the whole form is disabled. When the department isn't ready, or the selected market can't accept submissions, only the Start research button is disabled; the stock code stays editable.</li>
+    </ul>
+    <div class="table-wrap">
+      <table class="wide">
+        <thead>
+          <tr><th scope="col">Kind</th><th scope="col">Error codes</th><th scope="col">What the console tells the user</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Environment</th><td><code>engine_missing</code> <code>engine_invalid</code> <code>dependency_missing</code></td><td>Update the company runtime image</td></tr>
+          <tr><th scope="row">Environment</th><td><code>agent_not_registered</code></td><td>Reinstall the research department</td></tr>
+          <tr><th scope="row">Environment</th><td><code>runtime_unreachable</code></td><td>Refresh the status or restart the company instance</td></tr>
+          <tr><th scope="row">Environment</th><td><code>language_not_supported</code></td><td>Update the executor and retry</td></tr>
+          <tr><th scope="row">Run</th><td><code>provider_rate_limited</code></td><td>The free data provider is rate limiting; try again later</td></tr>
+          <tr><th scope="row">Run</th><td><code>run_timeout</code> <code>symbol_not_found</code> <code>unsupported_security</code> <code>insufficient_facts</code> and others</td><td>Shown as the specific failure reason for that run</td></tr>
+          <tr><th scope="row">Conversation</th><td><code>model_auth_failed</code></td><td>Shown on the failed conversation turn</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Console usage -->
+  <section id="console" aria-labelledby="console-h">
+    <h2 id="console-h">Using them in the console</h2>
+    <p>Series Studio works like any other built-in department: it comes in with a template or is added from the marketplace. Equity Research must be installed separately by the company owner, and only then does the Research tab appear in the company sidebar.</p>
+    <div class="table-wrap">
+      <table class="wide">
+        <thead>
+          <tr><th scope="col"></th><th scope="col">Series Studio</th><th scope="col">Equity Research</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Adding it to a company</th><td>Pick it in the Marketplace, or create a company from a template that includes it</td><td>Appears in the Marketplace only when the research runtime reports it as discoverable (open to all companies by default). The company owner installs it, which rebuilds the company instance.</td></tr>
+          <tr><th scope="row">Templates that include it</th><td>Company template “MCN content factory”; Solo line template “Short video / live side-hustle” (shown there as the Script group)</td><td>None</td></tr>
+          <tr><th scope="row">Where to find it</th><td>The company's Depts, Chat, and Tasks tabs</td><td>The company sidebar's Research tab, with six pages: New research, Research tasks, Research reports, Investment schools, Investor conversations, Investment roundtable</td></tr>
+          <tr><th scope="row">Where outputs appear</th><td>Workspace folder <code>board/dept-series/series/&lt;project&gt;/</code>. The Output Center project board does not show series projects yet (see below).</td><td>The Research reports page, for preview or download</td></tr>
+          <tr><th scope="row">What the user does</th><td>Confirms each step's delivery before the next step is dispatched</td><td>Picks a market, enters a code, chooses a depth, and submits; pauses, cancels, or retries from Research tasks</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Status and limits -->
+  <section id="limits" aria-labelledby="limits-h">
+    <h2 id="limits-h">Status and limits</h2>
+    <p>Both departments run their main flow end to end, but each has gaps. The largest: series projects don't appear on the Output Center board, and Deep research and US standard research are not open yet.</p>
+    <div class="table-wrap">
+      <table class="wide">
+        <thead>
+          <tr><th scope="col">Department</th><th scope="col">Item</th><th scope="col">Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="chip chip-series">Series</span></td><th scope="row">Output Center project board</th><td>Recognizes only <code>dept-film</code> (<code>OutputsPane.tsx</code>; <code>projectBoard.ts</code> hard-codes <code>board/dept-film/projects</code>). Short Film Studio is retired, so series projects don't appear on the board.</td></tr>
+          <tr><td><span class="chip chip-series">Series</span></td><th scope="row">Video length</th><td>Main channel allows 4–30 s per clip; the fallback is narrower. Shots outside the range go back to storyboard.</td></tr>
+          <tr><td><span class="chip chip-series">Series</span></td><th scope="row">Image size</th><td>Image channels don't guarantee the output size; the fallback may return 2:3 or 3:2.</td></tr>
+          <tr><td><span class="chip chip-series">Series</span></td><th scope="row">Automated checks</th><td>Sampled: at most 12 video frames and the first 60 s of audio. Not enough to claim every subtitle line was verified.</td></tr>
+          <tr><td><span class="chip chip-series">Series</span></td><th scope="row">Template updates</th><td>After a template change, installed departments need the sync flow; running sessions don't update automatically.</td></tr>
+          <tr><td><span class="chip chip-series">Series</span></td><th scope="row">Outdated docs</th><td>The design doc the README cites (<code>.workspace/doc/2026-10-09-网剧部门子Agent结构.md</code>) is not in the repo. Script paths and the <code>check.py</code> location in README and TOOLS are outdated since the 10-14 tool move (<code>2d6399d</code>).</td></tr>
+          <tr><td><span class="chip chip-series">Series</span></td><th scope="row">Feishu channel</th><td>The README says the department takes no Feishu channel, but <code>build_unified_config.py</code> still maps a <code>SERIES</code> suffix.</td></tr>
+          <tr><td><span class="chip chip-research">Research</span></td><th scope="row">Not yet available</th><td>Deep research, US standard research, search by company name, starting research from chat, watchlists and scheduled tracking.</td></tr>
+          <tr><td><span class="chip chip-research">Research</span></td><th scope="row">Data sources</th><td>Free providers with no reliable fallback; A-share reports are often flagged as missing some data. Quant-fund signals are sampled.</td></tr>
+          <tr><td><span class="chip chip-research">Research</span></td><th scope="row">Resource isolation</th><td>Research and chat share one company pod, so research running out of memory can affect chat. Long-term report retention is undecided.</td></tr>
+          <tr><td><span class="chip chip-research">Research</span></td><th scope="row">Compliance copy</th><td>A-share reports open with “Rule-based research report · not reviewed by agent analysis.” US reports lack this line (logged as a known issue). The phrase “not investment advice” was not found anywhere in the repo.</td></tr>
+          <tr><td><span class="chip chip-research">Research</span></td><th scope="row">Tier mismatch</th><td>The department card says MEDIUM; the roster says HIGH.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <p>Sources: <code>platform/ai_native/dept-series/</code>, <code>platform/ai_native/dept-investment/</code>, <code>platform/research/</code>, <code>platform/doc/ai_native-migration/</code>, the <code>frontend/mega-x/console/</code> source and <code>docs/</code>, and submodule commits from 2026-10-01 to 2026-10-14.</p>
+    <p>UI names follow the console's English locale (<code>console/src/i18n/en.json</code>, <code>console/src/lib/research/english.ts</code>).</p>
+  </footer>
+
+</div>
+</body>
+</html>
