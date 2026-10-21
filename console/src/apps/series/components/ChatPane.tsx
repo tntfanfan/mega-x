@@ -6,6 +6,7 @@ import type { Live, Pending, Stream } from "../useChat";
 import type { ConnectionState } from "../socket";
 import { dragRef, isRefDrag, mediaPath, readDrop, useRefDragging } from "../drag";
 import { itemRef, itemState, refLabel } from "../stages";
+import { openAskBubble } from "../askTarget";
 import { AskCard } from "./AskCard";
 import { KindIcon, Popover, StatusDot } from "./bits";
 import { MediaGrid } from "./MediaGrid";
@@ -107,8 +108,7 @@ export function ChatPane(props: {
   const dragging = useRefDragging();
   const [over, setOver] = useState(false);
   const items = bubbles(messages, live, pending);
-  const lastAssistant = [...items].reverse().find(b => b.role === "assistant" && !b.live);
-  const lastIsAssistant = items.length > 0 && items[items.length - 1].role === "assistant";
+  const question = openAskBubble(items);
   const notice = connText(conn);
   const connected = conn.kind === "open";
   const answers = useMemo(() => {
@@ -116,7 +116,7 @@ export function ChatPane(props: {
     for (const m of messages) if (m.role === "user" && m.answer_to) out[m.answer_to] = m.text;
     return out;
   }, [messages]);
-  const waitingAsk = Boolean(lastAssistant?.asks?.some(a => a.id && !answers[a.id])) && lastIsAssistant;
+  const waitingAsk = Boolean(question?.asks?.some(a => a.id && !answers[a.id]));
 
   // Stick to the bottom while the reply streams, unless the user scrolled up to read.
   useEffect(() => {
@@ -208,7 +208,7 @@ export function ChatPane(props: {
                   refOf={(item, n) => ({ ref: mediaPath(item.url), label: `${b.label || "回复"}里的第 ${n + 1} 张`, project_id: status?.project_id })} />
                 {(b.asks || []).map((ask, index) => (
                   <AskCard key={ask.id || index} ask={ask} onAnswer={onAnswer} answer={ask.id ? answers[ask.id] : undefined}
-                    answerable={Boolean(ask.id) && !busy && connected && (Boolean(b.live) || (b === lastAssistant && lastIsAssistant))} />
+                    answerable={Boolean(ask.id) && !busy && connected && (Boolean(b.live) || b === question)} />
                 ))}
               </div>
             );
