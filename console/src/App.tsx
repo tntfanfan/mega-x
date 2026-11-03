@@ -46,6 +46,7 @@ import SettingsView from "./pages/solo/line/SettingsView";
 import DevLanding from "./pages/dev/Landing";
 import DevHome from "./pages/dev/Home";
 import DevStudio from "./pages/dev/Studio";
+import AdminAnnouncements from "./pages/admin/Announcements";
 import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
 import AdminTemplateStudio from "./pages/admin/TemplateStudio";
@@ -213,6 +214,7 @@ export default function App() {
 
         <Route path="admin" element={<AdminOutlet />}>
           <Route index element={<AdminLanding />} />
+          <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="review-queue" element={<AdminQueue />} />
           <Route path="templates" element={<Navigate to="/dev/home" replace />} />
           <Route path="templates/:deptId/studio" element={<RedirectOfficialStudio />} />

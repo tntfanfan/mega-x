@@ -17,7 +17,7 @@ type GitSync = {
 type LagResponse = { items?: unknown[]; count?: number };
 
 export default function AdminLanding() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [sync, setSync] = useState<GitSync | null>(null);
   const [lagCount, setLagCount] = useState<number | null>(null);
 
@@ -62,6 +62,7 @@ export default function AdminLanding() {
         </h1>
         <p className="text-body max-w-2xl">{t("admin.landing.body")}</p>
         <div className="pt-4 flex flex-wrap gap-3">
+          <Link to="/admin/announcements" className="rounded-md border border-border-solid px-5 py-2 text-sm text-heading hover:text-primary">{i18n.language.startsWith("zh") ? "公告采集与分析中心" : "Announcement collection and analysis"}</Link>
           <Link
             to="/admin/review-queue"
             className="rounded-md bg-primary text-bg px-5 py-2 text-sm font-medium hover:bg-accent transition"
