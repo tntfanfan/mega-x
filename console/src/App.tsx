@@ -6,6 +6,7 @@ import { useAuth } from "./lib/auth";
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import RequireAuth from "./components/RequireAuth";
 import RequireAdmin from "./components/RequireAdmin";
+import WalletBadge from "./components/WalletBadge";
 
 import LandingChoose from "./pages/Landing";
 import LoginPage from "./pages/Login";
@@ -68,6 +69,7 @@ function UserMenu() {
       <span className="text-body max-w-[10rem] truncate" title={me.user.email}>
         {label}
       </span>
+      <WalletBadge />
       <button
         type="button"
         onClick={() => void logout()}
