@@ -50,3 +50,7 @@ export function mediaPath(url: string): string {
   if (at < 0) return url;
   return new URLSearchParams(url.slice(at + 1)).get("path") || url;
 }
+
+export function isFileDrag(event: React.DragEvent | DragEvent): boolean {
+  return Boolean(event.dataTransfer && Array.from(event.dataTransfer.types).includes("Files"));
+}

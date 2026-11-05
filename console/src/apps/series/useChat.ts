@@ -205,12 +205,12 @@ export function useSeriesChat(api: SeriesApi, socketPath: string, sessionId: str
 
   const busy = Boolean(live && !live.done) || pending.length > 0;
 
-  const send = useCallback((text: string, refs: ChatRef[] = [], resendOf?: string): boolean => {
+  const send = useCallback((text: string, refs: ChatRef[] = [], resendOf?: string, generationRequests?: string[]): boolean => {
     const socket = socketRef.current;
     const body = text.trim();
     if (!socket || (!body && !resendOf)) return false;
     const clientMessageId = messageId();
-    if (!socket.prompt({ text: body, refs, resend_of: resendOf, client_message_id: clientMessageId })) {
+    if (!socket.prompt({ text: body, refs, generation_requests: generationRequests, resend_of: resendOf, client_message_id: clientMessageId })) {
       setError("还没连上，稍等再发");
       return false;
     }

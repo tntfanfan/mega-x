@@ -5,13 +5,14 @@
 
 import { logicalOf, versionOf, type ProjectStatus, type StatusItem } from "./api";
 
-export type StageId = "setting" | "story" | "assets" | "boards" | "clips" | "cut" | "review";
+export type StageId = "setting" | "story" | "assets" | "boards" | "clips" | "cut" | "review" | "references";
 /** 工作区顶上的页签：总览 + 各环节。 */
 export type TabId = "overview" | StageId;
 export type Stage = { id: StageId; label: string; kinds: string[]; empty: string; suggest: string };
 
 export const STAGES: Stage[] = [
-  { id: "setting", label: "设定", kinds: ["bible", "outline", "arc", "reference"], empty: "还没有世界观和大纲。", suggest: "先帮我把这部剧的 bible 和总纲定下来。" },
+  { id: "references", label: "参考素材", kinds: ["reference"], empty: "上传图片、视频、文字或 ZIP，保存在当前项目中。", suggest: "整理项目参考素材。" },
+  { id: "setting", label: "设定", kinds: ["bible", "outline", "arc"], empty: "还没有世界观和大纲。", suggest: "先帮我把这部剧的 bible 和总纲定下来。" },
   { id: "story", label: "剧本", kinds: ["novel", "script"], empty: "还没有剧本。", suggest: "写第 1 集剧本。" },
   { id: "assets", label: "资产", kinds: ["profile", "abilities", "concept"], empty: "还没有人物、地点、道具。", suggest: "把主要人物的设定整理出来，再给主角出概念图。" },
   { id: "boards", label: "分镜", kinds: ["storyboard", "shot-list"], empty: "还没有分镜。", suggest: "给第 1 集拆镜头、出分镜。" },
@@ -34,7 +35,7 @@ const ASSET: Record<string, string> = { character: "人物", location: "地点",
 export function sectionOf(item: StatusItem): string {
   const scope = item.scope || {};
   if (typeof scope.episode === "number") return `第 ${scope.episode} 集`;
-  if (typeof scope.asset_kind === "string") return ASSET[scope.asset_kind] || scope.asset_kind;
+  if (typeof scope.asset_kind === "string") return `${ASSET[scope.asset_kind] || scope.asset_kind} · ${scope.slug || ""}`;
   if (item.kind === "arc") return "分段大纲";
   if (item.kind === "reference") return "参考";
   return "";
@@ -45,7 +46,7 @@ export function shortLabel(item: StatusItem): string {
   const scope = item.scope || {};
   const name = KIND_LABEL[item.kind] || item.kind;
   if (typeof scope.shot === "number") return `镜头 ${scope.shot}`;
-  if (typeof scope.slug === "string") return item.kind === "concept" ? `${scope.slug} · ${scope.variant ?? ""}` : `${scope.slug} · ${name}`;
+  if (typeof scope.slug === "string") return item.kind === "concept" ? `${scope.variant ?? "base"} · ${LAYOUT_LABEL[String(item.metadata?.layout || scope.concept_key || "")] || scope.concept_key || "原有设定图"}` : `${scope.slug} · ${name}`;
   if (typeof scope.episode === "number") return name;
   return item.label;
 }
@@ -117,3 +118,5 @@ export function timeLabel(at?: string | null, now = Date.now()): string {
   if (t.getFullYear() === today.getFullYear()) return `${pad(t.getMonth() + 1)}-${pad(t.getDate())} ${hm}`;
   return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
 }
+
+export const LAYOUT_LABEL: Record<string, string> = { "three-view": "三视图", "four-view": "四视图", "face-closeup": "脸部特写", "half-body": "半身", "full-body": "全身", expressions: "表情组", main: "主视图", panorama: "全景", turnaround: "四向环视", detail: "局部细节", single: "单视图", custom: "自定义" };

@@ -1,3 +1,4 @@
+import { refKey } from "./api";
 /**
  * 网剧部门应用：对话 │ 产出物工作区（按环节分栏）。
  *
@@ -91,6 +92,8 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   const [filePath, setFilePath] = useState("");
   const wide = useWide();
   const dirty = useRef(false);
+  const activeContext = useRef("");
+  activeContext.current = `${appBase}:${sid}`;
   const body = useRef<HTMLDivElement>(null);
   const selected = stage === "overview" ? "" : picked[stage] || "";
 
@@ -196,11 +199,24 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
   const chat = useSeriesChat(api, `${appBase}/chat`, sid, onPageFrame);
   const connected = chat.conn.kind === "open";
 
+  const createReferenceProject = async (title: string) => {
+    if (chat.busy) throw new Error("正在回复，等这一轮结束再创建项目");
+    const context = `${appBase}:${sid}`;
+    const created = await api.prepareProject(sid, title);
+    if (activeContext.current !== context) return;
+    // Stay in the library when this is the first project, ready to choose files.
+    landed.current = created.project_id;
+    setStage("references");
+    setProjectId(created.project_id);
+    void loadProjects();
+    void loadSessions().catch(() => undefined);
+  };
+
   // Session list titles / busy flags follow the chat.
   useEffect(() => { if (sid) void loadSessions().catch(() => undefined); }, [sid, chat.busy, loadSessions]);
 
   const addRef = useCallback((ref: ChatRef) => {
-    setDraftState(d => (d.refs.some(r => r.ref === ref.ref) || d.refs.length >= REF_LIMIT ? d : { ...d, refs: [...d.refs, ref] }));
+    setDraftState(d => (d.refs.some(r => refKey(r) === refKey(ref)) || d.refs.length >= REF_LIMIT ? d : { ...d, refs: [...d.refs, ref] }));
     setFocusTick(t => t + 1);
     if (!wide) setSheet(false);
   }, [wide]);
@@ -209,7 +225,7 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
     const block = text.split("\n").map(l => `> ${l}`).join("\n");
     setDraftState(d => ({
       text: `${d.text.trim() ? `${d.text.trimEnd()}\n\n` : ""}${block}\n\n`,
-      refs: d.refs.some(r => r.ref === ref.ref) || d.refs.length >= REF_LIMIT ? d.refs : [...d.refs, ref],
+      refs: d.refs.some(r => refKey(r) === refKey(ref)) || d.refs.length >= REF_LIMIT ? d.refs : [...d.refs, ref],
     }));
     setFocusTick(t => t + 1);
     if (!wide) setSheet(false);
@@ -329,8 +345,8 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
 
   const project = projects.find(p => p.project_id === projectId);
   const workspace = (
-    <Workspace api={api} status={status} view={view} onView={changeView} filePath={filePath} onFilePath={setFilePath}
-      onStructured={ref => openRef(ref, "structured")}
+    <Workspace key={projectId} sessionId={sid} onGenerate={(text, ids) => chat.send(text, [], undefined, ids)} api={api} status={status} view={view} onView={changeView} filePath={filePath} onFilePath={setFilePath}
+      onStructured={ref => openRef(ref, "structured")} onCreateProject={createReferenceProject}
       stage={stage} onStage={changeStage} selected={selected} focusRef={focusRef}
       onShow={item => { if (leaveEdit()) { show(item.logical, item.kind); setView("structured"); } }}
       onOpenFile={path => { if (!leaveEdit()) return; setFilePath(path); setView("files"); }}
@@ -395,7 +411,7 @@ export default function SeriesApp({ dept, appBase }: DeptAppProps) {
       )}
       <div ref={body} className="relative flex min-h-0 flex-1">
         <div className="flex min-h-0 min-w-0 flex-col" style={showSide ? { width: layout.chat, flexShrink: 0 } : { flex: 1 }}>
-          <ChatPane title={title} messages={chat.messages} live={chat.live} pending={chat.pending} conn={chat.conn}
+          <ChatPane key={`${sid}:${projectId}`} title={title} messages={chat.messages} live={chat.live} pending={chat.pending} conn={chat.conn}
             error={chat.error} busy={chat.busy} draft={draft} setDraft={setDraft} focusTick={focusTick}
             status={status} sid={sid} mediaSrc={api.mediaSrc} onOpenRef={openRef}
             onSend={chat.send} onAnswer={chat.answer} onCancel={chat.cancel} onRetry={chat.retry} onClearError={chat.clearError} />

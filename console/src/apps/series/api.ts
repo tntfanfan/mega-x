@@ -6,34 +6,48 @@ import { ApiError, api } from "../../lib/api";
 
 const API_BASE = ((import.meta.env.VITE_API_BASE as string | undefined) ?? "").replace(/\/$/, "");
 
-export type MediaItem = { url: string; mime?: string };
+export type MediaItem = { url: string; mime?: string; file?: string };
 export type AskOption = { label: string; description?: string };
 export type AskQuestion = { header?: string; question: string; options: AskOption[]; multi?: boolean };
 /** `mcp__ui__ask` 的提问。旧历史里是单题 `{question, options: string[], multi}`，用 askQuestions 读。 */
 export type Ask = { id?: string; questions?: AskQuestion[]; question?: string; options?: (string | AskOption)[]; multi?: boolean };
-/** 一题的回答：选中的选项 + 「其他」里写的话。 */
-export type AskAnswer = { choices: string[]; text?: string };
+/** 一题的回答：选中的选项 + 「其他」里写的话；refresh 请求更换这一题的候选。 */
+export type AskAnswer = { choices: string[]; text?: string; action?: "refresh" };
 
 /** 页面给每题自动加的选项。 */
-export const ASK_DECIDE = "你定";
+export const ASK_REFRESH = "换一批";
+export const ASK_PENDING = "待选择";
+// Retired choices and built-in actions must not reappear in model output or old cards.
+const ASK_RESERVED = new Set(["你定", "你来定", ASK_REFRESH, "其他", "其它", "其他（自己写）"]);
 
 export function askQuestions(ask: Ask): AskQuestion[] {
   const raw = Array.isArray(ask.questions) ? ask.questions : ask.question ? [{ question: ask.question, options: ask.options || [], multi: ask.multi }] : [];
   return raw.map(q => ({
     header: q.header,
     question: String(q.question || ""),
-    options: (q.options || []).map(o => (typeof o === "string" ? { label: o } : o)).filter(o => o.label && o.label !== ASK_DECIDE),
+    options: (q.options || []).map(o => (typeof o === "string" ? { label: o } : o)).filter(o => o.label && !ASK_RESERVED.has(o.label.trim())),
     multi: Boolean(q.multi),
   }));
 }
 
 /** 回答显示成的消息，和服务端 live.answer_text 一致。 */
 export function answerText(questions: AskQuestion[], answers: AskAnswer[]): string {
-  const lines = answers.map(a => [...new Set([...a.choices, ...(a.text?.trim() ? [a.text.trim()] : [])])].join("、"));
+  if (!questions.length || questions.length !== answers.length) return "";
+  const refreshing = answers.some(a => a.action === "refresh");
+  const lines = answers.map(a => a.action === "refresh" ? ASK_REFRESH : [...new Set([...a.choices, ...(a.text?.trim() ? [a.text.trim()] : [])])].join("、"));
+  if (!refreshing && lines.some(line => !line)) return "";
   if (questions.length === 1) return lines[0] || "";
-  return questions.map((q, i) => `${q.header || q.question}：${lines[i] || ""}`).join("\n");
+  return questions.map((q, i) => `${q.header || q.question}：${lines[i] || ASK_PENDING}`).join("\n");
 }
-export type ChatRef = { ref: string; label?: string; project_id?: string };
+export type AssetBinding = { asset_kind: string; slug: string; variant?: string };
+export type ChatRef = { ref: string; label?: string; project_id?: string; file?: string; purpose?: string; asset_binding?: AssetBinding | null };
+export const refKey = (r: ChatRef) => JSON.stringify([r.project_id || "", r.ref, r.file || ""]);
+export type ReferenceFile = ChatRef & MediaItem & { file: string; kind: string; status: string; version: number; source_type: string; available: boolean; created_at?: string; scope: Record<string, unknown> };
+export type Capabilities = { uploads: { extensions: string[]; maxBytes: Record<string, number>; batchMax: number; batchMaxBytes: number }; image: { aspectRatios: string[]; maxImages: number }; video: { minSeconds: number; maxSeconds: number; aspectRatios: string[]; resolutions: string[]; batchMax: number; modes: Record<string, { maxImages: number; maxVideos: number; maxAudios: number }> } };
+export type VideoSelection = { storyboard: string; preset: string; use_storyboard_text: boolean; references: ChatRef[]; extra_text: string; parameters: { durationSeconds: number; aspectRatio: string; resolution: string; audioMode?: string }; allow_draft?: string; confirmation?: string; session_id?: string };
+export type VideoManifest = { request_id?: string; storyboard: string; mode: string; text: string; references: (ChatRef & { order: number; input_type: string; url?: string; mime?: string })[]; payload: { prompt: string; images: string[]; videos: string[]; audios: string[]; driveAudio?: string; durationSeconds: number; aspectRatio: string } };
+export type UploadResult = ChatRef & MediaItem & { ok: boolean; file: string; material_id: string; error?: string };
+
 
 export type Message = {
   id: string;
@@ -76,7 +90,11 @@ export type StatusItem = {
   group: string;
   /** `media?path=…` of the shown version's first image (canonical, else latest) */
   thumb?: string | null;
-  media_kind?: "image" | "video" | null;
+  media_kind?: "image" | "video" | "audio" | null;
+  metadata?: Record<string, unknown>;
+  summary?: string;
+  availability?: string;
+  file?: string | null;
 };
 export type Job = { job_id: string; kind: string; target_ref?: string | null; state: string; at?: string };
 export type ProjectStatus = {
@@ -87,6 +105,8 @@ export type ProjectStatus = {
   overview?: unknown;
 };
 export type Version = {
+  generation?: VideoManifest;
+  generation_error?: string;
   ref: string;
   status: Status;
   files: string[];
@@ -101,6 +121,7 @@ export type Version = {
   editable?: boolean;
   body?: string;
   fields?: string;
+  metadata?: Record<string, unknown>;
 };
 export type ArtifactDetail = { project_id: string; logical: string; label: string; versions: Version[] };
 
@@ -154,11 +175,38 @@ async function refusable<T>(call: Promise<T>): Promise<T> {
 export function seriesApi(appBase: string) {
   const q = encodeURIComponent;
   return {
+    capabilities: () => api.get<Capabilities>(`${appBase}/capabilities`),
+    references: (pid: string) => api.get<{ items: ReferenceFile[] }>(`${appBase}/projects/${q(pid)}/references`).then(r => r.items),
+    previewVideo: (pid: string, selection: VideoSelection) => refusable(api.post<VideoManifest>(`${appBase}/projects/${q(pid)}/video-inputs/preview`, selection)),
+    saveVideo: (pid: string, selection: VideoSelection) => refusable(api.post<VideoManifest>(`${appBase}/projects/${q(pid)}/video-inputs`, selection)),
+    upload: (pid: string, file: File, metadata: Record<string, string>, progress: (n: number) => void, signal: AbortSignal) => new Promise<UploadResult>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const query = new URLSearchParams({ ...metadata, filename: file.name });
+      xhr.open("POST", `${API_BASE}${appBase}/projects/${q(pid)}/references/upload?${query}`);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader("Content-Type", "application/octet-stream");
+      xhr.upload.onprogress = e => { if (e.lengthComputable) progress(Math.round(e.loaded / e.total * 100)); };
+      const abort = () => xhr.abort();
+      signal.addEventListener("abort", abort, { once: true });
+      xhr.onloadend = () => signal.removeEventListener("abort", abort);
+      xhr.onerror = () => reject(new Error("上传连接中断，请重试"));
+      xhr.onabort = () => reject(new DOMException("已取消上传", "AbortError"));
+      xhr.onload = () => {
+        try {
+          const body = JSON.parse(xhr.responseText);
+          if (xhr.status < 200 || xhr.status >= 300 || !body.results?.[0]?.ok) reject(new Error(body.detail || body.results?.[0]?.error || "上传失败"));
+          else resolve(body.results[0]);
+        } catch { reject(new Error("上传响应异常，请重试")); }
+      };
+      if (signal.aborted) { reject(new DOMException("已取消上传", "AbortError")); return; }
+      xhr.send(file);
+    }),
     sessions: () => api.get<{ sessions: Session[] }>(`${appBase}/sessions`).then(r => r.sessions),
     createSession: (body: { title?: string; project_id?: string } = {}) => api.post<Session>(`${appBase}/sessions`, body),
     history: (sid: string) => api.get<History>(`${appBase}/sessions/${q(sid)}/history`),
     setProject: (sid: string, projectId: string) =>
       api.put<{ project_id: string; previous?: string | null }>(`${appBase}/sessions/${q(sid)}/project`, { project_id: projectId }),
+    prepareProject: (sid: string, title: string) => api.post<ProjectSummary>(`${appBase}/sessions/${q(sid)}/project`, { title }),
     projects: () => api.get<{ projects: ProjectSummary[] }>(`${appBase}/projects`).then(r => r.projects),
     status: (pid: string) => api.get<ProjectStatus>(`${appBase}/projects/${q(pid)}/status`),
     artifact: (pid: string, logical: string) =>

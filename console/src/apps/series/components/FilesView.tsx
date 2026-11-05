@@ -201,7 +201,7 @@ export function FilesView({ api, status, refreshKey, path, onPath, reveal, wide,
 
   const chatRefOf = useCallback((filePath: string, owner?: FileOwner): ChatRef => {
     if (owner && owner.role !== "media") return { ref: owner.ref, label: refLabel(status, owner.ref), project_id: pid };
-    return { ref: filePath, label: owner ? `${refLabel(status, owner.ref)} · ${baseName(filePath)}` : baseName(filePath), project_id: pid };
+    return { ref: owner?.ref || filePath, file: owner?.role === "media" ? filePath : undefined, label: owner ? `${refLabel(status, owner.ref)} · ${baseName(filePath)}` : baseName(filePath), project_id: pid };
   }, [status, pid]);
 
   if (treeError && !tree) return <p className="p-6 text-sm text-fusion">{treeError}</p>;

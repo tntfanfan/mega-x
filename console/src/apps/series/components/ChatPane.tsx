@@ -1,17 +1,18 @@
+import { refKey } from "../api";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, AtSign, LoaderCircle, Paperclip, RotateCcw, Search, Sparkles, Square, X } from "lucide-react";
 import { Markdown } from "../../../components/ui/Markdown";
 import type { Ask, AskAnswer, ChatRef, MediaItem, Message, ProjectStatus } from "../api";
 import type { Live, Pending, Stream } from "../useChat";
 import type { ConnectionState } from "../socket";
-import { dragRef, isRefDrag, mediaPath, readDrop, useRefDragging } from "../drag";
+import { dragRef, isFileDrag, isRefDrag, mediaPath, readDrop, useRefDragging } from "../drag";
 import { itemRef, itemState, refLabel } from "../stages";
 import { openAskBubble } from "../askTarget";
 import { AskCard } from "./AskCard";
 import { KindIcon, Popover, StatusDot } from "./bits";
 import { MediaGrid } from "./MediaGrid";
 
-export const REF_LIMIT = 8;
+export const REF_LIMIT = 20;
 export type Draft = { text: string; refs: ChatRef[] };
 
 type Bubble = {
@@ -143,7 +144,7 @@ export function ChatPane(props: {
     el.setSelectionRange(el.value.length, el.value.length);
   }, [props.focusTick]);
 
-  const addRef = (ref: ChatRef) => setDraft(d => (d.refs.some(r => r.ref === ref.ref) || d.refs.length >= REF_LIMIT ? d : { ...d, refs: [...d.refs, ref] }));
+  const addRef = (ref: ChatRef) => setDraft(d => (d.refs.some(r => refKey(r) === refKey(ref)) || d.refs.length >= REF_LIMIT ? d : { ...d, refs: [...d.refs, ref] }));
   const submit = () => {
     if (busy || !connected || !draft.text.trim()) return;
     if (onSend(draft.text, draft.refs)) { setDraft(() => ({ text: "", refs: [] })); setAtBottom(true); }
@@ -151,6 +152,7 @@ export function ChatPane(props: {
   const drop = (event: React.DragEvent) => {
     event.preventDefault();
     setOver(false);
+    if (isFileDrag(event)) return;
     const ref = readDrop(event);
     if (ref) { addRef(ref); input.current?.focus(); }
   };
@@ -161,7 +163,7 @@ export function ChatPane(props: {
   };
 
   return (
-    <section aria-label="对话" onDragOver={e => { if (isRefDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } }} onDrop={drop}
+    <section aria-label="对话" onDragOver={e => { if (isRefDrag(e) || isFileDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = isFileDrag(e) ? "none" : "copy"; } }} onDrop={drop}
       className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       {notice && (
         <div role="status" className={`flex items-center gap-3 border-b border-border-solid px-4 py-1.5 text-xs ${conn.kind === "fatal" ? "text-fusion" : "text-muted"}`}>
@@ -181,7 +183,7 @@ export function ChatPane(props: {
               return (
                 <div key={b.id} className="group flex flex-col items-end gap-1 animate-in fade-in slide-in-from-bottom-1">
                   <div className={`max-w-[85%] rounded-2xl rounded-br-md bg-primary/[0.13] px-3.5 py-2 text-sm text-heading ${b.pending ? "opacity-60" : ""}`}>
-                    {b.refs?.length ? <div className="mb-1.5 flex flex-wrap gap-1">{b.refs.map(r => <RefChip key={r.ref} chatRef={r} onOpen={onOpenRef} />)}</div> : null}
+                    {b.refs?.length ? <div className="mb-1.5 flex flex-wrap gap-1">{b.refs.map(r => <RefChip key={refKey(r)} chatRef={r} onOpen={onOpenRef} />)}</div> : null}
                     <div className="whitespace-pre-wrap break-words leading-relaxed">{b.text}</div>
                   </div>
                   {b.resendable && (
@@ -204,7 +206,7 @@ export function ChatPane(props: {
                   </p>
                 )}
                 {b.error && <p className="mt-1 text-xs text-fusion">{b.error}</p>}
-                <MediaGrid media={b.media || []} src={mediaSrc}
+                <MediaGrid media={b.media || []} src={mediaSrc} onRef={addRef}
                   refOf={(item, n) => ({ ref: mediaPath(item.url), label: `${b.label || "回复"}里的第 ${n + 1} 张`, project_id: status?.project_id })} />
                 {(b.asks || []).map((ask, index) => (
                   <AskCard key={ask.id || index} ask={ask} onAnswer={onAnswer} answer={ask.id ? answers[ask.id] : undefined}
@@ -235,7 +237,7 @@ export function ChatPane(props: {
         <div className="rounded-2xl border border-border-solid bg-surface/80 p-2 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.6)] transition-colors focus-within:border-primary/50">
           {draft.refs.length > 0 && (
             <div className="mb-1 flex flex-wrap gap-1 px-1 pt-0.5">
-              {draft.refs.map(r => <RefChip key={r.ref} chatRef={r} onOpen={onOpenRef} onRemove={() => setDraft(d => ({ ...d, refs: d.refs.filter(x => x.ref !== r.ref) }))} />)}
+              {draft.refs.map(r => <RefChip key={refKey(r)} chatRef={r} onOpen={onOpenRef} onRemove={() => setDraft(d => ({ ...d, refs: d.refs.filter(x => refKey(x) !== refKey(r)) }))} />)}
             </div>
           )}
           <textarea ref={input} aria-label="消息" rows={1} value={draft.text} onChange={e => { const text = e.target.value; setDraft(d => ({ ...d, text })); }}
@@ -309,7 +311,7 @@ function RefPicker({ status, picked, onPick }: { status: ProjectStatus | null; p
           <div className="flex items-center gap-2 border-b border-border-solid px-3 py-2">
             <Search size={13} aria-hidden className="text-muted" />
             <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="找产出物…" aria-label="找产出物"
-              onKeyDown={e => { if (e.key === "Enter" && shown[0]) { e.preventDefault(); onPick({ ref: itemRef(shown[0]), label: shown[0].label, project_id: status.project_id }); close(); } }}
+              onKeyDown={e => { if (e.key === "Enter" && shown[0]) { e.preventDefault(); onPick({ ref: itemRef(shown[0]), file: shown[0].file || undefined, label: shown[0].label, project_id: status.project_id }); close(); } }}
               className="min-w-0 flex-1 bg-transparent text-sm text-heading outline-none placeholder:text-dim" />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto py-1">
@@ -319,7 +321,7 @@ function RefPicker({ status, picked, onPick }: { status: ProjectStatus | null; p
               const already = picked.some(p => p.ref === ref);
               return (
                 <button key={item.logical} type="button" role="menuitem" disabled={already}
-                  onClick={() => { onPick({ ref, label: item.label, project_id: status.project_id }); close(); }}
+                  onClick={() => { onPick({ ref, file: item.file || undefined, label: item.label, project_id: status.project_id }); close(); }}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-body transition-colors hover:bg-surface-3 disabled:opacity-40">
                   <KindIcon kind={item.kind} size={13} className="shrink-0 text-muted" />
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>

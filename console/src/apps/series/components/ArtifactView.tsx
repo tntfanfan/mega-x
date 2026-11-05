@@ -1,3 +1,5 @@
+import { ReferenceDetails } from "./ReferenceDetails";
+import { GenerationRecord } from "./GenerationRecord";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Ban, Check, GitCompare, Images, LoaderCircle, MessageSquarePlus, Pencil, Quote, Undo2, X } from "lucide-react";
 import { apiErrorMessage } from "../../../lib/api";
@@ -44,7 +46,7 @@ function sameVersion(ref: string, pathOrRef: string): boolean {
  * 一项产出物：版本条（旧 → 新，←/→ 切换）、定稿 / 弃用、编辑文字、和改自的版本对比、
  * 读正文（选中一段可以「引用这段」）、看图选图；依赖 / 下游可以点过去。
  */
-export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, status, busy, connected, onSend, onRef, onQuote, onOpen, onChanged, onDirty }: {
+export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, status, busy, connected, onSend, onRef, onQuote, onOpen, onChanged, onDirty, onVersion }: {
   api: SeriesApi;
   projectId: string;
   logical: string;
@@ -59,6 +61,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
   onOpen: (ref: string) => void;
   onChanged: () => void;
   onDirty: (dirty: boolean) => void;
+  onVersion?: (version: Version) => void;
 }) {
   const [detail, setDetail] = useState<ArtifactDetail | null>(null);
   const [error, setError] = useState("");
@@ -91,6 +94,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
   const versions = useMemo(() => (detail && detail.logical === logical ? detail.versions : []), [detail, logical]);
   const current: Version | undefined = versions.find(v => v.ref === picked)
     || [...versions].reverse().find(v => v.status !== "deprecated") || versions[versions.length - 1];
+  useEffect(() => { if (current) onVersion?.(current); }, [current?.ref, current?.status, onVersion]);
   const live = versions.find(v => v.status === "canonical");
   // References and reviews are never final (series_mcp.kinds.NO_CANONICAL).
   const noFinal = NO_FINAL.has(status?.items.find(i => i.logical === logical)?.kind || "");
@@ -237,7 +241,7 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
         </div>
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-          <StatusPill tone={tone} />
+          <StatusPill tone={tone}>{noFinal && status?.items.find(i => i.logical === logical)?.kind === "reference" ? (current.status === "deprecated" ? "弃用" : "可用") : undefined}</StatusPill>
           {author && <span>{author}</span>}
           {current.created_at && <span>· {timeLabel(current.created_at)}</span>}
           {revisionOf && <span>· 改自 <button type="button" onClick={() => pick(revisionOf.ref)} className="text-body hover:text-primary hover:underline">{shortVersion(revisionOf.ref)}</button></span>}
@@ -345,9 +349,12 @@ export function ArtifactView({ api, projectId, logical, focusRef, refreshKey, st
           <DiffView versions={versions} current={current} base={baseVersion} onBase={setBase} />
         ) : (
           <>
+            {current.metadata?.source_type === "upload" && <ReferenceDetails key={current.ref} api={api} projectId={projectId} version={current} status={status} onChanged={onChanged} />}
+            {current.generation && <GenerationRecord value={current.generation} api={api} status={status} onRef={onRef} />}
+            {current.generation_error && <p role="alert" className="mx-auto mb-4 max-w-3xl text-sm text-fusion">生成输入记录暂时不可读：{current.generation_error}</p>}
             {yaml && <FieldsCard yaml={yaml} status={status} onOpen={onOpen} className="mx-auto mb-4 max-w-3xl" />}
             <MediaGrid media={current.media} src={api.mediaSrc} large
-              refOf={(item, i) => ({ ref: mediaPath(item.url), label: `${label} ${shortVersion(current.ref)} 第 ${i + 1} 张`, project_id: projectId })}
+              onRef={onRef} refOf={(item, i) => ({ ref: current.ref, file: item.file || mediaPath(item.url), label: `${label} ${shortVersion(current.ref)} 文件 ${i + 1}`, project_id: projectId })}
               onPick={images.length > 1 && connected && !busy ? (_item, index) => onSend(`${label} ${shortVersion(current.ref)} 选第 ${index + 1} 张。`, [chatRef(current)]) : undefined} />
             {body && (
               <article className={`mx-auto max-w-3xl ${current.media.length ? "mt-4" : ""} ${current.status === "deprecated" ? "opacity-60" : ""}`}>

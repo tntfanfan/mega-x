@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { Check, CornerDownLeft, PenLine } from "lucide-react";
-import { ASK_DECIDE, askQuestions } from "../api";
+import { Check, CornerDownLeft, PenLine, RefreshCw } from "lucide-react";
+import { ASK_PENDING, ASK_REFRESH, askQuestions } from "../api";
 import type { Ask, AskAnswer, AskQuestion } from "../api";
 import { isTyping } from "./bits";
 
 const EMPTY: AskAnswer = { choices: [] };
 
 function answered(a: AskAnswer | undefined): boolean {
-  return Boolean(a && (a.choices.length || a.text?.trim()));
+  return Boolean(a && (a.action === "refresh" || a.choices.length || a.text?.trim()));
 }
 
 /** The answer message (answerText) back into per-question choices, to show what was picked. */
@@ -23,9 +23,9 @@ function parseAnswer(questions: AskQuestion[], text: string): string[][] {
 }
 
 /**
- * `mcp__ui__ask` 的问题卡片。每题是选项 +「你定」+「其他（自己写）」。
- * 只有一题且单选时，点一下就发；否则每题选完后点「提交」，一条消息发回。
- * 正在等回答的卡片可以用数字键 1–9 选、Enter 提交；答过的卡片显示当时选了什么。
+ * `mcp__ui__ask` 的问题卡片。每题是选项 +「换一批」+「自己写」。
+ * 所有选择（包括换批）都先暂存，点「确认」后统一提交。
+ * 正在等回答的卡片可以用数字键 1–9 选、Enter 确认；答过的卡片显示当时选了什么。
  */
 export function AskCard({ ask, answerable, answer, onAnswer }: {
   ask: Ask;
@@ -37,49 +37,58 @@ export function AskCard({ ask, answerable, answer, onAnswer }: {
   const questions = askQuestions(ask);
   const [answers, setAnswers] = useState<AskAnswer[]>(() => questions.map(() => EMPTY));
   const [other, setOther] = useState<boolean[]>(() => questions.map(() => false));
-  const instant = questions.length === 1 && !questions[0].multi;
   const done = questions.filter((_, i) => answered(answers[i])).length;
+  const refreshing = answers.some(a => a.action === "refresh");
   const chosen = answer !== undefined ? parseAnswer(questions, answer) : null;
   const active = answerable && !chosen;
+  const canSend = active && questions.length > 0 && (refreshing || done === questions.length);
 
   const update = (i: number, next: AskAnswer) => setAnswers(list => list.map((a, j) => (j === i ? next : a)));
-  const send = (next: AskAnswer[]) => {
-    if (next.every(answered)) onAnswer(ask, next);
+  const send = () => {
+    if (canSend) onAnswer(ask, answers);
+  };
+  const refresh = (i: number) => {
+    if (!active || !questions.length) return;
+    update(i, answers[i]?.action === "refresh" ? EMPTY : { choices: [], action: "refresh" });
+    setOther(list => list.map((o, j) => (j === i ? false : o)));
   };
 
   const pick = (i: number, q: AskQuestion, label: string) => {
     const current = answers[i] || EMPTY;
     let choices: string[];
-    if (label === ASK_DECIDE || !q.multi) {
+    if (!q.multi) {
       choices = current.choices.length === 1 && current.choices[0] === label ? [] : [label];
     } else {
-      const rest = current.choices.filter(c => c !== ASK_DECIDE);
-      choices = rest.includes(label) ? rest.filter(c => c !== label) : [...rest, label];
+      choices = current.choices.includes(label) ? current.choices.filter(c => c !== label) : [...current.choices, label];
     }
     // 单选时，点选项就放弃「其他」里写的话；多选可以两者都要。
-    const next = { choices, text: q.multi && label !== ASK_DECIDE ? current.text : undefined };
-    if (!q.multi || label === ASK_DECIDE) setOther(list => list.map((o, j) => (j === i ? false : o)));
-    if (instant) { if (choices.length) send([next]); return; }
+    const next = { choices, text: q.multi ? current.text : undefined };
+    if (!q.multi) setOther(list => list.map((o, j) => (j === i ? false : o)));
     update(i, next);
   };
 
   const write = (i: number, q: AskQuestion, text: string) => {
     const current = answers[i] || EMPTY;
-    update(i, { choices: q.multi ? current.choices.filter(c => c !== ASK_DECIDE) : [], text });
+    update(i, { choices: q.multi ? current.choices : [], text });
   };
 
-  // 1–9 picks in the first question still open (or the only one); Enter submits when every question has an answer.
+  const toggleOther = (i: number) => {
+    if (answers[i]?.action === "refresh") update(i, EMPTY);
+    setOther(list => list.map((o, j) => (j === i ? !o : o)));
+  };
+
+  // 1–9 picks in the first question still open; Enter confirms the collected answers and refresh requests.
   useEffect(() => {
-    if (!active) return;
+    if (!active || !questions.length) return;
     const key = (e: KeyboardEvent) => {
       if (isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Enter" && !instant && done === questions.length) { e.preventDefault(); send(answers); return; }
+      if (e.key === "Enter" && canSend) { e.preventDefault(); send(); return; }
       const n = Number(e.key);
       if (!Number.isInteger(n) || n < 1 || n > 9) return;
       const i = questions.length === 1 ? 0 : Math.max(0, answers.findIndex(a => !answered(a)));
       const q = questions[i];
-      const labels = [...q.options.map(o => o.label), ASK_DECIDE];
-      if (n <= labels.length) { e.preventDefault(); pick(i, q, labels[n - 1]); }
+      const labels = [...q.options.map(o => o.label), ASK_REFRESH];
+      if (n <= labels.length) { e.preventDefault(); if (labels[n - 1] === ASK_REFRESH) refresh(i); else pick(i, q, labels[n - 1]); }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
@@ -96,14 +105,14 @@ export function AskCard({ ask, answerable, answer, onAnswer }: {
             <span className="min-w-0 text-muted">{q.header || q.question}</span>
             <span className="flex min-w-0 flex-wrap gap-1">
               {(chosen[i] || []).length ? chosen[i].map(c => (
-                <span key={c} className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-1.5 py-px text-xs text-heading">
-                  <Check size={11} aria-hidden className="text-primary" />{c}
+                <span key={c} className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-px text-xs ${c === ASK_PENDING ? "border-border-solid text-muted" : "border-primary/40 bg-primary/10 text-heading"}`}>
+                  {c === ASK_REFRESH ? <RefreshCw size={11} aria-hidden className="text-primary" /> : c !== ASK_PENDING && <Check size={11} aria-hidden className="text-primary" />}{c}
                 </span>
               )) : <span className="text-xs text-dim">—</span>}
             </span>
           </div>
         ))}
-        <p className="flex items-center gap-1 pt-0.5 text-[11px] text-dim"><Check size={12} aria-hidden className="text-spark-mint" />已回答</p>
+        <p className="flex items-center gap-1 pt-0.5 text-[11px] text-dim">{chosen.some(parts => parts.includes(ASK_REFRESH)) ? <><RefreshCw size={12} aria-hidden className="text-primary" />已请求更换选项</> : <><Check size={12} aria-hidden className="text-spark-mint" />已回答</>}</p>
       </div>
     );
   }
@@ -141,13 +150,13 @@ export function AskCard({ ask, answerable, answer, onAnswer }: {
                   </span>
                 </button>
               ))}
-              <div className={block ? "flex gap-1.5 pt-0.5" : "contents"}>
-                <button type="button" aria-pressed={isOn(ASK_DECIDE)} title="用默认值，或由主创判断"
-                  onClick={() => pick(i, q, ASK_DECIDE)} className={chip(isOn(ASK_DECIDE), false)}>
-                  {badge(q.options.length + 1, isOn(ASK_DECIDE))}{ASK_DECIDE}
+              <div className={block ? "flex flex-wrap gap-1.5 pt-0.5" : "contents"}>
+                <button type="button" aria-pressed={a.action === "refresh"} title="选中后点「确认」更换这一题的候选，保留其他题已选的答案"
+                  onClick={() => refresh(i)} className={chip(a.action === "refresh", false)}>
+                  {badge(q.options.length + 1, a.action === "refresh")}<RefreshCw size={13} aria-hidden className="mt-0.5" />{ASK_REFRESH}
                 </button>
                 <button type="button" aria-pressed={writing}
-                  onClick={() => setOther(list => list.map((o, j) => (j === i ? !o : o)))}
+                  onClick={() => toggleOther(i)}
                   className={chip(writing || Boolean(a.text?.trim()), false)}>
                   <PenLine size={13} aria-hidden className="mt-0.5" />自己写…
                 </button>
@@ -160,30 +169,26 @@ export function AskCard({ ask, answerable, answer, onAnswer }: {
                   onKeyDown={e => {
                     if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                       e.preventDefault();
-                      if (instant) send([answers[i]]);
-                      else if (done === questions.length) send(answers);
+                      send();
                     }
                   }}
-                  placeholder="写下你的想法，Enter 确定"
+                  placeholder="写下你的想法，Enter 确认"
                   className="min-w-0 flex-1 rounded-md border border-border-solid bg-surface px-2.5 py-1.5 text-sm text-body outline-none focus:border-primary/60" />
-                {instant && <button type="button" disabled={!a.text?.trim()} onClick={() => send([a])}
-                  className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-bg disabled:opacity-40">发送</button>}
               </div>
             )}
           </fieldset>
         );
       })}
-      {!instant ? (
+      <div className="space-y-2">
+        {active && refreshing && <p className="text-[11px] text-muted">点「确认」后统一更换，其他题已选的答案会保留</p>}
         <div className="flex items-center justify-end gap-3">
-          <span className="text-[11px] tabular-nums text-muted">已答 {done}/{questions.length}</span>
-          <button type="button" disabled={!active || done < questions.length} onClick={() => send(answers)}
+          <span className="text-[11px] tabular-nums text-muted">已选 {done}/{questions.length}</span>
+          <button type="button" disabled={!canSend} onClick={send}
             className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-bg transition-colors hover:bg-accent disabled:opacity-40">
-            提交<CornerDownLeft size={12} aria-hidden />
+            确认<CornerDownLeft size={12} aria-hidden />
           </button>
         </div>
-      ) : active ? (
-        <p className="text-[11px] text-dim">按数字键直接选，也可以在下面的输入框里用自己的话回答</p>
-      ) : null}
+      </div>
     </div>
   );
 }

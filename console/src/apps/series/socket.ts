@@ -111,7 +111,7 @@ export class SeriesSocket {
     if (!this.ws) this.connect();
   }
 
-  prompt(body: { text: string; refs?: ChatRef[]; resend_of?: string; client_message_id: string }): boolean {
+  prompt(body: { text: string; refs?: ChatRef[]; generation_requests?: string[]; resend_of?: string; client_message_id: string }): boolean {
     return this.send({ op: "prompt", ...body });
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
-import { isVideo, type ChatRef, type MediaItem } from "../api";
+import { isImage, isVideo, type ChatRef, type MediaItem } from "../api";
 import { dragRef } from "../drag";
 import { isTyping } from "./bits";
 
@@ -8,7 +8,8 @@ import { isTyping } from "./bits";
  * Images / videos of a reply or a version. Click an image = look at it large (←/→ to flip, Esc to close);
  * each one can be dragged into the chat. `onPick` makes them selectable candidates.
  */
-export function MediaGrid({ media, src, large = false, pickedUrl, onPick, refOf }: {
+export function MediaGrid({ media, src, large = false, pickedUrl, onPick, refOf, onRef }: {
+  onRef?: (ref: ChatRef) => void;
   media: MediaItem[];
   src: (url: string) => string;
   large?: boolean;
@@ -32,6 +33,10 @@ export function MediaGrid({ media, src, large = false, pickedUrl, onPick, refOf 
               className={`group relative overflow-hidden rounded-lg border bg-surface ${picked ? "border-primary ring-1 ring-primary" : "border-border-solid"}`}>
               {isVideo(item)
                 ? <video src={url} controls playsInline preload="metadata" className="aspect-video w-full bg-black object-contain" />
+                : item.mime?.startsWith("audio/") ? <div className="p-3"><p className="mb-2 text-xs text-muted">音频素材</p><audio src={url} controls preload="metadata" className="w-full" /></div>
+                : item.mime === "application/pdf" ? <div className="p-3"><iframe src={url} title={`PDF 素材 ${index+1}`} className="h-60 w-full rounded" /><a href={url} target="_blank" rel="noreferrer" className="text-xs text-primary">打开或下载 PDF</a></div>
+                : item.mime === "application/zip" ? <div className="p-4"><p className="mb-2 text-sm">ZIP 素材包</p><a href={url} download className="text-xs text-primary">下载 ZIP</a></div>
+                : !isImage(item) ? <div className="p-4"><p className="mb-2 text-sm">文字 / 文档素材</p><a href={url} target="_blank" rel="noreferrer" className="text-xs text-primary">打开原文件</a></div>
                 : (
                   <button type="button" onClick={() => setOpen(index)} className="block w-full cursor-zoom-in" aria-label={`看大图 ${index + 1}`}>
                     <img src={url} alt={`候选 ${index + 1}`} loading="lazy" draggable={false}
@@ -39,9 +44,11 @@ export function MediaGrid({ media, src, large = false, pickedUrl, onPick, refOf 
                     <Maximize2 size={14} aria-hidden className="absolute end-2 top-2 rounded bg-black/50 p-0.5 text-white opacity-0 transition-opacity group-hover:opacity-100" />
                   </button>
                 )}
-              {(onPick || media.length > 1) && (
+              {(onPick || media.length > 1 || ref) && (
                 <figcaption className="flex items-center justify-between px-2 py-1 text-[11px] text-muted">
                   <span className="tabular-nums">#{index + 1}</span>
+                  <a href={url} download target="_blank" rel="noreferrer" className="text-primary">下载</a>
+                  {ref && onRef && <button type="button" onClick={() => onRef(ref)} className="text-primary">加入对话</button>}
                   {onPick && <button type="button" onClick={() => onPick(item, index)} className="text-primary hover:underline">{picked ? "已选" : "选这张"}</button>}
                 </figcaption>
               )}
@@ -66,7 +73,7 @@ function Lightbox({ media, index, src, onIndex, onClose, onPick, refOf }: {
   onPick?: (item: MediaItem, index: number) => void;
   refOf?: (item: MediaItem, index: number) => ChatRef;
 }) {
-  const images = media.map((m, i) => ({ m, i })).filter(x => !isVideo(x.m));
+  const images = media.map((m, i) => ({ m, i })).filter(x => isImage(x.m));
   const at = Math.max(0, images.findIndex(x => x.i === index));
   const go = (step: number) => { if (images.length) onIndex(images[(at + step + images.length) % images.length].i); };
   useEffect(() => {

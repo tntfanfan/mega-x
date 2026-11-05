@@ -1,6 +1,10 @@
+import { ReferenceLibrary } from "./ReferenceLibrary";
+import { ConceptSettings } from "./ConceptSettings";
+import { VideoSettings } from "./VideoSettings";
+import { StoryboardSettings } from "./StoryboardSettings";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, FolderTree, LayoutGrid, MessageSquarePlus, Sparkles, Video, X } from "lucide-react";
-import type { ChatRef, ProjectStatus, SeriesApi, StatusItem } from "../api";
+import type { ChatRef, ProjectStatus, SeriesApi, StatusItem, Version } from "../api";
 import { dragRef } from "../drag";
 import { STAGES, hasNewer, itemRef, itemState, sectionOf, shortLabel, shortVersion, stageItems, type TabId } from "../stages";
 import { ArtifactView } from "./ArtifactView";
@@ -13,6 +17,8 @@ import { Overview } from "./Overview";
 export type SeriesView = "structured" | "files";
 
 type Props = {
+  sessionId: string;
+  onGenerate: (text: string, requests: string[]) => boolean;
   view: SeriesView;
   onView: (view: SeriesView) => void;
   /** the file picked in the files view (project-relative) */
@@ -39,6 +45,7 @@ type Props = {
   onQuote: (ref: ChatRef, text: string) => void;
   onOpen: (ref: string) => void;
   onChanged: () => void;
+  onCreateProject: (title: string) => Promise<void>;
   onDirty: (dirty: boolean) => void;
   onSuggest: (text: string) => void;
 };
@@ -76,6 +83,8 @@ function sections(items: StatusItem[]): { name: string; items: StatusItem[] }[] 
  */
 export function Workspace(props: Props) {
   const { status, stage, onStage, selected, onSelect, onSuggest, view, filePath } = props;
+  const [activeVersion, setActiveVersion] = useState<Version | null>(null);
+  const [panel, setPanel] = useState<"concept" | "video" | "storyboard" | null>(null);
   const [box, width] = useWidth<HTMLDivElement>();
   const [reveal, setReveal] = useState<{ path: string; tick: number } | null>(null);
   const [notice, setNotice] = useState<(Notice & { tick: number }) | null>(null);
@@ -107,6 +116,9 @@ export function Workspace(props: Props) {
   const at = items.findIndex(i => i.logical === selected);
   const open = selected && at >= 0 ? items[at] : null;
 
+  const versionItem = open && activeVersion && activeVersion.ref.startsWith(open.logical + ".v")
+    ? { ...open, latest: activeVersion.ref, canonical: activeVersion.status === "canonical" ? activeVersion.ref : null, stale: [], metadata: activeVersion.metadata }
+    : open;
   return (
     <section ref={box} aria-label="产出物" className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-surface/30">
       <div className="flex shrink-0 items-center gap-2 border-b border-border-solid pe-2">
@@ -129,7 +141,7 @@ export function Workspace(props: Props) {
                 <button key={s.id} type="button" onClick={() => onStage(s.id)} aria-current={on ? "page" : undefined}
                   className={`relative flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-sm transition-colors ${on ? "text-heading" : c.total ? "text-body hover:text-heading" : "text-dim hover:text-muted"}`}>
                   {s.label}
-                  {c.total > 0 && <span className={`tabular-nums text-[11px] ${on ? "text-muted" : "text-dim"}`} title={`${c.live} 项定稿 / 共 ${c.total} 项`}>{c.live}/{c.total}</span>}
+                  {c.total > 0 && <span className={`tabular-nums text-[11px] ${on ? "text-muted" : "text-dim"}`} title={s.id === "references" ? `${c.total} 项素材` : `${c.live} 项定稿 / 共 ${c.total} 项`}>{s.id === "references" ? c.total : `${c.live}/${c.total}`}</span>}
                   {c.stale && <StatusDot tone="stale" className="absolute end-1 top-2" />}
                   {!c.stale && c.newer && <StatusDot tone="newer" className="absolute end-1 top-2" />}
                   {on && <span aria-hidden className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />}
@@ -141,8 +153,26 @@ export function Workspace(props: Props) {
         <ViewSwitch view={view} onView={props.onView} compact={width > 0 && width < 520} />
       </div>
 
-      {!status ? (
-        <Empty text="还没选项目。" hint="在左边对话里说说你想做一部什么样的剧，主创会帮你建好项目。" />
+      {status && view === "structured" && <div className="flex flex-wrap justify-end gap-2 border-b border-border-solid px-3 py-2">
+        {stage === "boards" && <button type="button" onClick={() => setPanel("storyboard")} className="rounded-lg border border-border-solid px-3 py-1.5 text-xs text-primary">{open?.kind === "storyboard" ? "调整分镜形式" : "规划分镜"}</button>}
+        {open && ["profile", "concept"].includes(open.kind) && <button type="button" onClick={() => setPanel("concept")} className="rounded-lg border border-primary/50 px-3 py-1.5 text-xs text-primary">生成概念图</button>}
+        {(stage === "boards" || stage === "clips") && status.items.some(i => i.kind === "storyboard") && <button type="button" onClick={() => setPanel("video")} className="rounded-lg bg-primary px-3 py-1.5 text-xs text-bg">{open?.kind === "storyboard" ? "选择参考并生成视频" : "批量生成视频"}</button>}
+      </div>}
+      {status && panel === "concept" && open && <ConceptSettings api={props.api} status={status} item={versionItem!} onSend={props.onSend} onClose={() => setPanel(null)} />}
+      {status && panel === "storyboard" && <StoryboardSettings status={status} item={versionItem?.kind === "storyboard" ? versionItem : undefined} onSend={props.onSend} onClose={() => setPanel(null)} />}
+      {status && panel === "video" && <VideoSettings api={props.api} status={status} boards={versionItem?.kind === "storyboard" ? [versionItem] : status.items.filter(i => i.kind === "storyboard")} sessionId={props.sessionId} onGenerate={props.onGenerate} disabled={props.busy || !props.connected} onClose={() => setPanel(null)} />}
+      {view === "structured" && stage === "references" ? (
+        <ReferenceLibrary api={props.api} status={status} onSelect={onSelect} onRef={props.onRef} onChanged={props.onChanged} onCreateProject={props.onCreateProject} busy={props.busy}>
+          {open && status && <>
+            <button type="button" onClick={() => onSelect("")} className="inline-flex shrink-0 items-center gap-1 self-start px-4 py-2 text-xs text-primary"><ArrowLeft size={13} aria-hidden />全部参考素材</button>
+            <ArtifactView api={props.api} projectId={status.project_id} logical={open.logical} focusRef={props.focusRef}
+              refreshKey={props.refreshKey} status={status} busy={props.busy} connected={props.connected}
+              onSend={props.onSend} onRef={props.onRef} onQuote={props.onQuote} onOpen={props.onOpen}
+              onChanged={props.onChanged} onDirty={props.onDirty} onVersion={setActiveVersion} />
+          </>}
+        </ReferenceLibrary>
+      ) : !status ? (
+        <Empty text="还没选项目。" hint="可以先在参考素材里创建项目、上传素材，也可以在左边描述你想做的剧。" action={{ label: "去参考素材上传", run: () => { props.onView("structured"); onStage("references"); } }} />
       ) : view === "files" ? (
         <FilesView api={props.api} status={status} refreshKey={props.refreshKey} path={filePath} onPath={props.onFilePath}
           reveal={reveal} wide={wide} onRef={props.onRef} onStructured={props.onStructured} />
@@ -184,7 +214,7 @@ export function Workspace(props: Props) {
             <ArtifactView api={props.api} projectId={status.project_id} logical={open.logical} focusRef={props.focusRef}
               refreshKey={props.refreshKey} status={status} busy={props.busy} connected={props.connected}
               onSend={props.onSend} onRef={props.onRef} onQuote={props.onQuote} onOpen={props.onOpen}
-              onChanged={props.onChanged} onDirty={props.onDirty} />
+              onChanged={props.onChanged} onDirty={props.onDirty} onVersion={setActiveVersion} />
           </div>
         </div>
       ) : (
@@ -317,11 +347,12 @@ function Card({ item, src, chatRef, onClick, onRef, picker }: {
   const newer = hasNewer(item);
   return (
     <li className={`group relative flex flex-col rounded-lg border bg-surface transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg focus-within:z-20 has-[[aria-expanded=true]]:z-30 ${state === "stale" ? "border-spark-flare/40" : "border-border-solid"} ${state === "deprecated" ? "opacity-50" : ""}`}>
-      <button type="button" onClick={onClick} draggable onDragStart={e => dragRef(e, chatRef)} title={`${item.label}\n点开查看 · 拖到对话 = 引用`}
+      <button type="button" aria-label={`查看 ${item.label}`} onClick={onClick} draggable onDragStart={e => dragRef(e, chatRef)} title={`${item.label}\n点开查看 · 拖到对话 = 引用`}
         className="flex w-full flex-col text-left">
         <div className="relative flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-t-[7px] bg-surface-2">
           {item.thumb
             ? <img src={src(item.thumb)} alt="" loading="lazy" draggable={false} className="h-full w-full object-cover" />
+            : item.kind === "storyboard" && item.metadata?.representation === "text" ? <div className="w-full p-3"><span className="mb-2 block text-[11px] text-primary">文字分镜 · {String(item.metadata.duration_sec || "")} 秒</span><p className="line-clamp-5 whitespace-pre-line text-xs leading-relaxed text-body">{item.summary?.replace(/^#+\s*/gm, "").replace(/## 资产[\s\S]*/, "")}</p></div>
             : item.media_kind === "video"
               ? <Video size={28} aria-hidden className="text-dim" />
               : <KindIcon kind={item.kind} size={28} className="text-dim" />}
