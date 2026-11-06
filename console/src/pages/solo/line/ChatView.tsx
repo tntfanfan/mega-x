@@ -1,5 +1,5 @@
-import { TenantWorkspace } from "../../../components/chat/TenantWorkspace";
+import TenantChatView from "../../shared/TenantChatView";
 
 export default function ChatView() {
-  return <TenantWorkspace panel="chat" />;
+  return <TenantChatView />;
 }

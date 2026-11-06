@@ -3,8 +3,11 @@
 ## Source and destination
 
 Source: `platform/ai_native@5ca0c93ed772c4a6ad0a9ce5d9e3ca17cb1142f8`.
-Destination: Mega X's authenticated company Console, route
-`/console/#/business/c/<company-id>/research`.
+Destination: Mega X's authenticated company Console. Originally a separate
+`/console/#/business/c/<company-id>/research` tab; that tab has since been
+removed and the workbench is only shown in the company chat tab when the stock
+research department is selected
+(`/console/#/business/c/<company-id>/chat?dept=dept-investment`).
 
 All committed browser application features are migrated. Backend department
 skills, hooks, OpenClaw plugins, MCP servers and generated-report templates remain
@@ -12,9 +15,9 @@ backend responsibilities. The original backend workbench is preserved.
 
 | Source workbench file | Destination and responsibility |
 | --- | --- |
-| `index.html` | `ResearchView.tsx`, company navigation and the research components: React-owned page structure and existing company creation/switching flows |
+| `index.html` | `ResearchChatPanel.tsx` (formerly `ResearchView.tsx`), company navigation and the research components: React-owned page structure and existing company creation/switching flows |
 | `style.css` | Existing Console/Tailwind tokens, `components/research/shared.tsx`, scoped research rules in `globals.css` and responsive company shell |
-| `app.js` | `hooks/useResearch.ts`, `lib/research/client.ts`, `ResearchForm`, `ResearchTasks`, `ResearchOutputs`, `ResearchView` |
+| `app.js` | `hooks/useResearch.ts`, `lib/research/client.ts`, `ResearchForm`, `ResearchTasks`, `ResearchOutputs`, `ResearchChatPanel` |
 | `core.mjs` | `lib/research/core.ts`: ticker normalization, capability checks, stages, idempotency and research errors |
 | `dialogue.mjs` | `hooks/useResearchDialogue.ts`, `ResearchDialogue`: capabilities, personas, history, drafts, fixed-report discussions, roundtables and polling |
 | `dialogue-core.mjs` | `lib/research/core.ts` and `dialogue.ts`: context guards, request keys, length limits, citations and recovery messages |

@@ -40,7 +40,7 @@ test("research authored UI copy has no untranslated Chinese in English", () => {
   const components = new URL("../src/components/research/", import.meta.url);
   const files = [
     ...readdirSync(components).filter(name => name.endsWith(".tsx")).map(name => new URL(name, components)),
-    ...["pages/business/company/ResearchView.tsx", "hooks/useResearch.ts", "hooks/useResearchDialogue.ts", "lib/research/core.ts", "lib/research/dialogue.ts", "lib/research/navigation.ts"].map(name => new URL("../src/" + name, import.meta.url)),
+    ...["pages/business/company/ResearchChatPanel.tsx", "hooks/useResearch.ts", "hooks/useResearchDialogue.ts", "lib/research/core.ts", "lib/research/dialogue.ts", "lib/research/navigation.ts"].map(name => new URL("../src/" + name, import.meta.url)),
   ];
   const missing = [];
   for (const file of files) {

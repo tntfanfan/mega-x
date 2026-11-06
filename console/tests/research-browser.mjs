@@ -96,6 +96,13 @@ await context.route("**/v1/**", async (route) => {
   else if (path === "/v1/companies") data = { items: companies };
   else if (/^\/v1\/companies\/c-[ab]$/.test(path))
     data = companies.find((c) => path.endsWith(c.id));
+  else if (/^\/v1\/companies\/c-[ab]\/depts$/.test(path))
+    data = {
+      items: [
+        { id: "dept-ceo", name: "CEO", emoji: "👔" },
+        { id: "dept-investment", name: "股票投研部", emoji: "📈" },
+      ],
+    };
   else if (path.endsWith("/research/department"))
     data = {
       installation_status: departmentStatus,
@@ -271,7 +278,7 @@ await context.route("**/v1/**", async (route) => {
 });
 try {
   if (process.env.RESEARCH_RESTORE_ONLY === "1") {
-    await page.goto(`${origin}/console/?lang=en#/business/c/c-a/research/roundtable`);
+    await page.goto(`${origin}/console/?lang=en#/business/c/c-a/chat?dept=dept-investment&page=roundtable`);
     const dialogue = page.locator("#dialogue");
     await dialogue.getByRole("checkbox").first().waitFor();
     await dialogue.locator("textarea").fill("Keep this roundtable after reload");
@@ -285,7 +292,7 @@ try {
     await dialogue.getByText("Keep this roundtable after reload", { exact: true }).waitFor();
     console.log("Roundtable deep-link reload restores the active conversation and turns: PASS");
   } else if (process.env.RESEARCH_ENGLISH_ONLY === "1") {
-    await page.goto(`${origin}/console/?lang=en#/business/c/c-a/research`);
+    await page.goto(`${origin}/console/?lang=en#/business/c/c-a/chat?dept=dept-investment`);
     const menu = page.getByRole("navigation", { name: "Research menu", exact: true });
     const workspace = page.locator(".research-workspace");
     for (const name of ["New research", "Research tasks", "Research reports", "Investment schools", "Investor conversations", "Investment roundtable"]) {
@@ -319,7 +326,7 @@ try {
     assert.equal(errors.length, 0, errors.join("\n"));
     console.log("All six English research pages, all school dropdowns/filters and waiting/partial failure statuses: PASS");
   } else if (process.env.RESEARCH_MENU_ONLY === "1") {
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/chat?dept=dept-investment`);
     const menu = page.getByRole("navigation", { name: "投研功能菜单", exact: true });
     const research = page.locator("#research");
     assert.equal(await research.getByRole("combobox").first().inputValue(), "US");
@@ -339,7 +346,7 @@ try {
       await menu.getByRole("link", { name, exact: true }).click();
       await page.getByRole("heading", { name: heading, exact: true }).waitFor();
       assert.equal(await menu.locator('[aria-current="page"]').innerText(), name);
-      assert(page.url().endsWith(`/research${path ? "/" + path : ""}`));
+      assert(page.url().endsWith(path ? `&page=${path}` : "?dept=dept-investment"));
       if (path) assert(!(await research.isVisible()), "Form remains visible outside its page");
       if (path !== "tasks") assert(!(await page.locator("#tasks").isVisible()), "Tasks remain visible outside their page");
       if (path === "roundtable") assert.equal(await page.locator("#dialogue").getByRole("checkbox").count(), 4);
@@ -349,10 +356,10 @@ try {
     assert.equal(await research.locator("input").inputValue(), "600519", "Menu navigation discarded stock draft");
     await research.getByRole("button", { name: "开始研究", exact: true }).click();
     await page.getByRole("heading", { name: "执行详情", exact: true }).waitFor();
-    assert(page.url().endsWith("/research/tasks"));
+    assert(page.url().endsWith("&page=tasks"));
     await page.getByRole("button", { name: "与角色讨论", exact: true }).click();
     await page.locator("#dialogue").getByText(/固定版本 r-20261003/).waitFor();
-    assert(page.url().endsWith("/research/dialogue"));
+    assert(page.url().endsWith("&page=dialogue"));
     const question = page.locator("#dialogue textarea");
     await question.fill("保留我的问题草稿");
     await menu.getByRole("link", { name: "研究报告", exact: true }).click();
@@ -361,7 +368,7 @@ try {
     await menu.getByRole("link", { name: "投资流派", exact: true }).click();
     await page.getByRole("button", { name: /巴菲特/ }).click();
     await page.getByRole("heading", { name: "人物对话", exact: true }).waitFor();
-    assert(page.url().endsWith("/research/dialogue"));
+    assert(page.url().endsWith("&page=dialogue"));
     await menu.getByRole("link", { name: "投资圆桌", exact: true }).click();
     await page.reload();
     await page.getByRole("heading", { name: "投资圆桌", exact: true }).waitFor();
@@ -380,7 +387,7 @@ try {
     assert.equal(errors.length, 0, errors.join("\n"));
     console.log("Six independent menus, deep links, preserved drafts, submit/discussion transitions and responsive layout: PASS");
   } else if (process.env.RESEARCH_TIMEOUT_ONLY === "1") {
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/chat?dept=dept-investment`);
     const research = page.locator("#research");
     await research
       .getByRole("button", { name: "开始研究", exact: true })
@@ -415,7 +422,7 @@ try {
       "Actual request deadline preserves the retry identity after uncertain delivery: PASS",
     );
   } else if (process.env.RESEARCH_RACE_ONLY === "1") {
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research/dialogue`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/chat?dept=dept-investment&page=dialogue`);
     const dialogue = page.locator("#dialogue"),
       input = dialogue.locator("textarea");
     await input.fill("Draft typed during bootstrap");
@@ -480,7 +487,7 @@ try {
       .click();
     await oldWrite;
     await page.evaluate(() => {
-      location.hash = "/business/c/c-b/research/dialogue";
+      location.hash = "/business/c/c-b/chat?dept=dept-investment&page=dialogue";
     });
     await page
       .getByRole("button", { name: "Second Company", exact: true })
@@ -515,7 +522,7 @@ try {
       "Bootstrap drafts, history/send overlap and active persona and delayed-write/company isolation: PASS",
     );
   } else {
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/chat?dept=dept-investment`);
     await page
       .getByRole("heading", { name: "新建股票研究", exact: true })
       .waitFor({ timeout: 5000 });
@@ -690,7 +697,7 @@ try {
       "Research writes/retries, report binding, drafts, roundtable, localization, mobile and cleanup: PASS",
     );
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/chat?dept=dept-investment`);
     await research
       .getByRole("button", { name: "开始研究", exact: true })
       .waitFor();
@@ -740,7 +747,7 @@ try {
     largeHistory = true;
     // Re-enter to fetch the expanded server-side history from offset zero.
     await page.goto(`${origin}/console/?lang=zh#/business/companies`);
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/research/dialogue`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-a/chat?dept=dept-investment&page=dialogue`);
     await dialogue
       .getByRole("button", { name: "加载更多会话", exact: true })
       .click();
@@ -791,7 +798,7 @@ try {
       .locator("#tasks")
       .getByRole("button", { name: /AAPL Research/ })
       .click();
-    await page.goto(`${origin}/console/?lang=zh#/business/c/c-b/research/tasks`);
+    await page.goto(`${origin}/console/?lang=zh#/business/c/c-b/chat?dept=dept-investment&page=tasks`);
     await page
       .locator("#tasks")
       .getByRole("button", { name: /Second Company Task/ })
@@ -836,7 +843,7 @@ try {
     );
     assert.equal(errors.length, 0, errors.join("\n"));
     companies[1].name = "美股";
-    await page.goto(`${origin}/console/?lang=en#/business/c/c-b/research`);
+    await page.goto(`${origin}/console/?lang=en#/business/c/c-b/chat?dept=dept-investment`);
     await page
       .getByRole("button", { name: "US Stocks", exact: true })
       .waitFor();

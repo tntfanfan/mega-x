@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../../components/ui/Toast";
 import { useResearchDialogue } from "../../../hooks/useResearchDialogue";
 import { InvestorCatalog } from "../../../components/research/InvestorCatalog";
 import { ResearchDialogue } from "../../../components/research/ResearchDialogue";
-import type { CompanyOutlet } from "./CompanyShell";
 import { api, type Company } from "../../../lib/api";
 import { createResearchClient } from "../../../lib/research/client";
 import { researchErrors } from "../../../lib/research/core";
@@ -19,9 +18,25 @@ import { ResearchOutputs } from "../../../components/research/ResearchOutputs";
 import { ResearchNavigation } from "../../../components/research/ResearchNavigation";
 import { Badge, buttonClass } from "../../../components/research/shared";
 
-export default function ResearchView() {
-  const { company } = useOutletContext<CompanyOutlet>();
-  return <ResearchWorkspace key={company.id} company={company} />;
+function pagePath(page: ResearchPage) {
+  return researchPages.find(item => item.id === page)!.path;
+}
+
+/**
+ * 股票投研部的工作台，只在「聊天」页选中它时出现（没有单独的投研页）。
+ * 用 `?page=` 记住当前功能页，切回别的部门时自然清掉。
+ */
+export function ResearchChatPanel({ company, page }: { company: Company; page?: string | null }) {
+  const href = (next: ResearchPage) => {
+    const params = new URLSearchParams({ dept: "dept-investment" });
+    if (pagePath(next)) params.set("page", pagePath(next));
+    return `/business/c/${company.id}/chat?${params}`;
+  };
+  return (
+    <div className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+      <ResearchWorkspace key={company.id} company={company} page={researchPageFromPath(page || undefined)} hrefFor={href} />
+    </div>
+  );
 }
 
 /** Keep visited tools mounted so navigating never discards drafts or filters. */
@@ -32,13 +47,10 @@ function ResearchPanel({ active, children }: { active: boolean; children: ReactN
   return <div hidden={!active}>{children}</div>;
 }
 
-function ResearchWorkspace({ company }: { company: Company }) {
+function ResearchWorkspace({ company, page, hrefFor }: { company: Company; page: ResearchPage; hrefFor: (page: ResearchPage) => string }) {
   const { i18n } = useTranslation();
-  const { "*": path } = useParams();
   const navigate = useNavigate();
-  const page = researchPageFromPath(path);
   const currentPage = researchPages.find(item => item.id === page)!;
-  const basePath = `/business/c/${company.id}/research`;
   const language = researchLanguage(i18n.language);
   const tr = useMemo(() => createCopy(language), [language]);
   const client = useMemo(() => createResearchClient(api, import.meta.env.VITE_API_BASE || "", window.location.origin), []);
@@ -51,8 +63,7 @@ function ResearchWorkspace({ company }: { company: Company }) {
   }, [page, dialogue.kind, dialogue.busy]);
 
   function openPage(next: ResearchPage) {
-    const path = researchPages.find(item => item.id === next)!.path;
-    navigate(`${basePath}${path ? `/${path}` : ""}`);
+    navigate(hrefFor(next));
   }
   function canSwitchDiscussion() {
     if (!dialogue.busy) return true;
@@ -84,7 +95,7 @@ function ResearchWorkspace({ company }: { company: Company }) {
         </div>
         <button className={buttonClass} onClick={() => void research.refresh()} disabled={research.busy}>{tr("刷新状态")}</button>
       </header>
-      <ResearchNavigation {...{ basePath, tr }} active={page} dialogueBusy={dialogue.busy} dialogueKind={dialogue.kind} />
+      <ResearchNavigation {...{ hrefFor, tr }} active={page} dialogueBusy={dialogue.busy} dialogueKind={dialogue.kind} />
       {(error || research.notice) && (
         <p role={error ? "alert" : "status"} className={`text-sm ${error ? "text-fusion" : "text-spark-mint"}`}>{tr(researchErrors[error] || error || research.notice)}</p>
       )}

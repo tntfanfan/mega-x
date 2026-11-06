@@ -6,6 +6,7 @@ import { useAuth } from "./lib/auth";
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import RequireAuth from "./components/RequireAuth";
 import RequireAdmin from "./components/RequireAdmin";
+import WalletBadge from "./components/WalletBadge";
 
 import LandingChoose from "./pages/Landing";
 import LoginPage from "./pages/Login";
@@ -23,7 +24,6 @@ import TaskNew from "./pages/business/company/TaskNew";
 import ChatView from "./pages/business/company/ChatView";
 import CompanyMarketplace from "./pages/business/company/Marketplace";
 import Settings from "./pages/business/company/Settings";
-import ResearchView from "./pages/business/company/ResearchView";
 
 // Solo (超级个体 — 完全独立 IA：产线 + 团队 + 杠杆)
 import SoloLanding from "./pages/solo/Landing";
@@ -51,6 +51,9 @@ import AdminLanding from "./pages/admin/Landing";
 import AdminQueue from "./pages/admin/ReviewQueue";
 import AdminTemplateStudio from "./pages/admin/TemplateStudio";
 
+// 部门应用（档案里声明了 app 的部门）在「聊天」页里选；apps/:deptId 是旧链接
+import { DeptAppRedirect } from "./pages/shared/DeptAppView";
+
 function UserMenu() {
   const { t } = useTranslation();
   const { me, status, logout } = useAuth();
@@ -67,6 +70,7 @@ function UserMenu() {
       <span className="text-body max-w-[10rem] truncate" title={me.user.email}>
         {label}
       </span>
+      <WalletBadge />
       <button
         type="button"
         onClick={() => void logout()}
@@ -165,7 +169,7 @@ export default function App() {
             <Route index element={<DeptsView />} />
             <Route path="depts" element={<Navigate to=".." replace />} />
             <Route path="chat" element={<ChatView />} />
-            <Route path="research/*" element={<ResearchView />} />
+            <Route path="research/*" element={<Navigate to="../chat?dept=dept-investment" replace />} />
             <Route path="tasks" element={<TasksList />} />
             <Route path="tasks/new" element={<TaskNew />} />
             <Route path="tasks/:taskId" element={<TaskDetail />} />
@@ -173,6 +177,7 @@ export default function App() {
             <Route path="conversations" element={<Navigate to="../chat" replace />} />
             <Route path="marketplace" element={<CompanyMarketplace />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="apps/:deptId/*" element={<DeptAppRedirect />} />
           </Route>
         </Route>
 
@@ -195,6 +200,7 @@ export default function App() {
             <Route path="timeline" element={<TimelineView />} />
             <Route path="billing" element={<BillingView />} />
             <Route path="settings" element={<SettingsView />} />
+            <Route path="apps/:deptId/*" element={<DeptAppRedirect />} />
           </Route>
         </Route>
 

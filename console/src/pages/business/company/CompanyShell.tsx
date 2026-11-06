@@ -98,7 +98,7 @@ export default function CompanyShell() {
       <div className="min-h-[calc(100vh-8rem)] flex flex-col">
         <CompanyHeader company={company} companies={companies} onRefresh={refresh} />
         <div className="company-workspace-body flex flex-1">
-          <CompanySidebar companyId={company.id} deptIds={company.dept_ids} />
+          <CompanySidebar companyId={company.id} />
           <div className="flex-1 min-w-0">
             <Outlet context={{ company, companies, refreshCompany: refresh } satisfies CompanyOutlet} />
           </div>
@@ -183,14 +183,13 @@ function CompanyHeader({
   );
 }
 
-function CompanySidebar({ companyId, deptIds }: { companyId: string; deptIds: string[] }) {
+function CompanySidebar({ companyId }: { companyId: string }) {
   const { t } = useTranslation();
   const tabs: { key: string; to: string; end?: boolean; label: string }[] = [
     { key: "marketplace", to: "marketplace", label: t("business.company.tab.marketplace") },
     { key: "depts", to: ``, end: true, label: t("business.company.tab.depts") },
     { key: "chat", to: "chat", label: t("business.company.tab.chat") },
     { key: "tasks", to: "tasks", label: t("business.company.tab.tasks") },
-    { key: "research", to: "research", label: t("business.company.tab.research") },
     { key: "settings", to: "settings", label: t("business.company.tab.settings") },
   ];
 
@@ -200,7 +199,7 @@ function CompanySidebar({ companyId, deptIds }: { companyId: string; deptIds: st
       className="company-workspace-nav w-48 shrink-0 border-e border-border-solid bg-surface/60 py-4"
     >
       <nav aria-label={t("business.company.nav.label")} className="flex flex-col">
-        {tabs.filter((tab) => tab.key !== "research" || deptIds.includes("dept-investment")).map((tab) => (
+        {tabs.map((tab) => (
           <NavLink
             key={tab.key}
             end={tab.end}
@@ -213,7 +212,6 @@ function CompanySidebar({ companyId, deptIds }: { companyId: string; deptIds: st
               }`
             }
           >
-            {tab.key === "research" && <span aria-hidden="true">📈 </span>}
             {tab.label}
           </NavLink>
         ))}

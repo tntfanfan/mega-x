@@ -178,6 +178,20 @@ export type Me = {
   tenants: { id: string; name: string; role: string }[];
 };
 
+/** `GET /v1/me/wallet` — model balance on the user's own new-api account. */
+export type Wallet =
+  | { status: "disabled" }
+  | { status: "unavailable" }
+  | {
+      status: "ready";
+      currency: "CNY";
+      /** Yuan with 2 decimals, as a string (never a float in JSON). */
+      balance_cny: string;
+      used_cny: string;
+      request_count: number;
+      updated_at: string;
+    };
+
 export type DeptCard = {
   id: string;
   name: string;
@@ -194,6 +208,7 @@ export type {
   Company,
   CompanyState,
   DeptCatalogItem,
+  DeptPublicProfile,
   Agent,
   AgentTeamRole,
   AgentTier,

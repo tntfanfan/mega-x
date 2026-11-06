@@ -4,7 +4,7 @@ Reviewed 2026-10-07 as an ordinary extension of the existing Mega X Console. Vis
 
 ## Scope and evidence
 
-The surface is `console/src/pages/business/company/ResearchView.tsx` and `console/src/components/research/`. The approved specification is [research frontend migration design](superpowers/specs/2026-10-07-research-frontend-migration-design.md); its visual direction is recorded in [.impeccable surface contract](../.impeccable/surfaces/c-pages-business-company-researchview-tsx-0a10e618.md).
+The surface is `console/src/pages/business/company/ResearchChatPanel.tsx` (formerly `ResearchView.tsx`, now shown only inside the company chat tab) and `console/src/components/research/`. The approved specification is [research frontend migration design](superpowers/specs/2026-10-07-research-frontend-migration-design.md); its visual direction is recorded in [.impeccable surface contract](../.impeccable/surfaces/c-pages-business-company-researchview-tsx-0a10e618.md).
 
 Code samples checked against the extension: `CompanyShell.tsx`, `components/tasks/WorkspaceTasks.tsx`, `components/ui/Segmented.tsx`, `components/ui/SearchInput.tsx`, `console/index.html` and `console/src/styles/globals.css`. The implementation reuses the company shell rather than introducing a separate browser workbench identity.
 

@@ -416,6 +416,18 @@ export interface DeptCatalogItem {
   desc_key?: string;
   category: "leadership" | "engineering" | "creative" | "ops" | "finance" |
             "research" | "marketing" | "security" | "vertical";
+  /** Public part of `config/profile.json` (`DeptProfile.to_public`), present on
+   *  the installed-dept cards of `/v1/companies|lines/{id}/depts`. A dept with
+   *  `app` is a 部门应用: it opens its own page (`apps/{deptId}`) instead of the
+   *  default chat, and stays out of the chat / task dept lists. */
+  profile?: DeptPublicProfile;
+}
+
+export interface DeptPublicProfile {
+  engine?: { kind: string };
+  chat?: { output_collection?: string; archive_chat_video?: boolean };
+  ui?: { surface?: string };
+  app?: { id: string };
 }
 
 // ⚠ `role_count` / `tier_breakdown` / `name` 都是 **demo 近似值**，权威是
