@@ -1,0 +1,147 @@
+console/src/App.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 9,54-56,73,172,180,203
+console/src/components/research/ResearchNavigation.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 6-7,20
+console/src/apps/registry.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-28
+console/src/apps/series/index.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-450
+console/src/apps/series/diff.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-60
+console/tests/fixtures/series-app.html
+  s_86bf37bff890a4::t_321f60e0abe47b 1
+console/tests/researchCopy.test.mjs
+  s_86bf37bff890a4::t_321f60e0abe47b 43
+docs/research-frontend-migration.md
+  s_86bf37bff890a4::t_321f60e0abe47b 6-10,18,20
+console/src/components/WalletBadge.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-69
+console/src/apps/series/components/Workspace.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-396
+console/src/apps/series/components/GenerationRecord.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-20
+console/src/apps/series/files.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-183
+console/src/apps/series/components/ArtifactView.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-446
+console/src/apps/series/components/ChatPane.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-337
+console/src/apps/series/components/ReferenceSelector.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-28
+console/src/apps/series/drag.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-56
+console/src/apps/series/components/bits.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-111
+console/src/lib/api.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 181-194,211
+console/src/apps/series/components/SessionPicker.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-66
+console/src/apps/series/components/Uploads.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-91
+console/src/apps/series/askTarget.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-38
+console/src/apps/series/components/Overview.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-484
+console/tests/research-browser.mjs
+  s_86bf37bff890a4::t_321f60e0abe47b 99-105,281,295,329,349,359,362,371,390,425,490,525,700,750,801,846
+console/tests/series-choices-browser.py
+  s_86bf37bff890a4::t_321f60e0abe47b 1-239
+console/src/apps/series/components/ConceptSettings.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-47
+console/tests/seriesNotes.test.mjs
+  s_86bf37bff890a4::t_321f60e0abe47b 1-135
+console/src/pages/solo/line/ChatView.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1,4
+console/src/apps/series/components/VideoSettings.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-83
+console/src/apps/series/api.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-249
+console/src/apps/series/components/FinalPicker.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-205
+console/src/i18n/ar.json
+  s_86bf37bff890a4::t_321f60e0abe47b 19-22,1184,1255-1261
+console/src/apps/series/components/TextEditor.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-83
+docs/research-visual-review.md
+  s_86bf37bff890a4::t_321f60e0abe47b 7
+console/src/i18n/zh.json
+  s_86bf37bff890a4::t_321f60e0abe47b 56-59,1291,1362-1368
+console/src/lib/fixtures.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 419-430
+console/src/apps/series/components/FilesView.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-536
+console/src/apps/series/generation.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-22
+console/tests/fixtures/series-ui.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-26
+console/src/components/chat/TenantWorkspace.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 5,54-55,172,179-184,190-191,208,211
+console/src/apps/series/components/GenerationDialog.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-12
+console/tests/seriesFiles.test.mjs
+  s_86bf37bff890a4::t_321f60e0abe47b 1-72
+console/src/apps/series/components/StoryboardSettings.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-21
+console/src/pages/business/company/ChatView.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1,4
+docs/new-departments-en.html
+  s_86bf37bff890a4::t_321f60e0abe47b 1-535
+console/src/apps/series/notes.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-175
+README.md
+  s_86bf37bff890a4::t_321f60e0abe47b 186-190,229
+console/src/apps/series/components/AskCard.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-194
+console/src/apps/series/components/ReferenceLibrary.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-64
+console/src/apps/series/stages.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-122
+console/src/pages/business/company/ResearchChatPanel.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-135
+console/tests/fixtures/series-app.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-18
+console/src/apps/series/socket.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-145
+console/tests/series-browser.py
+  s_86bf37bff890a4::t_321f60e0abe47b 1-268
+console/src/apps/series/components/MediaGrid.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-107
+console/src/apps/series/useChat.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-240
+console/src/pages/shared/DeptAppView.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-110
+console/src/apps/series/components/Doc.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-307
+console/src/i18n/en.json
+  s_86bf37bff890a4::t_321f60e0abe47b 56-59,1291,1362-1368
+console/src/lib/deptApps.ts
+  s_86bf37bff890a4::t_321f60e0abe47b 1-49
+console/tests/seriesAskTarget.test.mjs
+  s_86bf37bff890a4::t_321f60e0abe47b 1-85
+console/src/apps/series/components/ReferenceDetails.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-41
+console/tests/fixtures/series-ui.html
+  s_86bf37bff890a4::t_321f60e0abe47b 1
+console/src/apps/series/components/JobsBar.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-25
+console/src/pages/business/company/CompanyShell.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 101,186,202
+console/src/pages/shared/TenantChatView.tsx
+  s_86bf37bff890a4::t_321f60e0abe47b 1-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.2",
+  "base_commit_sha": "07d3cb345ab893927dde6eff72c67c19631f6745",
+  "prompts": {},
+  "sessions": {
+    "s_86bf37bff890a4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b086-480f-7412-8197-3a7ab35cdeb1",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
