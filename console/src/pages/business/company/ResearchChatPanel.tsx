@@ -11,6 +11,7 @@ import { researchErrors } from "../../../lib/research/core";
 import { createCopy, researchLanguage, dateLabel } from "../../../lib/research/copy";
 import { researchPages, researchPageFromPath, type ResearchPage } from "../../../lib/research/navigation";
 import { useResearch } from "../../../hooks/useResearch";
+import { ResearchMacroData } from "../../../components/research/ResearchMacroData";
 import { ResearchAnnouncements } from "../../../components/research/ResearchAnnouncements";
 import { ResearchForm } from "../../../components/research/ResearchForm";
 import { ResearchTasks } from "../../../components/research/ResearchTasks";
@@ -101,6 +102,9 @@ function ResearchWorkspace({ company, page, hrefFor }: { company: Company; page:
       )}
       <ResearchPanel active={page === "new"}>
         <ResearchForm {...{ research, language, tr }} companyState={company.state} onSubmitted={() => openPage("tasks")} />
+      </ResearchPanel>
+      <ResearchPanel active={page === "macro"}>
+        <ResearchMacroData key={company.id} companyId={company.id} active={page === "macro"} tr={tr} />
       </ResearchPanel>
       <ResearchPanel active={page === "announcements"}>
         <ResearchAnnouncements companyId={company.id} active={page === "announcements"} tr={tr} />

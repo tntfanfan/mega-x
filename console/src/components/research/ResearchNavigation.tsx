@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { FlaskConical, ListChecks, Files, Library, MessageSquare, Users } from "lucide-react";
 import { researchPages, type ResearchPage } from "../../lib/research/navigation";
 import type { Copy } from "./shared";
-const icons: Record<ResearchPage, typeof FlaskConical> = { announcements: Files, new: FlaskConical, tasks: ListChecks, reports: Files, schools: Library, dialogue: MessageSquare, roundtable: Users };
+const icons: Record<ResearchPage, typeof FlaskConical> = { macro: ListChecks, announcements: Files, new: FlaskConical, tasks: ListChecks, reports: Files, schools: Library, dialogue: MessageSquare, roundtable: Users };
 export function ResearchNavigation({ hrefFor, active, tr, dialogueBusy, dialogueKind }: {
   hrefFor: (page: ResearchPage) => string;
   active: ResearchPage;

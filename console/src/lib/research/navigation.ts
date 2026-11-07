@@ -1,6 +1,7 @@
-export type ResearchPage = "announcements" | "new" | "tasks" | "reports" | "schools" | "dialogue" | "roundtable";
+export type ResearchPage = "macro" | "announcements" | "new" | "tasks" | "reports" | "schools" | "dialogue" | "roundtable";
 export const researchPages: { id: ResearchPage; label: string; description: string; path: string }[] = [
   { id: "new", label: "新建研究", description: "输入股票代码，开始一次新的研究。", path: "" },
+  { id: "macro", label: "宏观数据", description: "采集和查看申万指数、股东户数与市场分布。", path: "macro" },
   { id: "announcements", label: "公告分析", description: "监测关注股票的新公告，查看共享分析结果。", path: "announcements" },
   { id: "tasks", label: "研究任务", description: "跟踪执行阶段，查看结果，继续或重试研究。", path: "tasks" },
   { id: "reports", label: "研究报告", description: "查看、预览和下载已交付的研究报告。", path: "reports" },
