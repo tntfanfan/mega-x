@@ -12,3 +12,14 @@ export const researchPages: { id: ResearchPage; label: string; description: stri
 export function researchPageFromPath(path?: string): ResearchPage {
   return researchPages.find(page => page.path === path || page.id === path)?.id || "new";
 }
+
+export type ResearchSection = "stock" | "announcements" | "macro";
+export const researchSections: { id: ResearchSection; label: string; page: ResearchPage }[] = [
+  { id: "stock", label: "个股分析", page: "new" },
+  { id: "announcements", label: "公告分析", page: "announcements" },
+  { id: "macro", label: "宏观数据", page: "macro" },
+];
+export function researchSectionForPage(page: ResearchPage): ResearchSection {
+  return page === "macro" || page === "announcements" ? page : "stock";
+}
+export const stockResearchPages = researchPages.filter(page => researchSectionForPage(page.id) === "stock");

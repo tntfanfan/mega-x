@@ -1,6 +1,6 @@
 export type MacroRow = Record<string, string | number | null>;
 export type MacroPage = {items: MacroRow[]; total: number; page?:number; page_count?:number; summary?:{sample_count:number;counts:Record<string,number>;earliest_date:string|null;latest_date:string|null}};
-export type MacroJob = {id:string;kind:'sw'|'shareholders';status:string;cancel:number;error:string|null;progress:{current?:number;total?:number;records?:number;errors?:number}};
+export type MacroJob = {id:string;created_at:number;kind:'sw'|'shareholders';status:string;cancel:number;error:string|null;progress:{current?:number;total?:number;records?:number;errors?:number}};
 export type Comparison = {field:string;dates:string[];series:{name:string;data:(number|null)[]}[]};
 type Transport = {get<T>(path:string,options?:any):Promise<T>;post<T>(path:string,body?:any,options?:any):Promise<T>};
 export function createMacroClient(transport:Transport,company:string){

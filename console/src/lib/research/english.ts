@@ -1,5 +1,8 @@
 // UI copy only. Stored messages, report text, names and titles are never translated.
 export const english = {
+  "采集记录": "Collection history",
+  "个股分析": "Stock analysis",
+  "投研分析模块": "Research analysis modules",
   "市净率": "P/B",
   "市盈率": "P/E",
   "发布日期": "Publication date",

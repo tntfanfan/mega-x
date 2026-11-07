@@ -1,3 +1,4 @@
+import './macro-workspace.css';
 import {useEffect,useMemo,useState} from 'react';
 import {api} from '../../lib/api';
 import {createMacroClient,type MacroPage} from '../../lib/research/macro';
@@ -11,7 +12,7 @@ export function ResearchMacroData({companyId,active,tr}:{companyId:string;active
   const client=useMemo(()=>createMacroClient(api,companyId),[companyId]);
   const [tab,setTab]=useState<'sw'|'shareholders'>('sw'),[revision,setRevision]=useState(0);
   return <Section title={tr('宏观数据')} description={tr('采集和查看申万指数、股东户数与市场分布。')}>
-    <div className="p-4 sm:p-5 space-y-6">
+    <div className="macro-workspace p-4 sm:p-5 space-y-6">
       <div className="flex gap-2" aria-label={tr('数据类型')}>{(['sw','shareholders'] as const).map(v=><button key={v} className={`${buttonClass} ${tab===v?'border-primary text-primary':''}`} aria-pressed={tab===v} onClick={()=>setTab(v)}>{tr(v==='sw'?'申万指数':'股东户数')}</button>)}</div>
       <MacroCollection client={client} kind={tab} active={active} tr={tr} onRefresh={()=>setRevision(v=>v+1)}/>
       {tab==='sw'?<MacroIndices client={client} active={active} revision={revision} tr={tr}/>:<Shareholders client={client} active={active} revision={revision} tr={tr}/>}

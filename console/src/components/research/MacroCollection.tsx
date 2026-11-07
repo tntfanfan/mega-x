@@ -1,3 +1,4 @@
+import {ChevronDown, CheckCircle2, AlertCircle, Loader2, Database} from 'lucide-react';
 import {useEffect,useRef,useState} from 'react';
 import type {MacroClient,MacroJob} from '../../lib/research/macro';
 import {buttonClass,inputClass,type Copy} from './shared';
@@ -18,19 +19,32 @@ export function MacroCollection({client,kind,active,tr,onRefresh}:{client:MacroC
   async function stop(id:string){setBusy(true);try{await client.stop(id);setTick(v=>v+1);}catch{setError('停止失败，请刷新后重试。');}finally{setBusy(false);}}
   const running=jobs.some(j=>j.kind===kind&&['queued','running'].includes(j.status));
   useEffect(()=>{if(running)setExpanded(true);},[running]);
-  return <details className="border border-border-solid rounded-md p-4" open={expanded} onToggle={e=>setExpanded(e.currentTarget.open)}>
-    <summary className="cursor-pointer text-sm font-medium text-heading">{tr('数据采集与任务状态')}</summary>
-    <form className="mt-4 flex flex-wrap gap-3 items-end" onSubmit={e=>{e.preventDefault();void collect();}}>
+  const visibleJobs=jobs.filter(j=>j.kind===kind);
+  const latest=visibleJobs[0];
+  return <details className="group border-y border-border-solid py-4" open={expanded} onToggle={e=>setExpanded(e.currentTarget.open)}>
+    <summary className="flex min-h-10 cursor-pointer list-none flex-wrap items-center gap-3 rounded-sm text-sm font-medium text-heading outline-none focus-visible:ring-2 focus-visible:ring-primary/60 [&::-webkit-details-marker]:hidden">
+      <Database size={16} className="text-primary" aria-hidden="true"/>
+      <span>{tr('数据采集与任务状态')}</span>
+      {latest&&<span className={`ml-auto flex items-center gap-2 text-xs font-normal ${latest.status==='completed'?'text-spark-mint':latest.status==='failed'?'text-fusion':'text-muted'}`}>
+        {latest.status==='completed'?<CheckCircle2 size={14} aria-hidden="true"/>:latest.status==='failed'?<AlertCircle size={14} aria-hidden="true"/>:latest.status==='running'?<Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true"/>:null}
+        {tr(labels[latest.status]||latest.status)}{latest.status==='completed'&&<> · {tr('写入记录')} {latest.progress.records||0}</>}
+      </span>}
+      <ChevronDown size={16} className="shrink-0 text-muted transition-transform group-open:rotate-180" aria-hidden="true"/>
+    </summary>
+    <form className="mt-5 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end" onSubmit={e=>{e.preventDefault();void collect();}}>
       {kind==='sw'?<>
-        <label className="text-sm text-body">{tr('采集范围')}<select className={inputClass} value={mode} onChange={e=>setMode(e.target.value)}>{Object.entries({latest:'最新一周',recent:'最近 N 周',range:'指定日期范围',all:'全量历史'}).map(([v,l])=><option value={v} key={v}>{tr(l)}</option>)}</select></label>
-        {mode==='recent'&&<label className="text-sm text-body">{tr('周数')}<input className={inputClass} type="number" required min={1} max={1040} value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/></label>}
-        {(mode==='range'||mode==='all')&&<label className="text-sm text-body">{tr('开始日期')}<input className={inputClass} type="date" required={mode==='range'} value={start} onChange={e=>setStart(e.target.value)}/></label>}
-        {mode==='range'&&<label className="text-sm text-body">{tr('结束日期')}<input className={inputClass} type="date" required min={start||undefined} value={end} onChange={e=>setEnd(e.target.value)}/></label>}
-      </>:<label className="text-sm text-body">{tr('股票代码')}<input className={inputClass} value={code} pattern="[0-9]{6}" maxLength={6} placeholder={tr('留空采集全市场')} onChange={e=>setCode(e.target.value)}/></label>}
-      <button className={buttonClass} disabled={busy||running}>{tr('开始采集')}</button>
+        <label className="grid gap-2 text-xs font-medium text-muted sm:min-w-44">{tr('采集范围')}<select className={inputClass} value={mode} onChange={e=>setMode(e.target.value)}>{Object.entries({latest:'最新一周',recent:'最近 N 周',range:'指定日期范围',all:'全量历史'}).map(([v,l])=><option value={v} key={v}>{tr(l)}</option>)}</select></label>
+        {mode==='recent'&&<label className="grid gap-2 text-xs font-medium text-muted sm:min-w-44">{tr('周数')}<input className={inputClass} type="number" required min={1} max={1040} value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/></label>}
+        {(mode==='range'||mode==='all')&&<label className="grid gap-2 text-xs font-medium text-muted sm:min-w-44">{tr('开始日期')}<input className={inputClass} type="date" required={mode==='range'} value={start} onChange={e=>setStart(e.target.value)}/></label>}
+        {mode==='range'&&<label className="grid gap-2 text-xs font-medium text-muted sm:min-w-44">{tr('结束日期')}<input className={inputClass} type="date" required min={start||undefined} value={end} onChange={e=>setEnd(e.target.value)}/></label>}
+      </>:<label className="grid gap-2 text-xs font-medium text-muted sm:min-w-44">{tr('股票代码')}<input className={inputClass} value={code} pattern="[0-9]{6}" maxLength={6} placeholder={tr('留空采集全市场')} onChange={e=>setCode(e.target.value)}/></label>}
+      <button className={`${buttonClass} min-h-11 border-primary/40 px-5 text-primary hover:bg-primary/10`} disabled={busy||running}>{tr('开始采集')}</button>
     </form>
     <p className="mt-3 text-xs text-muted">{tr('采集在后台运行，可离开页面。全市场与全量历史采集可能耗时较长；停止会在当前请求结束后生效。')}</p>
     {error&&<p role="alert" className="mt-3 text-sm text-fusion">{tr(error)}</p>}
-    <ul className="mt-3 divide-y divide-border-solid" aria-live="polite">{jobs.filter(j=>j.kind===kind).slice(0,5).map(j=><li key={j.id} className="py-3 text-sm text-body flex items-start justify-between gap-3"><div><p>{tr(labels[j.status]||j.status)} · {j.progress.current||0}/{j.progress.total||0} · {tr('写入记录')} {j.progress.records||0} · {tr('失败项')} {j.progress.errors||0}</p>{j.error&&<p className="text-fusion">{tr(j.error)}</p>}{j.cancel===1&&j.status==='running'&&<p>{tr('正在停止…')}</p>}</div>{['queued','running'].includes(j.status)&&<button type="button" className={buttonClass} disabled={busy||j.cancel===1} onClick={()=>void stop(j.id)}>{tr('停止')}</button>}</li>)}</ul>
+    {latest?.error&&<p role="alert" className="mt-3 text-sm text-fusion">{tr(latest.error)}</p>}
+    {visibleJobs.filter(j=>['queued','running'].includes(j.status)).map(j=><div key={j.id} className="mt-4 flex items-center justify-between gap-3 text-sm text-body"><span>{tr(labels[j.status])} · {j.progress.current||0}/{j.progress.total||0}</span><button type="button" className={buttonClass} disabled={busy||j.cancel===1} onClick={()=>void stop(j.id)}>{tr(j.cancel===1?'正在停止…':'停止')}</button></div>)}
+    <details className="mt-5 border-t border-border-solid pt-3"><summary className="cursor-pointer text-xs text-muted hover:text-heading">{tr('采集记录')} <span className="ml-1 tabular-nums">{visibleJobs.length}</span></summary>
+    <ul className="mt-2 divide-y divide-border-solid" aria-live="polite">{visibleJobs.slice(0,5).map(j=><li key={j.id} className="flex items-start justify-between gap-3 py-3 text-xs text-muted tabular-nums"><div className="min-w-0 space-y-1"><p className="text-[11px] text-muted">{new Date(j.created_at*1000).toLocaleString()}</p><p>{tr(labels[j.status]||j.status)} · {j.progress.current||0}/{j.progress.total||0} · {tr('写入记录')} {j.progress.records||0} · {tr('失败项')} {j.progress.errors||0}</p>{j.error&&<p className="max-w-prose break-words text-fusion">{tr(j.error)}</p>}{j.cancel===1&&j.status==='running'&&<p>{tr('正在停止…')}</p>}</div>{['queued','running'].includes(j.status)&&<button type="button" className={buttonClass} disabled={busy||j.cancel===1} onClick={()=>void stop(j.id)}>{tr('停止')}</button>}</li>)}</ul></details>
   </details>;
 }
