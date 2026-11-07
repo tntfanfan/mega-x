@@ -1,0 +1,43 @@
+console/src/components/research/MacroCollection.tsx
+  s_988e1c4d8b01b8::t_acc5178b64fd02 1-16,18-19,22-36
+  s_988e1c4d8b01b8::t_ccb19ae73153c4 17,20-21
+console/src/components/research/MacroIndices.tsx
+  s_988e1c4d8b01b8::t_acc5178b64fd02 1-3,5-16,20-24,26-28
+  s_988e1c4d8b01b8::t_3e32332b0248dd 4,17-19,25
+console/src/components/research/MacroChart.tsx
+  s_988e1c4d8b01b8::t_52f43129e3fa2f 1-19
+console/src/components/research/MacroTable.tsx
+  s_988e1c4d8b01b8::t_02a4e84b66d73b 1-5
+console/src/components/research/ResearchMacroData.tsx
+  s_988e1c4d8b01b8::t_3d3cb04ed0b9ae 1-48
+console/src/components/research/ResearchNavigation.tsx
+  s_988e1c4d8b01b8::t_5d78ed0dc6488a 5
+console/src/lib/research/english.ts
+  s_988e1c4d8b01b8::t_86723bbb92d36d 3-85
+console/src/lib/research/macro.ts
+  s_988e1c4d8b01b8::t_394cbd53a26fde 1-21
+console/src/lib/research/navigation.ts
+  s_988e1c4d8b01b8::t_2f78eaaf1f4afe 1,4
+console/src/pages/business/company/ResearchChatPanel.tsx
+  s_988e1c4d8b01b8::t_07ed2b6b99a4a0 14,106-108
+console/tests/macro-browser.mjs
+  s_988e1c4d8b01b8::t_551dc6bf9e1cda 1-56
+console/tests/macro.test.mjs
+  s_988e1c4d8b01b8::t_64dc2ac33575e5 1-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.2",
+  "base_commit_sha": "d36f14a2bcf519d4c47ecfdb05e863735824a868",
+  "prompts": {},
+  "sessions": {
+    "s_988e1c4d8b01b8": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1b389-b668-7680-9644-bbab834d1b9e",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
