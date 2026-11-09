@@ -1,0 +1,51 @@
+console/src/hooks/useAnnouncements.ts
+  s_fe5fd0c725e42f::t_9d49e86e6d62fa 3,26,41-45
+console/src/components/research/ResearchAnnouncements.tsx
+  s_fe5fd0c725e42f::t_6b4e740b5096e7 25-28
+  s_fe5fd0c725e42f::t_a7da90ce104b37 66-78,80
+  s_fe5fd0c725e42f::t_cd04020d9578d7 2,6-7,11,15-24,29-52,54-65,82,84-96,99-100
+console/src/components/research/announcements.css
+  s_fe5fd0c725e42f::t_a7da90ce104b37 19-20
+  s_fe5fd0c725e42f::t_38ad506b29f823 31-33
+  s_fe5fd0c725e42f::t_00c5cca88b5800 1-18,21-30,34-70
+console/tests/announcements-browser.mjs
+  s_fe5fd0c725e42f::t_d8caf62c3d7da3 17,38
+  s_fe5fd0c725e42f::t_9d49e86e6d62fa 8,22,44,46-54,57,71-72
+  s_fe5fd0c725e42f::t_a7da90ce104b37 24,41-43
+  s_fe5fd0c725e42f::t_3fb26f751d2589 23
+  s_fe5fd0c725e42f::t_38ad506b29f823 55-56
+  s_fe5fd0c725e42f::t_d73029d2fe9dd3 45
+docs/superpowers/plans/2026-11-09-announcement-actions.md
+  s_fe5fd0c725e42f::t_2abf238d6f4245 9-16
+  s_fe5fd0c725e42f::t_59fbe42ab59053 1-8
+  s_fe5fd0c725e42f::t_0e821e0b3798a7 17-20
+console/tests/announcements.test.mjs
+  s_fe5fd0c725e42f::t_ac9405e814d8fc 25-35
+console/src/lib/research/english.ts
+  s_fe5fd0c725e42f::t_a7da90ce104b37 8
+  s_fe5fd0c725e42f::t_973f46a3c365d0 12-15
+  s_fe5fd0c725e42f::t_625eae239f7745 9-11
+  s_fe5fd0c725e42f::t_d04f671c3a2df9 3-7,16-41
+console/src/lib/research/announcements.ts
+  s_fe5fd0c725e42f::t_ce5d7ef3842cc7 18
+  s_fe5fd0c725e42f::t_a7da90ce104b37 3
+  s_fe5fd0c725e42f::t_6b4e740b5096e7 19
+console/src/pages/business/company/ResearchChatPanel.tsx
+  s_fe5fd0c725e42f::t_4c396a145865a8 110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.2",
+  "base_commit_sha": "dabe4a320c40dc6904d2bc7d4c82d13630a9d062",
+  "prompts": {},
+  "sessions": {
+    "s_fe5fd0c725e42f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1beaf-f1e1-74e3-988e-cdb1cf626ba0",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "duzhihao <duzhihao@kingsoft.com>"
+    }
+  }
+}
