@@ -62,6 +62,7 @@ await page.getByRole('button',{name:'取消收藏 '+row.title,exact:true}).waitF
 await page.screenshot({path:'/private/tmp/ann-desktop.png',fullPage:true});
 await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/private/tmp/ann-mobile.png',fullPage:true});
 assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true,'no horizontal overflow');
+await page.getByRole('button',{name:'返回公告列表',exact:true}).click();
 await page.getByRole('button',{name:'取消关注 000001',exact:true}).click();
 await page.getByText('添加第一只关注股票，开始监测公告。').waitFor();
 await page.goto(origin+'/console/?lang=en#/admin/announcements');

@@ -1,10 +1,11 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {ArrowDownToLine, Sparkles, Plus, X, Search, RefreshCw, FileText, Bookmark, ChevronLeft, ChevronRight, CheckCircle2, Info} from 'lucide-react';
 import {api} from '../../lib/api';
-import {createAnnouncementsClient,scoreLabel,safeSourceUrl,type AnnReport,type Announcement,type AnnClient} from '../../lib/research/announcements';
+import {createAnnouncementsClient,scoreLabel} from '../../lib/research/announcements';
 import {useAnnouncements} from '../../hooks/useAnnouncements';
 import {buttonClass, primaryClass} from './shared';
 import './announcements.css';
+import {AnnouncementReader} from './AnnouncementReader';
 
 type Copy=(s:string)=>string;
 const statusLabels:Record<string,string>={pending:'待分析',running:'分析中',completed:'已完成',failed:'分析失败',insufficient_evidence:'证据不足'};
@@ -16,6 +17,30 @@ export function ResearchAnnouncements({companyId,active,tr}:{companyId:string;ac
   const [action,setAction]=useState<'collect'|'analyze'|null>(null);
   const {data,filters,setFilters,capabilities:caps}=state;
   const enabled=Boolean(caps?.enabled);
+  const readingAnchor=useRef<HTMLDivElement>(null);
+  const savedScroll=useRef<{element:HTMLElement;top:number}[]>([]);
+  const readerActive=state.detailId!==null;
+  const position=data.items.findIndex(row=>row.id===state.detailId);
+  function openAnnouncement(id:number){
+    if(!readerActive){
+      savedScroll.current=[];
+      let element=readingAnchor.current?.parentElement;
+      while(element){if(/auto|scroll/.test(getComputedStyle(element).overflowY))savedScroll.current.push({element,top:element.scrollTop});element=element.parentElement;}
+    }
+    void state.open(id);
+  }
+  function closeReader(){
+    const id=state.detailId;state.close();
+    requestAnimationFrame(()=>{savedScroll.current.forEach(({element,top})=>{element.scrollTop=top;});document.getElementById('ann-open-'+id)?.focus({preventScroll:true});});
+  }
+  useEffect(()=>{if(readerActive)readingAnchor.current?.scrollIntoView({block:'start'});},[state.detailId]);
+  useEffect(()=>{
+    const anchor=readingAnchor.current;if(!readerActive||!anchor)return;
+    let compact=anchor.getBoundingClientRect().width<960;
+    const observer=new ResizeObserver(()=>{const next=anchor.getBoundingClientRect().width<960;if(next!==compact){compact=next;anchor.scrollIntoView({block:'start'});}});
+    observer.observe(anchor);return()=>observer.disconnect();
+  },[readerActive]);
+
   useEffect(()=>{setCode('');setQuery('');setNotice('');},[companyId]);
   async function trigger(kind:'collect'|'analyze'){
     if(state.busy||action)return;
@@ -31,7 +56,8 @@ export function ResearchAnnouncements({companyId,active,tr}:{companyId:string;ac
       });
     }finally{setAction(null);}
   }
-  return <section className="ann-workspace" aria-label={tr('公告分析')}>
+  return <section className={'ann-workspace'+(readerActive?' ann-reader-active':'')} aria-label={tr('公告分析')}>
+    <div className="ann-management">
     <header className="ann-actions">
       <div>
         <h2 className="text-xl text-heading">{tr('公告监测')}</h2>
@@ -71,6 +97,7 @@ export function ResearchAnnouncements({companyId,active,tr}:{companyId:string;ac
     </section>
     {state.error&&<p role="alert" className="ann-feedback text-sm text-fusion"><Info size={16} aria-hidden="true"/>{tr(state.error)}</p>}
     {notice&&!state.error&&<p role="status" className="ann-feedback text-sm text-spark-mint"><CheckCircle2 size={16} aria-hidden="true"/>{tr(notice)}</p>}
+    </div>
     <section className="ann-results" aria-busy={state.loading} aria-labelledby="ann-results-title">
       <div className="ann-results-heading"><h3 id="ann-results-title" className="text-lg text-heading">{tr('公告列表')} <span className="ann-count">{data.total}</span></h3><span className="text-xs text-muted" role="status">{state.loading?tr('加载中…'):tr('仅展示关注股票的公告')}</span></div>
       <div className="ann-toolbar">
@@ -81,39 +108,27 @@ export function ResearchAnnouncements({companyId,active,tr}:{companyId:string;ac
         <label className="sr-only" htmlFor="ann-status">{tr('分析状态')}</label><select id="ann-status" className={inputClass} value={filters.status} onChange={e=>setFilters({...filters,page:1,status:e.target.value})}><option value="">{tr('全部状态')}</option>{Object.entries(statusLabels).map(([v,s])=><option value={v} key={v}>{tr(s)}</option>)}</select>
         <button className={buttonClass+' ann-action'} onClick={()=>void state.refresh()} disabled={state.loading}><RefreshCw size={15} aria-hidden="true"/>{tr('刷新')}</button>
       </div>
+      <div className={'ann-reading-layout'+(!data.items.length&&!readerActive?' ann-no-results':'')} ref={readingAnchor}>
+      <div className="ann-index">
       {data.items.length===0?<div className="ann-empty">
         <FileText size={28} strokeWidth={1.25} aria-hidden="true"/>
         <h4 className="text-base font-medium text-heading">{tr(filters.q||filters.status?'没有匹配的公告':state.watches.length?'正在等待新公告':'从关注一只股票开始')}</h4>
         <p>{filters.q||filters.status?tr('请调整筛选条件，或清空搜索后重试。'):state.watches.length?tr('暂时没有新公告，系统会持续监测关注股票。'):tr('添加第一只关注股票，开始监测公告。')}</p>
         {state.watches.length>0&&!filters.q&&!filters.status&&<p>{tr('点击上方“采集公告”补采最近7天，已有公告自动去重。')}</p>}
       </div>:<ul className="ann-rows">
-        {data.items.map(row=><li key={row.id} className="ann-row">
-          <FileText size={19} className="ann-row-icon" aria-hidden="true"/>
-          <div className="min-w-0 flex-1"><p className="ann-row-meta"><span className="font-mono">{row.stock_code}</span><span>{row.stock_name}</span><time dateTime={row.publish_date}>{new Date(row.publish_date).toLocaleString()}</time></p>
-            <button className="ann-row-title" onClick={()=>void state.open(row.id)}>{row.title}</button>
-            <div className="ann-row-status"><span className={'ann-analysis-status ann-analysis-'+row.analysis_status}>{tr(statusLabels[row.analysis_status]||row.analysis_status)}</span>{row.report&&<span>{tr(row.report.impact_type)} · {scoreLabel(row.report.impact_score)}</span>}{row.is_read&&<span>{tr('已读')}</span>}</div>
-          </div>
-          <button className={'ann-bookmark'+(row.is_starred?' text-primary':' text-muted')} aria-label={(row.is_starred?tr('取消收藏'):tr('收藏'))+' '+row.title} disabled={state.busy} onClick={()=>void state.act(()=>client.state(companyId,row.id,{is_starred:!row.is_starred}))}><Bookmark size={18} fill={row.is_starred?'currentColor':'none'} aria-hidden="true"/></button>
+        {data.items.map(row=><li key={row.id} className={'ann-row'+(state.detailId===row.id?' ann-row-selected':'')}>
+          <button id={'ann-open-'+row.id} className="ann-row-open" aria-label={row.title} aria-current={state.detailId===row.id?'true':undefined} aria-controls="ann-reader" onClick={()=>openAnnouncement(row.id)}>
+            <span className="ann-row-title">{row.title}</span>
+            <span className="ann-row-meta"><span>{row.stock_name||row.stock_code}</span><time dateTime={row.publish_date}>{new Date(row.publish_date).toLocaleString()}</time></span>
+            <span className="ann-row-status"><span className={'ann-analysis-status ann-analysis-'+row.analysis_status}>{tr(statusLabels[row.analysis_status]||row.analysis_status)}</span>{row.report&&<span>{tr(row.report.impact_type)} · {scoreLabel(row.report.impact_score)}</span>}{row.is_read&&<span>{tr('已读')}</span>}</span>
+          </button>
+          <button className={'ann-bookmark'+(row.is_starred?' text-primary':' text-muted')} aria-label={(row.is_starred?tr('取消收藏'):tr('收藏'))+' '+row.title} disabled={state.busy} onClick={()=>void state.act(()=>client.state(companyId,row.id,{is_starred:!row.is_starred}))}><Bookmark size={17} fill={row.is_starred?'currentColor':'none'} aria-hidden="true"/></button>
         </li>)}
       </ul>}
       {data.total>0&&<div className="ann-pagination text-sm"><span className="text-muted">{tr('公告总数')} {data.total}</span><div><button className={buttonClass+' ann-action'} disabled={filters.page===1||state.loading} onClick={()=>setFilters({...filters,page:filters.page-1})}><ChevronLeft size={15} aria-hidden="true"/>{tr('上一页')}</button><span className="tabular-nums">{filters.page}</span><button className={buttonClass+' ann-action'} disabled={filters.page*data.page_size>=data.total||state.loading} onClick={()=>setFilters({...filters,page:filters.page+1})}>{tr('下一页')}<ChevronRight size={15} aria-hidden="true"/></button></div></div>}
+      </div>
+      {readerActive?<AnnouncementReader row={state.selected} client={client} companyId={companyId} tr={tr} loading={state.detailLoading} error={state.detailError} position={position} count={data.items.length} busy={state.busy} onClose={closeReader} onPrevious={()=>{if(position>0)openAnnouncement(data.items[position-1].id);}} onNext={()=>{if(position>=0&&position<data.items.length-1)openAnnouncement(data.items[position+1].id);}} onRetry={()=>{if(state.detailId!==null)void state.open(state.detailId);}} onStar={()=>{if(state.selected)void state.act(()=>client.state(companyId,state.selected!.id,{is_starred:!state.selected!.is_starred}));}}/>:<div id="ann-reader" className="ann-reader-placeholder"><FileText size={32} strokeWidth={1.25} aria-hidden="true"/><h4>{tr('选择一条公告开始阅读')}</h4><p>{tr('在这里查看公告原文与分析报告，列表始终保留在左侧。')}</p></div>}
+      </div>
     </section>
-    {state.selected&&<AnnouncementDetail key={state.selected.id} row={state.selected} client={client} companyId={companyId} tr={tr} onClose={()=>state.setSelected(null)}/>}
   </section>;
-}
-
-function AnnouncementDetail({row,client,companyId,tr,onClose}:{row:Announcement;client:AnnClient;companyId:string;tr:Copy;onClose:()=>void}){
-  const [report,setReport]=useState(row.report),[history,setHistory]=useState<AnnReport[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(false);
-  useEffect(()=>{let current=true;client.history(companyId,row.id).then(v=>{if(current)setHistory(v.items);}).catch(()=>{if(current)setError('报告历史暂时无法加载。');});return()=>{current=false;};},[companyId,client,row.id]);
-  useEffect(()=>{setReport(row.report);},[row.report?.id]);
-  const source=safeSourceUrl(row.source_url);
-  async function download(){if(!report)return;setLoading(true);try{const base=import.meta.env.VITE_API_BASE||'';const response=await fetch(base+client.downloadPath(companyId,row.id,report.id),{credentials:'include',signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error('download');const blob=await response.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`announcement-${row.id}-report-${report.id}.md`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}catch{setError('报告下载失败，请重试。');}finally{setLoading(false);}}
-  return <article className="border border-border-solid rounded-lg bg-surface p-4 sm:p-6 space-y-4">
-    <div className="flex items-start justify-between gap-3"><h2 className="text-xl text-heading break-words">{row.title}</h2><button className={buttonClass} onClick={onClose}>{tr('关闭')}</button></div>
-    <p className="text-xs text-muted">{row.stock_code} · {tr('正文覆盖')} {tr(({complete:'完整',partial:'部分',missing:'缺失',unknown:'未知'} as Record<string,string>)[row.content_metadata?.status||'unknown']||'未知')}{source&&<> · <a href={source} target="_blank" rel="noopener noreferrer" className="text-primary">{tr('原始公告')}</a></>}</p>
-    {error&&<p role="alert" className="text-sm text-fusion">{tr(error)}</p>}
-    {history.length>0&&<label className="flex flex-wrap gap-2 items-center text-sm text-body">{tr('报告版本')}<select className={inputClass} value={report?.id||''} onChange={e=>setReport(history.find(r=>r.id===Number(e.target.value))||null)}>{history.map(r=><option key={r.id} value={r.id}>{new Date(r.created_at).toLocaleString()} · {r.model_used}</option>)}</select></label>}
-    {report?<><div className="flex flex-wrap items-center gap-3"><h3 className="text-lg text-heading">{tr(report.impact_type)} · {scoreLabel(report.impact_score)}</h3><button className={buttonClass} disabled={loading} onClick={()=>void download()}>{tr('下载报告')}</button></div><p className="text-body">{report.impact_summary}</p>{report.scoring&&<p className="text-sm text-muted">{tr('评分依据')}：{report.scoring.rationale}</p>}<div className="whitespace-pre-wrap break-words text-sm text-body leading-7">{report.report}</div><p className="text-xs text-muted">{tr('已校验字段和原文引用，未进行事实复核。')}</p></>:<p role="status" className="text-sm text-muted">{tr(statusLabels[row.analysis_status]||'待分析')}</p>}
-    <details><summary className="text-sm text-primary cursor-pointer">{tr('查看公告正文')}</summary><pre className="mt-3 whitespace-pre-wrap break-words text-sm text-body font-sans leading-7">{row.content||tr('公告正文暂不可用。')}</pre></details>
-  </article>;
 }

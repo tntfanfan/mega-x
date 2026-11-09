@@ -68,3 +68,80 @@
   .ann-row-icon { display: none; }
   .ann-pagination { flex-wrap: wrap; }
 }
+
+/* Reading workspace: a stable index beside a document, one view on phones. */
+.ann-workspace { container: ann-workspace / inline-size; }
+.ann-management { display: grid; gap: 20px; }
+.ann-reading-layout { @apply border border-border-solid; min-width: 0; border-radius: 8px; scroll-margin-top: 12px; }
+.ann-index { min-width: 0; }
+.ann-index .ann-row { gap: 0; padding: 0; position: relative; }
+.ann-index .ann-row:last-child { border-bottom: 0; }
+.ann-row-open { display: block; width: 100%; min-width: 0; padding: 18px 46px 18px 18px; text-align: start; }
+.ann-row-open:hover { @apply bg-surface; }
+.ann-row-selected { @apply bg-primary-muted; }
+.ann-row-selected .ann-row-title { @apply text-primary; }
+.ann-row-selected .ann-row-open:hover { background: transparent; }
+.ann-index .ann-row-title { margin: 0 0 10px; font-size: 14px; line-height: 1.65; font-weight: 500; }
+.ann-index .ann-row-meta { font-size: 11px; gap: 4px 10px; }
+.ann-index .ann-row-status { margin-top: 8px; font-size: 11px; }
+.ann-index .ann-bookmark { position: absolute; inset-inline-end: 4px; top: 10px; }
+.ann-index .ann-pagination { @apply border-t border-border-solid; padding: 12px; flex-wrap: wrap; gap: 10px; font-size: 12px; }
+.ann-index .ann-pagination > div { gap: 8px; }
+.ann-index .ann-pagination button { padding: 6px 8px; }
+.ann-reader-placeholder { display: none; }
+.ann-reader { @apply bg-surface; min-width: 0; border-radius: 0 0 8px 8px; }
+.ann-reader-toolbar { @apply border-b border-border-solid bg-surface; position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 12px; }
+.ann-reader-back { @apply text-body; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; font-size: 13px; }
+.ann-reader-back:hover { @apply text-primary; }
+.ann-reader-navigation { display: flex; align-items: center; gap: 6px; }
+.ann-reader-navigation > span { margin-inline-end: 6px; }
+.ann-reader-navigation button { @apply text-body; display: grid; place-items: center; width: 36px; height: 40px; border-radius: 4px; }
+.ann-reader-navigation button:hover:not(:disabled) { @apply text-primary bg-surface-2; }
+.ann-reader-navigation button:disabled { opacity: .35; cursor: not-allowed; }
+.ann-reader-scroll { min-width: 0; }
+.ann-document-header { padding: 28px 24px 0; }
+.ann-document-meta { @apply text-muted; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ann-document-header h2 { @apply text-heading; margin-top: 16px; font-size: 24px; line-height: 1.55; overflow-wrap: anywhere; outline: none; }
+.ann-document-actions { @apply text-muted; display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; margin-top: 16px; }
+.ann-document-actions a, .ann-document-actions button { @apply text-body; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-size: 12px; }
+.ann-document-actions a:hover, .ann-document-actions button:hover { @apply text-primary; }
+.ann-document-tabs { @apply border-b border-border-solid bg-surface; position: sticky; top: 53px; z-index: 1; display: flex; gap: 24px; margin: 16px 24px 0; }
+.ann-document-tabs button { @apply text-muted; display: flex; align-items: center; gap: 8px; min-height: 48px; border-bottom: 2px solid transparent; font-size: 14px; }
+.ann-document-tabs button[aria-selected="true"] { @apply text-primary border-primary; }
+.ann-document-tabs button span { @apply text-muted; font-size: 11px; }
+.ann-document-content { @apply text-body; padding: 28px 24px 40px; max-width: 76ch; margin-inline: auto; overflow-wrap: anywhere; }
+.ann-original-text { font-family: inherit; font-size: 15px; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 4; }
+.ann-reader-message { @apply text-muted; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; padding: 28px 0; font-size: 14px; line-height: 1.8; }
+.ann-reader-message h3 { @apply text-heading; font-size: 16px; }
+.ann-reader-scroll > .ann-reader-message { margin: 24px; }
+.ann-report-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.ann-report-controls label { @apply text-muted; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+.ann-report-controls select { @apply bg-bg border border-border-solid text-body; max-width: 100%; padding: 8px; border-radius: 4px; }
+.ann-report-summary { @apply border-b border-border-solid; display: grid; gap: 12px; padding-bottom: 24px; margin-bottom: 24px; font-size: 14px; line-height: 1.8; }
+.ann-report-summary h3 { @apply text-heading; font-size: 20px; }
+.ann-report-disclaimer { @apply border-t border-border-solid text-muted; margin-top: 28px; padding-top: 16px; font-size: 12px; line-height: 1.7; }
+.ann-reader-loading { @apply text-muted; display: grid; gap: 18px; padding: 32px 24px; font-size: 14px; }
+.ann-reader-loading div { @apply bg-surface-2; height: 14px; border-radius: 4px; }
+.ann-reader-loading div:last-child { width: 60%; }
+@container ann-workspace (min-width: 960px) {
+  .ann-reading-layout { display: grid; grid-template-columns: clamp(300px, 30%, 380px) minmax(0, 1fr); align-items: stretch; }
+  .ann-index { @apply border-r border-border-solid; max-height: min(76dvh, 800px); min-height: 480px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2A2010 transparent; }
+  .ann-reader { display: flex; flex-direction: column; height: min(76dvh, 800px); min-height: 480px; border-radius: 0 8px 8px 0; }
+  .ann-reader-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #2A2010 transparent; }
+  .ann-document-tabs { top: 0; }
+  .ann-reader-placeholder { @apply text-muted; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 480px; padding: 32px; text-align: center; }
+  .ann-reader-placeholder h4 { @apply text-heading; font-size: 17px; }
+  .ann-reader-placeholder p { max-width: 38ch; font-size: 13px; line-height: 1.8; }
+  .ann-no-results { display: block; }
+  .ann-no-results .ann-index { border-inline-end: 0; min-height: 0; }
+  .ann-no-results .ann-reader-placeholder { display: none; }
+}
+@container ann-workspace (max-width: 959px) {
+  .ann-reader-active .ann-management, .ann-reader-active .ann-results-heading, .ann-reader-active .ann-toolbar, .ann-reader-active .ann-index { display: none; }
+  .ann-document-header { padding: 24px 18px 0; }
+  .ann-document-header h2 { font-size: 21px; }
+  .ann-document-tabs { margin-inline: 18px; }
+  .ann-document-content { padding: 24px 18px 32px; }
+  .ann-reader-navigation button { width: 40px; }
+  .ann-reader-back { min-height: 44px; }
+}
