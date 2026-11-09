@@ -1,5 +1,6 @@
 import {useState,useEffect,useCallback,useRef} from 'react';
 import type {AnnClient,AnnCapabilities,AnnPage,Watch,Announcement} from '../lib/research/announcements';
+import {apiErrorMessage} from '../lib/api';
 const empty:AnnPage={items:[],total:0,page:1,page_size:20};
 export function useAnnouncements(company:string,client:AnnClient,active:boolean){
   const [capabilities,setCapabilities]=useState<AnnCapabilities|null>(null);
@@ -22,6 +23,7 @@ export function useAnnouncements(company:string,client:AnnClient,active:boolean)
       const [list,watch]=await Promise.all([client.list(company,filters,signal),client.watchlist(company,signal)]);
       if(version!==epoch.current||!mounted.current)return;
       setData(list);setWatches(watch.items);setError('');
+      if(filters.code&&!watch.items.some(w=>w.stock_code===filters.code))setFilters(previous=>({...previous,page:1,code:''}));
       setSelected(previous=>{if(!previous||!watch.items.some(w=>w.stock_code===previous.stock_code))return null;const current=list.items.find(r=>r.id===previous.id);return current?{...previous,...current}:previous;});
     }catch(e){if(!signal?.aborted&&version===epoch.current&&mounted.current)setError('公告暂时无法加载，请刷新重试。');}
     finally{if(version===epoch.current&&mounted.current)setLoading(false);}
@@ -36,7 +38,11 @@ export function useAnnouncements(company:string,client:AnnClient,active:boolean)
     if(busy)return false;
     setBusy(true);setError('');
     try{await operation();if(mounted.current)await refresh();return true;}
-    catch{if(mounted.current)setError('操作未完成，请重试。');return false;}
+    catch(error){if(mounted.current){
+      const detail=apiErrorMessage(error);
+      const messages:Record<string,string>={announcement_collect_paused:'自动采集已暂停，请联系管理员开启。',announcement_analyze_paused:'公告分析已暂停，请联系管理员开启。',announcement_personal_model_required:'分析待配置：需要个人模型账户。',only_followed_stocks_allowed:'只能采集或分析当前关注股票，请刷新后重试。'};
+      setError(messages[detail]||'操作未完成，请重试。');
+    }return false;}
     finally{if(mounted.current)setBusy(false);}
   }
   async function open(id:number){

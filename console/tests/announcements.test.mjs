@@ -22,6 +22,17 @@ test('failed writes reject, preserving caller state',async()=>{
   await assert.rejects(client.follow('c-a','000001'),/denied/);
 });
 
+test('manual company actions never use the global admin routes',async()=>{
+  const requests=[];
+  const client=createAnnouncementsClient({post:async(path,body)=>{requests.push([path,body]);return {job_ids:['job-1']}}});
+  await client.collect('c-a',['300750']);
+  await client.analyze('c-a');
+  assert.deepEqual(requests,[
+    ['/v1/companies/c-a/research/announcements/collect',{stock_codes:['300750']}],
+    ['/v1/companies/c-a/research/announcements/analyze',{}],
+  ]);
+});
+
 test('zero scores and missing scores have different display',()=>{
   assert.equal(scoreLabel(0),'0');assert.equal(scoreLabel(null),'—');assert.equal(scoreLabel(-2),'-2');
   assert.equal(safeSourceUrl('javascript:alert(1)'),undefined);

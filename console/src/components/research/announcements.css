@@ -1,0 +1,70 @@
+.ann-workspace { display: grid; gap: 20px; min-width: 0; }
+.ann-actions, .ann-watchlist-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.ann-action-buttons, .ann-follow-form { display: flex; gap: 10px; }
+.ann-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; white-space: nowrap; }
+.ann-service-status { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: -8px; }
+.ann-service-status > span { display: inline-flex; align-items: center; gap: 7px; }
+.ann-status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.ann-model-status { margin-inline-start: auto; }
+.ann-watchlist { padding: 20px; }
+.ann-count { @apply text-muted; display: inline-block; margin-inline-start: 5px; font-family: inherit; font-size: 13px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.ann-input { min-height: 40px; }
+.ann-follow-form input { width: 190px; min-width: 0; }
+.ann-stock-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.ann-stock-list:not(:empty) { margin-top: 20px; }
+.ann-stock { @apply border border-border-solid bg-bg; display: flex; border-radius: 6px; align-items: center; }
+.ann-stock-selected { @apply border-primary; }
+.ann-stock-select { @apply text-heading; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 8px 10px 14px; }
+.ann-stock-select:hover { @apply text-primary; }
+.ann-stock-identity { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ann-stock-name { font-size: 14px; font-weight: 500; }
+.ann-stock-date { @apply text-muted; font-size: 11px; line-height: 1.5; }
+.ann-stock-remove { @apply text-muted; display: grid; place-items: center; min-width: 40px; min-height: 44px; }
+.ann-stock-remove:hover { @apply text-fusion; }
+.ann-feedback { @apply border border-border-solid bg-surface; display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: 6px; }
+.ann-feedback svg { flex-shrink: 0; margin-top: 2px; }
+.ann-results { min-width: 0; }
+.ann-results-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.ann-toolbar { @apply border-y border-border-solid; display: flex; gap: 10px; flex-wrap: wrap; padding: 12px 0; }
+.ann-search { @apply border border-border-solid bg-bg; display: flex; align-items: center; gap: 10px; border-radius: 6px; padding-inline-start: 12px; flex: 1 1 260px; }
+.ann-search > svg { @apply text-muted; flex-shrink: 0; }
+.ann-search input { @apply text-heading; background: transparent; flex: 1; width: 0; min-width: 0; padding: 8px 0; font-size: 13px; }
+.ann-search input::placeholder { @apply text-muted; }
+.ann-search button { flex-shrink: 0; white-space: nowrap; border-top: 0; border-bottom: 0; border-inline-end: 0; border-start-start-radius: 0; border-end-start-radius: 0; min-height: 40px; }
+.ann-empty { @apply border-b border-border-solid text-muted; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding: 44px 20px 48px; font-size: 13px; line-height: 1.7; }
+.ann-empty > svg { margin-bottom: 4px; }
+.ann-empty p { max-width: 65ch; }
+.ann-empty p + p { margin-top: -6px; font-size: 12px; }
+.ann-row { @apply border-b border-border-solid; display: flex; align-items: flex-start; gap: 14px; padding: 20px 0; }
+.ann-row-icon { @apply text-muted; flex-shrink: 0; margin-top: 3px; }
+.ann-row-meta { @apply text-muted; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; }
+.ann-row-meta time { font-variant-numeric: tabular-nums; }
+.ann-row-title { @apply text-heading; display: block; text-align: start; font-size: 15px; line-height: 1.7; margin: 7px 0; overflow-wrap: anywhere; }
+.ann-row-title:hover { @apply text-primary; }
+.ann-row-status { @apply text-muted; display: flex; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 12px; }
+.ann-analysis-status { @apply text-body; }
+.ann-analysis-completed { @apply text-spark-mint; }
+.ann-analysis-running { @apply text-spark-blue; }
+.ann-analysis-failed { @apply text-fusion; }
+.ann-bookmark { display: grid; place-items: center; min-width: 40px; min-height: 40px; border-radius: 6px; }
+.ann-bookmark:hover { @apply bg-surface text-primary; }
+.ann-pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 16px; }
+.ann-pagination > div { display: flex; align-items: center; gap: 12px; }
+@media (max-width: 640px) {
+  .ann-workspace { gap: 18px; }
+  .ann-actions, .ann-watchlist-header { align-items: stretch; gap: 16px; }
+  .ann-action-buttons { width: 100%; }
+  .ann-action-buttons > button { flex: 1; }
+  .ann-service-status { gap: 8px 16px; margin-top: -6px; }
+  .ann-model-status { margin-inline-start: 0; width: 100%; }
+  .ann-watchlist { padding: 16px; }
+  .ann-follow-form { width: 100%; }
+  .ann-follow-form input { flex: 1; width: 0; }
+  .ann-toolbar { gap: 8px; }
+  .ann-search { flex-basis: 100%; }
+  .ann-toolbar > select { flex: 1; width: 0; min-width: 80px; padding-inline: 8px; }
+  .ann-empty { padding: 32px 12px; }
+  .ann-row { gap: 10px; padding-block: 16px; }
+  .ann-row-icon { display: none; }
+  .ann-pagination { flex-wrap: wrap; }
+}

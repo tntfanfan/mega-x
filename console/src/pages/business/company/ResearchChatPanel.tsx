@@ -107,7 +107,7 @@ function ResearchWorkspace({ company, page, hrefFor }: { company: Company; page:
         <ResearchMacroData key={company.id} companyId={company.id} active={page === "macro"} tr={tr} />
       </ResearchPanel>
       <ResearchPanel active={page === "announcements"}>
-        <ResearchAnnouncements companyId={company.id} active={page === "announcements"} tr={tr} />
+        <ResearchAnnouncements key={company.id} companyId={company.id} active={page === "announcements"} tr={tr} />
       </ResearchPanel>
       <ResearchPanel active={page === "tasks"}>
         <ResearchTasks {...{ research, client, language, tr }} companyId={company.id} onPreview={path => void preview(path)}

@@ -1,6 +1,6 @@
 export type AnnReport = {id:number;announcement_id:number;impact_type:string;impact_score:number|null;impact_summary:string;report:string;key_points?:{content:string;evidence:string}[];scoring?:{confidence:string;rationale:string};validation?:{fact_review:string};created_at:string;model_used:string};
 export type Announcement = {id:number;stock_code:string;stock_name:string;title:string;publish_date:string;source_url:string;source:string;analysis_status:string;analysis_error?:string;is_read:boolean;is_starred:boolean;report:AnnReport|null;content?:string;content_metadata?:{status?:string}};
-export type Watch = {stock_code:string;followed_at:string};
+export type Watch = {stock_code:string;stock_name?:string;followed_at:string};
 export type AnnCapabilities = {enabled:boolean;model_ready:boolean;collect_enabled:boolean;analyze_enabled:boolean;collect_interval_seconds:number};
 export type AnnJob = {id:string;kind:string;status:string;created_at:string;attempts:number;error?:string;progress:Record<string,unknown>;payload:{stock_code?:string}};
 export type AnnPage = {items:Announcement[];total:number;page:number;page_size:number};
@@ -15,6 +15,8 @@ export function createAnnouncementsClient(transport:Transport){
     capabilities:(c:string,signal?:AbortSignal)=>transport.get<AnnCapabilities>(base(c)+'/capabilities',options(signal)),
     watchlist:(c:string,signal?:AbortSignal)=>transport.get<{items:Watch[]}>(base(c)+'/watchlist',options(signal)),
     follow:(c:string,code:string)=>transport.post<Watch>(base(c)+'/watchlist',{stock_code:code},options()),
+    collect:(c:string,stock_codes:string[]=[])=>transport.post<{job_ids:string[]}>(base(c)+'/collect',{stock_codes},options()),
+    analyze:(c:string)=>transport.post<{job_ids:string[];failed_count?:number}>(base(c)+'/analyze',{},options()),
     unfollow:(c:string,code:string)=>transport.delete(base(c)+'/watchlist/'+encodeURIComponent(code),options()),
     list:(c:string,filters:Record<string,string|number>,signal?:AbortSignal)=>transport.get<AnnPage>(base(c)+'?'+new URLSearchParams(Object.entries(filters).filter(([,v])=>v!=='').map(([k,v])=>[k,String(v)])),options(signal)),
     detail:(c:string,id:number,signal?:AbortSignal)=>transport.get<Announcement>(base(c)+'/'+id,options(signal)),
