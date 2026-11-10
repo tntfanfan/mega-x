@@ -3,7 +3,8 @@
  *
  * - 普通部门 → 默认聊天（TenantWorkspace）。
  * - 部门应用（档案声明了 `app`）→ 应用自己的页面（DeptAppView → apps/registry）。
- * - 平台自带专属界面的部门（公司里的股票投研部）→ 投研工作台（ResearchChatPanel）。
+ * - 平台自带专属界面的部门（公司里的股票投研部）→ 投研工作台（ResearchChatPanel）；
+ *   游戏部 → 内嵌游戏（GameChatPanel）。
  *
  * 选中的部门就是 `?dept=`；没带时用这个 shell 里上次打开的部门，再没有就用第一个。
  * 部门栏在两种界面之外，任何一边卡在「连接中 / 尚未启动」都还能切到别的部门。
@@ -20,6 +21,7 @@ import { resolveDeptDisplay } from "../../lib/depts";
 import { companyScope, lineScope, type WorkspaceScope } from "../../lib/workspaceScope";
 import { ResearchChatPanel } from "../business/company/ResearchChatPanel";
 import DeptAppView from "./DeptAppView";
+import { GameChatPanel } from "./GameChatPanel";
 
 export default function TenantChatView() {
   const { companyId, lineId } = useParams<{ companyId?: string; lineId?: string }>();
@@ -56,7 +58,9 @@ export default function TenantChatView() {
     <div className="flex h-[calc(100dvh-8rem-72px)] min-h-0 min-w-0 flex-col">
       <DeptBar scope={scope} depts={depts} current={current.id} locked={locked} onChoose={choose} />
       {hasNativeView(scope, current.id)
-        ? <ResearchChatPanel company={tenant} page={params.get("page")} />
+        ? current.id === "dept-game"
+          ? <GameChatPanel />
+          : <ResearchChatPanel company={tenant} page={params.get("page")} />
         : isAppDept(current)
           ? <DeptAppView key={current.id} deptId={current.id} />
           : <TenantWorkspace panel="chat" embedded />}

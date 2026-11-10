@@ -11,9 +11,10 @@ export function isAppDept(dept: Pick<DeptCatalogItem, "profile">): boolean {
 /**
  * 平台 API 本来就带专属界面的部门（不经部门应用转发）：「聊天」页选中它时，同样换掉
  * 默认聊天。股票投研部走 `/v1/companies/{id}/research/*`，只有公司有。
+ * 游戏部的专属界面是内嵌的游戏前端（`VITE_GAME_URL`），不走平台 API。
  */
 const NATIVE_VIEW_DEPTS: Partial<Record<WorkspaceScope["kind"], string[]>> = {
-  company: ["dept-investment"],
+  company: ["dept-investment", "dept-game"],
 };
 
 export function hasNativeView(scope: WorkspaceScope, deptId: string): boolean {
