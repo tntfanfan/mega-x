@@ -7,12 +7,17 @@
  * - 游戏画布固定 1920×960（Phaser 实际是 scale NONE），所以 iframe 也固定成这个尺寸，
  *   再按容器大小 `transform: scale(k)` 等比缩放；点击坐标由浏览器换算，游戏不用改。
  * - 跨源 iframe，与 console 无任何通信；不加 sandbox（游戏要 WebSocket / localStorage / 全屏）。
- * - 切走部门时 iframe 卸载、socket 断开，切回来要重新登录（有「记住登录」预填）。
+ * - 免登：`POST /v1/me/game-login` 取「mega-x 邮箱 + 平台派生的密码」，iframe 带 `?embed=megax`，
+ *   游戏发 `lgh-game:ready` 时（以及 iframe onLoad 时）回 `lgh-game:login`，
+ *   targetOrigin 钉死为游戏源，只有游戏能收到。游戏只认白名单里的父页面源
+ *   （metal-max 的 `VITE_EMBED_PARENT_ORIGINS`）。取凭证失败就退回手动登录。
+ * - 切走部门时 iframe 卸载、socket 断开，切回来会再自动登录一次。
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { WorkspaceAvailabilityGate } from "../../components/ui/WorkspaceAvailabilityGate";
+import { api } from "../../lib/api";
 
 const GAME_W = 1920;
 const GAME_H = 960;
@@ -21,7 +26,10 @@ const PROBE_TIMEOUT_MS = 4000;
 
 const GAME_URL = ((import.meta.env.VITE_GAME_URL as string | undefined) ?? "").trim().replace(/\/+$/, "");
 
+const GAME_ORIGIN = (() => { try { return GAME_URL ? new URL(GAME_URL).origin : ""; } catch { return ""; } })();
+
 type Probe = "checking" | "up" | "down";
+type GameLogin = { email: string; password: string };
 
 /** Cross-origin reachability check: an opaque response means the server answered. */
 async function probeGame(signal: AbortSignal): Promise<boolean> {
@@ -39,6 +47,29 @@ export function GameChatPanel() {
   const [reloadKey, setReloadKey] = useState(0);
   const [probe, setProbe] = useState<Probe>("checking");
   const [attempt, setAttempt] = useState(0);
+  const frame = useRef<HTMLIFrameElement>(null);
+  const login = useRef<GameLogin | null>(null);
+
+  const sendLogin = () => {
+    const c = login.current;
+    const win = frame.current?.contentWindow;
+    if (!c || !win || !GAME_ORIGIN) return;
+    win.postMessage({ type: "lgh-game:login", email: c.email, password: c.password }, GAME_ORIGIN);
+  };
+
+  useEffect(() => {
+    if (!GAME_ORIGIN) return;
+    let alive = true;
+    api.post<GameLogin>("/v1/me/game-login")
+      .then(c => { if (alive && c?.email && c?.password) { login.current = c; sendLogin(); } })
+      .catch(() => { /* 取不到就手动登录 */ });
+    const onMessage = (ev: MessageEvent) => {
+      if (ev.origin !== GAME_ORIGIN || ev.source !== frame.current?.contentWindow) return;
+      if ((ev.data as { type?: unknown } | null)?.type === "lgh-game:ready") sendLogin();
+    };
+    window.addEventListener("message", onMessage);
+    return () => { alive = false; window.removeEventListener("message", onMessage); };
+  }, []);
 
   useEffect(() => {
     if (!GAME_URL) return;
@@ -106,7 +137,7 @@ export function GameChatPanel() {
           className="rounded-md px-2 py-0.5 text-body hover:bg-surface-2 hover:text-heading">新窗口打开</a>
       </div>
       <div ref={box} className="relative min-h-0 flex-1 overflow-hidden bg-black">
-        <iframe key={reloadKey} src={`${GAME_URL}/`} title="游戏"
+        <iframe ref={frame} key={reloadKey} src={`${GAME_URL}/?embed=megax`} title="游戏" onLoad={sendLogin}
           allow="fullscreen; autoplay" allowFullScreen width={GAME_W} height={GAME_H}
           className="absolute left-1/2 top-1/2 max-w-none border-0"
           style={{ transform: `translate(-50%, -50%) scale(${k})`, visibility: k > 0 ? "visible" : "hidden" }} />
